@@ -5,6 +5,7 @@ Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game r
 | Game | Kiểu | Người chơi |
 |---|---|---|
 | 🐴 **Cờ Cá Ngựa — Lục Mã Hỗn Chiến** | theo lượt | 2–6 |
+| 💣 **Mèo Nổ** — Exploding Kittens, thêm chế độ Hỗn Loạn (Mèo Hẹn Giờ, Bom Tổng Lực, hồn ma...) | theo lượt + hô "Không!" ngoài lượt | 2–6 |
 | ⚡ Phản Xạ *(game mẫu, chỉ hiện khi `HUB_DEV=1`)* | real-time | 2–6 |
 
 ## Chạy

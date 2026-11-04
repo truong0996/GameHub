@@ -41,7 +41,17 @@ check(host.room.seats.every(s => s.kind !== 'open'), 'không còn ghế trống'
 check((await host.req('start')).ok, 'bắt đầu ván');
 
 // Cả 2 người tự chơi: gửi hành động bot-đơn-giản khi tới lượt (game theo lượt) hoặc bấm liên tục (real-time).
-const guessAction = g => (g.state.phase === 'move' && g.state.legal ? { type: 'move', h: g.state.legal[0].h } : { type: g.state.phase === 'go' || g.state.phase === 'wait' ? 'press' : 'roll' });
+// Game có thể đặt state.ask = ghế đang phải quyết định (khi khác state.turn, vd bị Xin Bài).
+function guessAction(g, seat) {
+  const s = g.state, hand = s.players && s.players[seat] && s.players[seat].hand;
+  if (s.phase === 'move' && s.legal) return { type: 'move', h: s.legal[0].h };
+  if (s.phase === 'go' || s.phase === 'wait') return { type: 'press' };
+  if (s.phase === 'play') return { type: 'draw' };                      // Mèo Nổ
+  if (s.phase === 'bury') return { type: 'bury', pos: 0 };
+  if (s.phase === 'favor') return { type: 'give', card: hand[0] };
+  if (s.phase === 'alter') return { type: 'order', order: s.alter.cards.map((c, i) => i) };
+  return { type: 'roll' };
+}
 const end = Date.now() + +secs * 1000;
 let acted = 0;
 while (Date.now() < end) {
@@ -49,8 +59,8 @@ while (Date.now() < end) {
   for (const [c, seat] of [[host, 0], [guest, 1]]) {
     const g = c.game;
     if (!g) continue;
-    const myTurn = g.state.turn === seat || g.state.phase === 'go';
-    if (myTurn) { const r = await c.req('act', { action: guessAction(g) }); if (r.ok) acted++; }
+    const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go';
+    if (myTurn) { const r = await c.req('act', { action: guessAction(g, seat) }); if (r.ok) acted++; }
   }
 }
 check(host.games > 1 && guest.games > 1, `cả 2 nhận tin game (chủ ${host.games}, khách ${guest.games})`);

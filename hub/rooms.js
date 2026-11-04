@@ -144,8 +144,9 @@ export function createHub({ games, lanUrls = () => [] }) {
     const seat = room.seats[t.seat];
     const wait = Math.max(0, mt.busyUntil - Date.now());
     let delay, mode;
-    if (seat.kind === 'bot') { delay = wait + 450 + Math.random() * 600; mode = 'bot'; }
-    else if (t.auto) { delay = wait + (t.autoDelay ?? 300); mode = 'auto'; }
+    // auto ưu tiên hơn bot: game dùng auto + autoDelay để mở "cửa sổ phản ứng" (vd chờ ai đó hô "Không!").
+    if (t.auto) { delay = wait + (t.autoDelay ?? 300); mode = 'auto'; }
+    else if (seat.kind === 'bot') { delay = wait + 450 + Math.random() * 600; mode = 'bot'; }
     else {
       delay = wait + (online(room, seat.pid) ? mt.turnMs : OFFLINE_MS);
       mode = 'timeout';

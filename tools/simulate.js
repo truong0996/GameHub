@@ -31,10 +31,11 @@ for (let g = 0; g < N; g++) {
   for (; s < MAX_STEPS && !L.isOver(state); s++) {
     const t = L.turn ? L.turn(state) : null;
     if (t) {
+      now += t.auto ? (t.autoDelay ?? 300) : 800; // hub chờ autoDelay, hoặc thời gian "suy nghĩ"
       const a = t.auto || L.bot(state, t.seat, {});
       const r = L.act(state, t.seat, a, now);
       if (!r.ok) throw new Error(`Ván ${g}: hành động bot bị từ chối: ${r.err} ${JSON.stringify(a)}`);
-      now += (L.animDuration ? L.animDuration(r.events || []) : 0) + 800; // + thời gian "suy nghĩ"
+      now += L.animDuration ? L.animDuration(r.events || []) : 0;
     } else if (L.tickRate) {
       now += 1000 / L.tickRate;
       L.tick(state, now);

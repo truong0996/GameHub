@@ -25,6 +25,7 @@ hub/registry.js      nạp games/*/ (manifest.js + server.js), kiểm tra interf
 hub/rooms.js         phòng, thành viên, ghế, chủ phòng, bot, hẹn giờ lượt, tick real-time, giao thức tin nhắn
 public/              client hub: index.html, hub.js (kết nối, phòng chờ, nạp game), ui.js, sfx.js, hub.css
 games/cocangua/      Cờ Cá Ngựa (theo lượt) — ví dụ đầy đủ, nhiều animation
+games/meono/         Mèo Nổ (theo lượt + cửa sổ phản ứng "Không!", che bài bằng view/viewEvents)
 games/_template/     ⚡ Phản Xạ (real-time) — GAME MẪU tối giản, copy thư mục này khi làm game mới
 tools/               simulate.js, smoke.js
 ```
@@ -44,7 +45,7 @@ Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `
 | `create({ seats, opts, now })` → `{ state, events }` | ✔ | `seats[i]` = `{ kind: 'human'\|'bot', name }` hoặc `null` (ghế trống/đóng). `opts` = giá trị đã chọn theo `manifest.options`. |
 | `act(state, seat, action, now)` → `{ ok, err?, events? }` | ✔ | Kiểm tra & áp dụng hành động của ghế `seat` (sửa `state` tại chỗ). `ok:false` + `err` (tiếng Việt) sẽ hiện toast cho người chơi. |
 | `isOver(state)` → bool | ✔ | Ván kết thúc thì hub dừng hẹn giờ/tick. |
-| `turn(state)` → `{ seat, auto?, autoDelay? }` \| `null` | game theo lượt | Ghế đang phải quyết định. `auto`: hành động hub tự làm thay (vd chỉ có 1 lựa chọn). Hub tự gọi bot cho ghế bot, và gọi `bot(...,{timeout:true})` khi người chơi hết giờ (`manifest.turnMs`, mất mạng thì 3s). |
+| `turn(state)` → `{ seat, auto?, autoDelay? }` \| `null` | game theo lượt | Ghế đang phải quyết định. `auto`: hành động hub tự làm thay sau `autoDelay` ms (vd chỉ có 1 lựa chọn) — ưu tiên hơn bot, nên dùng được làm **cửa sổ phản ứng**: trả `{ seat, auto: {type:'resolve'}, autoDelay: 3000 }` rồi cho mọi ghế `act` chen vào trong lúc chờ (xem games/meono). Hub tự gọi bot cho ghế bot, và gọi `bot(...,{timeout:true})` khi người chơi hết giờ (`manifest.turnMs`, mất mạng thì 3s). |
 | `bot(state, seat, { timeout })` → action | game theo lượt | AI cho bot; `timeout:true` = đi giúp người hết giờ (nên chọn nước an toàn, không dùng tài nguyên quý). |
 | `animDuration(events)` → ms | nên có | Thời lượng animation client sẽ phát; hub chờ hết rồi mới cho bot/hẹn giờ chạy tiếp. |
 | `tickRate` (số lần/giây) + `tick(state, now)` → `{ events?, changed? }` \| `null` | game real-time | Hub gọi đều đặn; trả về khác `null` thì phát cho mọi người. Bot của game real-time tự xử lý trong `tick`. |
@@ -81,4 +82,5 @@ Server → client: `room {room}`, `game {matchId, game, state, events, meta, dea
 ## Ghi chú
 - Phòng chỉ nằm trong RAM: khởi động lại server là mất phòng.
 - Chủ phòng offline >15s thì quyền chủ phòng chuyển cho người khác đang online.
+- Mèo Nổ: `cards.js` dùng chung (tên lá, combo, thời lượng animation); luật + bot nằm trong `server.js` để không lộ chồng bài. `state.ask` = ghế đang phải quyết định (khác `turn` khi bị Xin Bài). `resolve` kiểm tra `now >= react.until` để client không tự đóng cửa sổ sớm.
 - Cờ cá ngựa: luật ở `games/cocangua/rules.js` (dùng chung server + client). Mặc định luật về chuồng "nhanh" vì luật truyền thống làm ván 6 người dài gần gấp đôi (đo bằng simulate).
