@@ -1,0 +1,10 @@
+{
+  "name": "co-ca-ngua-luc-ma-hon-chien",
+  "version": "1.0.0",
+  "description": "Cờ cá ngựa 6 người online — Lục Mã Hỗn Chiến",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}
