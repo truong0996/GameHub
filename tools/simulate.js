@@ -27,13 +27,16 @@ for (let g = 0; g < N; g++) {
   const seats = Array.from({ length: M.maxPlayers }, (_, i) => ({ kind: 'bot', name: 'Bot ' + i }));
   let now = 1e12;
   const { state } = L.create({ seats, opts: { ...opts }, now });
-  let s = 0;
+  let s = 0, lastKey;
   for (; s < MAX_STEPS && !L.isOver(state); s++) {
     const t = L.turn ? L.turn(state) : null;
     if (t) {
-      now += t.auto ? (t.autoDelay ?? 300) : 800; // hub chờ autoDelay, hoặc thời gian "suy nghĩ"
-      const a = t.auto || L.bot(state, t.seat, {});
-      const r = L.act(state, t.seat, a, now);
+      // Quyết định cùng lúc ({ seats, key }): cả nhóm mất ~1.5s mỗi pha; theo lượt: hub chờ autoDelay, hoặc thời gian "suy nghĩ".
+      const seat = t.seats ? t.seats[0] : t.seat;
+      if (t.seats) { if (t.key !== lastKey) now += 1500; lastKey = t.key; }
+      else now += t.auto ? (t.autoDelay ?? 300) : 800;
+      const a = t.auto || L.bot(state, seat, {});
+      const r = L.act(state, seat, a, now);
       if (!r.ok) throw new Error(`Ván ${g}: hành động bot bị từ chối: ${r.err} ${JSON.stringify(a)}`);
       now += L.animDuration ? L.animDuration(r.events || []) : 0;
     } else if (L.tickRate) {

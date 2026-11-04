@@ -1,0 +1,173 @@
+/* 💎 Kho Báu Inca — mọi selector nằm trong .ig (modal dùng .ig-m) */
+.ig { --cw: 70px; --ch: 96px; display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 12px; width: 100%; height: 100%; padding: 12px; }
+.ig-main { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
+.ig-side { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.ig-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 18px; }
+.ig .muted { color: var(--muted); }
+.ig .warn { color: #b35c00; }
+
+/* ---------- Lá bài ---------- */
+:is(.ig, .ig-m) .cd { --k: #5d4a36; position: relative; width: var(--cw); height: var(--ch); border-radius: 9px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 5px 3px; text-align: center; color: #fff; user-select: none;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--k) 80%, #fff) 0%, var(--k) 40%, color-mix(in srgb, var(--k) 60%, #000) 100%);
+  border: 2px solid rgba(255,255,255,.6); box-shadow: 0 3px 8px rgba(30,20,10,.35), inset 0 0 0 3px rgba(0,0,0,.12); }
+:is(.ig, .ig-m) .cd i { font-style: normal; font-size: calc(var(--cw) * .4); line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+:is(.ig, .ig-m) .cd b { font-size: 10px; font-weight: 800; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+:is(.ig, .ig-m) .cd b.num { font-size: calc(var(--cw) * .3); }
+:is(.ig, .ig-m) .cd.back { --k: #7b4b1e; background: repeating-linear-gradient(45deg, #8a5a28 0 7px, #6e4519 7px 14px); }
+:is(.ig, .ig-m) .cd.back b { letter-spacing: .14em; opacity: .9; }
+:is(.ig, .ig-m) .cd.gem { --k: #1d8a7a; }
+:is(.ig, .ig-m) .cd.haz { border-color: rgba(255,210,200,.7); }
+:is(.ig, .ig-m) .cd.haz.hid { --k: #2b2633; }
+:is(.ig, .ig-m) .cd.art { --k: #b8862b; border-color: #ffe08a; }
+:is(.ig, .ig-m) .cd.art.taken { opacity: .35; filter: grayscale(.7); }
+:is(.ig, .ig-m) .cd.mys { --k: #6a3fa0; border-style: dashed; }
+:is(.ig, .ig-m) .cd .left { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 99px; font-size: 11px; font-weight: 800; white-space: nowrap;
+  background: #fff3c4; color: #5a4300; border: 1px solid #d9a23a; box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+:is(.ig, .ig-m) .cd .badge { position: absolute; top: -8px; right: -8px; font-style: normal; font-size: 16px; }
+:is(.ig, .ig-m) .cd.warn { box-shadow: 0 0 0 2px #ffb347, 0 3px 8px rgba(30,20,10,.35); }
+:is(.ig, .ig-m) .cd.boom { box-shadow: 0 0 0 3px #ff3b3b, 0 0 22px #ff3b3b; animation: ig-wobble .25s ease-in-out 6 alternate; }
+:is(.ig, .ig-m) .cd.mini { --cw: 34px; --ch: 46px; display: inline-flex; vertical-align: middle; padding: 2px; border-width: 1px; }
+:is(.ig, .ig-m) .cd.mini b { display: none; }
+:is(.ig, .ig-m) .cd.mini b.num { display: block; font-size: 11px; }
+:is(.ig, .ig-m) .cd.xl { --cw: 140px; --ch: 192px; }
+:is(.ig, .ig-m) .cd.xl b { font-size: 16px; }
+:is(.ig, .ig-m) .cd.xl b.num { font-size: 40px; }
+
+/* ---------- Người chơi ---------- */
+#ig-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.ig .pp { position: relative; display: flex; gap: 8px; align-items: center; padding: 7px 10px 9px; border-radius: 12px; background: var(--surface);
+  border: 1px solid var(--line); border-left: 6px solid var(--c); transition: transform .2s, box-shadow .2s, background .2s, opacity .3s; min-width: 0; }
+.ig .pp.st-in { background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+.ig .pp.wait { box-shadow: 0 0 0 2px var(--c); }
+.ig .pp.st-out { opacity: .8; }
+.ig .pp.st-dead { opacity: .5; filter: grayscale(.8); }
+.ig .pp.me .tag { font-size: 10px; background: var(--ink); color: var(--surface); padding: 1px 6px; border-radius: 99px; vertical-align: middle; }
+.ig .av { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 20px; background: var(--c); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+.ig .pp-body { min-width: 0; flex: 1; }
+.ig .pp-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig .pp-sub { font-size: 12px; color: var(--muted); }
+.ig .pp-gems { display: flex; gap: 8px; font-size: 13px; flex-wrap: wrap; align-items: center; }
+.ig .pp-gems .carry b { font-size: 15px; }
+.ig .pp-gems .tentv { color: var(--muted); }
+.ig .pp-gems .nch { font-size: 12px; color: var(--muted); }
+.ig .choice { position: absolute; top: -9px; right: 6px; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: var(--chip); border: 1px solid var(--line); white-space: nowrap; }
+.ig .choice.think { animation: ig-bob 1s ease-in-out infinite; }
+.ig .choice.locked { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.ig .choice.stay { background: #2f6f62; color: #fff; border-color: #1f4d44; }
+.ig .choice.leave { background: #d27a2c; color: #fff; border-color: #9e5718; }
+.ig .choice.pop { animation: ig-pop .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes ig-pop { from { transform: rotateY(90deg) scale(1.6); } }
+@keyframes ig-bob { 50% { transform: translateY(-3px); } }
+.ig .pp-timer { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 3px; border-radius: 3px; overflow: hidden; }
+.ig .pp-timer i { display: block; height: 100%; width: 0; background: var(--c); transition: width .1s linear; }
+.ig .bubble { position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translate(-50%, 6px) scale(.6); opacity: 0; pointer-events: none; z-index: 5;
+  background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 700; font-size: 13px; padding: 5px 10px; border-radius: 12px; white-space: nowrap; transition: opacity .2s, transform .25s cubic-bezier(.2,1.6,.4,1);
+  box-shadow: 0 4px 14px rgba(60,48,36,.2); }
+.ig .bubble::after { content: ''; position: absolute; left: 50%; top: 100%; margin-left: -6px; border: 6px solid transparent; border-top-color: #fff; }
+.ig .bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.ig .pp.hit { animation: ig-hit .6s; }
+@keyframes ig-hit { 20% { transform: translateX(-8px) rotate(-2deg); background: #f6c9c2; } 50% { transform: translateX(8px) rotate(2deg); } }
+
+/* ---------- Hang ---------- */
+#ig-cave { flex: 1; min-height: 240px; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-radius: 20px; color: #f3e9d8;
+  background: radial-gradient(ellipse at 30% 40%, #5a4632 0%, #3d2f22 60%, #2c2219 100%); border: 8px solid var(--wood); box-shadow: inset 0 0 40px rgba(0,0,0,.5), var(--shadow); }
+#ig-cave .muted { color: rgba(243,233,216,.65); }
+#ig-cave .warn { color: #ffb347; }
+.ig-cave-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+#ig-temples { display: flex; gap: 4px; }
+.ig .tp { position: relative; width: 34px; height: 34px; display: grid; place-items: center; font-size: 18px; border-radius: 8px; background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.15); opacity: .55; }
+.ig .tp small { position: absolute; bottom: -2px; right: 2px; font-size: 9px; font-weight: 800; }
+.ig .tp.done { opacity: .35; filter: grayscale(.8); }
+.ig .tp.cur { opacity: 1; background: rgba(217,162,58,.35); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+#ig-temple { flex: 1; min-width: 200px; }
+.ig-cave-body { flex: 1; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; min-height: 0; }
+#ig-deck { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 12px; width: 178px; }
+#ig-deck .stack { position: relative; width: var(--cw); height: var(--ch); }
+#ig-deck .stack .cd { position: relative; z-index: 2; }
+#ig-deck .layer { position: absolute; inset: 0; border-radius: 9px; background: #5a3a14; border: 2px solid rgba(255,255,255,.4); }
+#ig-deck .layer.l1 { transform: translate(3px, 3px); z-index: 1; }
+#ig-deck .layer.l2 { transform: translate(6px, 6px); z-index: 0; }
+#ig-deck .kinds { display: flex; gap: 6px; justify-content: center; white-space: nowrap; }
+#ig-deck .types { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; margin-top: 3px; }
+#ig-deck .ht { padding: 1px 3px; border-radius: 6px; background: rgba(0,0,0,.25); }
+#ig-deck .ht.hot { background: rgba(255,80,60,.45); font-weight: 800; }
+#ig-deck .risk { font-weight: 800; font-size: 13px; margin-top: 3px; }
+#ig-deck .risk.bad { color: #ff7b6b; }
+#ig-deck .risk.safe { color: #7dffb0; }
+#ig-path { display: flex; flex-wrap: wrap; gap: 14px 8px; align-content: center; padding: 8px 4px 14px; min-height: calc(var(--ch) + 24px); overflow: auto; max-height: 100%; }
+#ig-path .slot.new { animation: ig-in .3s ease-out; }
+#ig-path .empty { margin: auto; font-style: italic; }
+@keyframes ig-in { from { opacity: 0; transform: translateY(-8px) scale(.9); } }
+.ig .shake { animation: ig-shake .5s; }
+@keyframes ig-shake { 10%,90% { transform: translate(-2px, 1px); } 30%,70% { transform: translate(-6px, 2px) rotate(-.5deg); } 50% { transform: translate(6px, -2px) rotate(.5deg); } }
+@keyframes ig-wobble { from { transform: rotate(-4deg); } to { transform: rotate(4deg) scale(1.05); } }
+
+/* ---------- Điều khiển ---------- */
+#ig-status { font-size: 15px; padding: 9px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); min-height: 40px; line-height: 1.35; }
+#ig-status.mine { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#ig-status .armed { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 13px; }
+#ig-status .armed span { padding: 2px 8px; border-radius: 8px; background: var(--chip); border: 1px solid var(--line); display: inline-flex; gap: 6px; align-items: center; }
+.ig .ig-timer { height: 4px; border-radius: 4px; overflow: hidden; background: var(--chip); }
+.ig .ig-timer i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s linear; }
+.ig .ig-timer i.low { background: var(--danger); }
+#ig-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+#ig-actions:empty { display: none; }
+#ig-actions button { min-width: 180px; }
+#ig-actions button small { display: block; font-size: 11px; font-weight: 500; opacity: .8; }
+#ig-actions .stay { background: var(--primary); box-shadow: 0 3px 0 var(--primary-d); }
+#ig-actions .leave { background: var(--cta); box-shadow: 0 3px 0 var(--cta-d); }
+#ig-charms { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; align-items: center; }
+#ig-charms:empty { display: none; }
+#ig-charms .charm { padding: 6px 12px; font-size: 14px; }
+#ig-charms .charm.dirty { border-color: color-mix(in srgb, var(--danger) 50%, var(--line)); }
+
+/* ---------- Cột phải ---------- */
+#ig-tent { padding: 10px 12px; border-radius: 12px; background: var(--chip); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+#ig-tent .tent-row { display: flex; justify-content: space-between; align-items: baseline; }
+#ig-tent .tent-row b { font-size: 20px; }
+#ig-tent .tent-arts { display: flex; gap: 6px; align-items: center; font-size: 20px; flex-wrap: wrap; }
+#ig-tent .tent-arts small { font-size: 10px; font-weight: 700; vertical-align: super; }
+#ig-log { flex: 1; min-height: 120px; overflow: auto; font-size: 13px; display: flex; flex-direction: column; gap: 3px; padding-right: 4px; }
+.ig .li { padding: 4px 8px; border-radius: 8px; background: var(--chip); animation: ig-li .3s ease-out; }
+.ig .li .sep { color: var(--muted); font-size: 12px; }
+@keyframes ig-li { from { opacity: 0; transform: translateX(10px); } }
+
+/* ---------- Hiệu ứng ---------- */
+.ig .ig-fly { position: fixed; left: 0; top: 0; z-index: 40; pointer-events: none; }
+.ig .gemf { font-size: 26px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.ig .ig-spot { position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 45; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  animation: ig-spotin .35s cubic-bezier(.2,1.5,.4,1); transition: opacity .3s, transform .3s; }
+.ig .ig-spot.out { opacity: 0; transform: translate(-50%, -50%) scale(.7); }
+.ig .ig-spot > .cd + .cd { margin-top: -8px; }
+.ig .ig-spot .cap { font-size: 22px; font-weight: 800; padding: 8px 20px; border-radius: 18px; color: #fff; background: rgba(30,28,25,.88); text-align: center; max-width: 90vw; }
+.ig .ig-spot .cap small { display: block; font-size: 14px; font-weight: 500; opacity: .85; margin-top: 2px; }
+.ig .ig-spot .big-ic { font-size: 96px; line-height: 1; filter: drop-shadow(0 6px 12px rgba(0,0,0,.4)); }
+.ig .ig-spot.danger .cd, .ig .ig-spot.danger .big-ic { animation: ig-wobble .25s ease-in-out infinite alternate; }
+.ig .ig-spot.safe .cd { box-shadow: 0 0 40px #ffd23f; }
+@keyframes ig-spotin { from { transform: translate(-50%, -50%) scale(.3) rotate(-15deg); opacity: 0; } }
+#ig-flash { position: fixed; inset: 0; pointer-events: none; z-index: 44; opacity: 0; }
+#ig-flash.on { animation: ig-flash .9s ease-out; }
+#ig-flash.blood { background: radial-gradient(circle, rgba(255,60,40,.15) 0%, rgba(160,0,0,.55) 80%); }
+#ig-flash.quake { background: rgba(60,40,20,.55); }
+#ig-flash.quake.on { animation: ig-flash 1.5s steps(6); }
+@keyframes ig-flash { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- Modal ---------- */
+.ig-m .rank li > b { white-space: nowrap; }
+
+@media (max-width: 1000px) {
+  .ig { grid-template-columns: 1fr; height: auto; --cw: 56px; --ch: 78px; padding: 8px; }
+  .ig .ig-side { order: 1; }
+  .ig #ig-log { max-height: 200px; }
+  #ig-players { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; }
+  .ig .pp { padding: 6px 8px 8px; }
+  .ig .av { width: 30px; height: 30px; font-size: 16px; }
+  #ig-cave { padding: 10px; border-width: 6px; min-height: 0; }
+  .ig-cave-body { grid-template-columns: 1fr; gap: 8px; }
+  #ig-deck { flex-direction: row; width: auto; justify-content: center; text-align: left; }
+  #ig-path { justify-content: center; }
+  #ig-actions button { min-width: 0; flex: 1; }
+  #ig-actions button small { display: none; }
+  .ig .cd.xl { --cw: 110px; --ch: 150px; }
+}

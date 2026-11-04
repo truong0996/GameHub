@@ -50,6 +50,7 @@ function guessAction(g, seat) {
   if (s.phase === 'bury') return { type: 'bury', pos: 0 };
   if (s.phase === 'favor') return { type: 'give', card: hand[0] };
   if (s.phase === 'alter') return { type: 'order', order: s.alter.cards.map((c, i) => i) };
+  if (s.phase === 'decide') return { type: 'decide', stay: Math.random() < 0.6 };  // Kho Báu Inca (chọn cùng lúc)
   return { type: 'roll' };
 }
 const end = Date.now() + +secs * 1000;
@@ -59,7 +60,9 @@ while (Date.now() < end) {
   for (const [c, seat] of [[host, 0], [guest, 1]]) {
     const g = c.game;
     if (!g) continue;
-    const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go';
+    const me = g.state.players && g.state.players[seat];
+    const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go'
+      || (g.state.phase === 'decide' && me.status === 'in' && !me.choice);
     if (myTurn) { const r = await c.req('act', { action: guessAction(g, seat) }); if (r.ok) acted++; }
   }
 }

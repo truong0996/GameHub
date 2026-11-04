@@ -28,6 +28,7 @@ hub/rooms.js         phòng, thành viên, ghế, chủ phòng, bot, hẹn giờ
 public/              client hub: index.html, hub.js (kết nối, phòng chờ, nạp game), ui.js, sfx.js, hub.css
 games/cocangua/      Cờ Cá Ngựa (theo lượt) — ví dụ đầy đủ, nhiều animation
 games/meono/         Mèo Nổ (theo lượt + cửa sổ phản ứng "Không!", che bài bằng view/viewEvents)
+games/incagold/      Kho Báu Inca (mọi người chọn bí mật CÙNG LÚC qua turn() → { seats, key })
 games/_template/     ⚡ Phản Xạ (real-time) — GAME MẪU tối giản, copy thư mục này khi làm game mới
 tools/               simulate.js, smoke.js
 ```
@@ -48,6 +49,7 @@ Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `
 | `act(state, seat, action, now)` → `{ ok, err?, events? }` | ✔ | Kiểm tra & áp dụng hành động của ghế `seat` (sửa `state` tại chỗ). `ok:false` + `err` (tiếng Việt) sẽ hiện toast cho người chơi. |
 | `isOver(state)` → bool | ✔ | Ván kết thúc thì hub dừng hẹn giờ/tick. |
 | `turn(state)` → `{ seat, auto?, autoDelay? }` \| `null` | game theo lượt | Ghế đang phải quyết định. `auto`: hành động hub tự làm thay sau `autoDelay` ms (vd chỉ có 1 lựa chọn) — ưu tiên hơn bot, nên dùng được làm **cửa sổ phản ứng**: trả `{ seat, auto: {type:'resolve'}, autoDelay: 3000 }` rồi cho mọi ghế `act` chen vào trong lúc chờ (xem games/meono). Hub tự gọi bot cho ghế bot, và gọi `bot(...,{timeout:true})` khi người chơi hết giờ (`manifest.turnMs`, mất mạng thì 3s). |
+| `turn(state)` → `{ seats: [...], key }` | game chọn cùng lúc | Thay cho `{ seat }`: mọi ghế trong `seats` (những ai chưa chốt) quyết định song song, chung **một** hạn chót `turnMs`. `key` đổi = pha mới (hạn chót mới). Hub gọi `bot()` cho ghế bot (rải rác 0.3–1.7s), người mất mạng sau 3s; hết giờ thì `bot(...,{timeout:true})` cho mọi người chưa chốt, `meta.auto` khi đó là **mảng** ghế. Xem games/incagold. |
 | `bot(state, seat, { timeout })` → action | game theo lượt | AI cho bot; `timeout:true` = đi giúp người hết giờ (nên chọn nước an toàn, không dùng tài nguyên quý). |
 | `animDuration(events)` → ms | nên có | Thời lượng animation client sẽ phát; hub chờ hết rồi mới cho bot/hẹn giờ chạy tiếp. |
 | `tickRate` (số lần/giây) + `tick(state, now)` → `{ events?, changed? }` \| `null` | game real-time | Hub gọi đều đặn; trả về khác `null` thì phát cho mọi người. Bot của game real-time tự xử lý trong `tick`. |
@@ -85,4 +87,5 @@ Server → client: `room {room}`, `game {matchId, game, state, events, meta, dea
 - Phòng chỉ nằm trong RAM: khởi động lại server là mất phòng.
 - Chủ phòng offline >15s thì quyền chủ phòng chuyển cho người khác đang online.
 - Mèo Nổ: `cards.js` dùng chung (tên lá, combo, thời lượng animation); luật + bot nằm trong `server.js` để không lộ chồng bài. `state.ask` = ghế đang phải quyết định (khác `turn` khi bị Xin Bài). `resolve` kiểm tra `now >= react.until` để client không tự đóng cửa sổ sớm.
+- Kho Báu Inca: `data.js` dùng chung (lá, bùa, đền, thời lượng animation); luật + bot trong `server.js`. `view` ẩn chồng bài, ngọc trong lều và lựa chọn của người khác (trừ khi người xem dùng bùa Mắt Kền Kền), bùa "bí ẩn" che tên trong `viewEvents`. Client giữ bản `V` cập nhật dần theo từng sự kiện để vẽ, diễn xong thì thay bằng state thật.
 - Cờ cá ngựa: luật ở `games/cocangua/rules.js` (dùng chung server + client). Mặc định luật về chuồng "nhanh" vì luật truyền thống làm ván 6 người dài gần gấp đôi (đo bằng simulate).

@@ -140,7 +140,9 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
     const L = mt.logic;
     if (L.isOver(mt.state) || !L.turn) return;
     const t = L.turn(mt.state);
+    if (!t || !t.seats) mt.multi = null;
     if (!t) return;
+    if (t.seats) return scheduleMulti(room, t);
     const seat = room.seats[t.seat];
     const wait = Math.max(0, mt.busyUntil - Date.now());
     let delay, mode;
@@ -161,6 +163,43 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
       if (!r.ok) { console.error(`[${room.code}] tự đi lỗi:`, r.err, action); return; }
       afterAction(room, r.events || [], mode === 'timeout' ? { auto: t.seat } : null);
     }, delay);
+  }
+
+  // Quyết định cùng lúc: turn() trả { seats, key } — mọi ghế trong `seats` chọn song song, chung một hạn chót.
+  // `key` đổi = pha mới (hạn chót mới). Bot chọn rải rác 0.3–1.7s, người mất kết nối sau 3s, hết giờ thì máy chọn giúp tất cả.
+  function scheduleMulti(room, t) {
+    const mt = room.match, L = mt.logic, now = Date.now();
+    if (!mt.multi || mt.multi.key !== t.key) {
+      const start = Math.max(now, mt.busyUntil);
+      mt.multi = { key: t.key, start, deadline: start + mt.turnMs, botAt: {}, off: {} };
+      for (const s of t.seats) if (room.seats[s].kind === 'bot') mt.multi.botAt[s] = start + 300 + Math.random() * 1400;
+    }
+    const M = mt.multi;
+    mt.deadline = M.deadline;
+    const due = t.seats.map(s => {
+      const seat = room.seats[s];
+      if (seat.kind === 'bot') return [s, M.botAt[s] ?? now];
+      if (online(room, seat.pid)) { delete M.off[s]; return [s, M.deadline]; }
+      M.off[s] ??= Math.max(now, M.start);
+      return [s, Math.min(M.deadline, M.off[s] + OFFLINE_MS)];
+    });
+    const first = Math.min(...due.map(d => d[1]));
+    mt.timer = setTimeout(() => {
+      if (room.match !== mt || L.isOver(mt.state)) return;
+      const tnow = Date.now(), events = [], autos = [];
+      for (const [s, at] of due) {
+        if (at > tnow + 30) continue;
+        const cur = L.turn(mt.state);
+        if (!cur || !cur.seats || cur.key !== t.key || !cur.seats.includes(s)) continue;
+        const human = room.seats[s].kind !== 'bot';
+        const action = L.bot(mt.state, s, { timeout: human });
+        const r = L.act(mt.state, s, action, tnow);
+        if (!r.ok) { console.error(`[${room.code}] tự chọn lỗi:`, r.err, action); continue; }
+        events.push(...(r.events || []));
+        if (human) autos.push(s);
+      }
+      if (events.length || autos.length) afterAction(room, events, autos.length ? { auto: autos } : null);
+    }, Math.max(0, first - now));
   }
 
   // ---------- xử lý tin nhắn từ client ----------
