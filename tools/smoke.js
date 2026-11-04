@@ -1,0 +1,78 @@
+// Kiểm tra đầu-cuối qua WebSocket với 1 server đang chạy (cần Node 22+ vì dùng WebSocket có sẵn).
+//   node tools/smoke.js [gameId] [port] [giây]
+// Chủ phòng tạo phòng → khách vào bằng mã → ngồi ghế → lấp bot → bắt đầu → khách tự chơi phần của mình
+// → kiểm tra cả 2 đều nhận tin 'game' → khách rớt mạng & vào lại đúng ghế → về phòng chờ.
+const [gameId = 'cocangua', port = '3000', secs = '15'] = process.argv.slice(2);
+const URL_WS = `ws://localhost:${port}/ws`;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let failed = false;
+const check = (cond, msg) => { console.log(`${cond ? '✅' : '❌'} ${msg}`); if (!cond) failed = true; };
+
+function client(name) {
+  const ws = new WebSocket(URL_WS);
+  const c = { ws, name, seq: 0, pending: new Map(), room: null, game: null, games: 0, events: {} };
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'res') { c.pending.get(m.id)?.(m); c.pending.delete(m.id); return; }
+    if (m.t === 'room') c.room = m.room;
+    if (m.t === 'game') { c.game = m; c.games++; for (const ev of m.events) c.events[ev.t] = (c.events[ev.t] || 0) + 1; }
+  };
+  c.req = (t, data = {}) => new Promise(res => { const id = ++c.seq; c.pending.set(id, res); ws.send(JSON.stringify({ id, t, ...data })); });
+  c.ready = new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+  return c;
+}
+
+const host = client('Chủ');
+await host.ready;
+const created = await host.req('create', { name: 'Chủ', game: gameId });
+check(created.ok && created.code, `tạo phòng ${created.code}`);
+check((await host.req('selectGame', { game: gameId })).ok, `chọn game ${gameId}`);
+check((await host.req('sit', { seat: 0 })).ok, 'chủ phòng ngồi ghế 0');
+
+const guest = client('Khách');
+await guest.ready;
+const joined = await guest.req('join', { code: created.code, name: 'Khách' });
+check(joined.ok, 'khách vào phòng bằng mã');
+check((await guest.req('sit', { seat: 1 })).ok, 'khách ngồi ghế 1');
+check(!(await guest.req('start')).ok, 'khách KHÔNG được bắt đầu ván (chỉ chủ phòng)');
+check((await host.req('fillBots')).ok, 'lấp ghế trống bằng bot');
+await sleep(200);
+check(host.room.seats.every(s => s.kind !== 'open'), 'không còn ghế trống');
+check((await host.req('start')).ok, 'bắt đầu ván');
+
+// Cả 2 người tự chơi: gửi hành động bot-đơn-giản khi tới lượt (game theo lượt) hoặc bấm liên tục (real-time).
+const guessAction = g => (g.state.phase === 'move' && g.state.legal ? { type: 'move', h: g.state.legal[0].h } : { type: g.state.phase === 'go' || g.state.phase === 'wait' ? 'press' : 'roll' });
+const end = Date.now() + +secs * 1000;
+let acted = 0;
+while (Date.now() < end) {
+  await sleep(300);
+  for (const [c, seat] of [[host, 0], [guest, 1]]) {
+    const g = c.game;
+    if (!g) continue;
+    const myTurn = g.state.turn === seat || g.state.phase === 'go';
+    if (myTurn) { const r = await c.req('act', { action: guessAction(g) }); if (r.ok) acted++; }
+  }
+}
+check(host.games > 1 && guest.games > 1, `cả 2 nhận tin game (chủ ${host.games}, khách ${guest.games})`);
+check(acted > 0, `người chơi gửi được ${acted} hành động`);
+console.log('   sự kiện đã thấy:', JSON.stringify(host.events));
+
+// Rớt mạng rồi vào lại
+guest.ws.close();
+await sleep(300);
+check(host.room.seats[1].online === false, 'khách rớt mạng → ghế hiện offline');
+const back = client('Khách');
+await back.ready;
+const rejoin = await back.req('join', { code: created.code, pid: joined.pid });
+await sleep(300);
+check(rejoin.ok && rejoin.uid === joined.uid, 'khách vào lại bằng pid cũ, giữ nguyên danh tính');
+check(back.room && back.room.seats[1].uid === joined.uid && back.room.seats[1].online, 'vẫn ngồi đúng ghế 1 và online lại');
+check(back.game && back.game.matchId === host.game.matchId, 'nhận lại trạng thái ván đang chơi');
+
+check((await host.req('lobby')).ok, 'chủ phòng đưa mọi người về phòng chờ');
+await sleep(200);
+check(back.room.playing === false, 'khách thấy phòng đã về chờ');
+
+for (const c of [host, back]) c.ws.close();
+console.log(failed ? '\n❌ SMOKE TEST THẤT BẠI' : '\n✅ SMOKE TEST OK');
+process.exit(failed ? 1 : 0);

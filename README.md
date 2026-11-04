@@ -1,29 +1,34 @@
-# 🐴 Cờ Cá Ngựa — Lục Mã Hỗn Chiến
+# 🏮 Sân Đình — game hub chơi cùng bạn bè
 
-Cờ cá ngựa 6 người chơi online trên bàn lục giác, với chế độ **Hỗn Loạn**: ô bí ẩn, cổng dịch chuyển, thẻ kỹ năng, biến cố toàn bàn (sóng thần, lốc xoáy, mưa sao băng...).
+Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game rồi cùng chơi qua **LAN hoặc Internet**. Ghế trống có thể cho **Bot** ngồi.
+
+| Game | Kiểu | Người chơi |
+|---|---|---|
+| 🐴 **Cờ Cá Ngựa — Lục Mã Hỗn Chiến** | theo lượt | 2–6 |
+| ⚡ Phản Xạ *(game mẫu, chỉ hiện khi `HUB_DEV=1`)* | real-time | 2–6 |
 
 ## Chạy
 
 Cần Node.js 18+. Không cần `npm install`.
 
 ```bash
-node server.js          # hoặc: npm start
+node server.js            # hoặc: npm start
 PORT=8080 node server.js  # đổi cổng
 ```
 
-Mở http://localhost:3000 → nhập tên → **Tạo phòng** → gửi link mời cho bạn bè.
+Mở http://localhost:3000 → nhập tên → **Tạo phòng** → gửi link mời → chọn game → **Bắt đầu**.
 
-- **Cùng wifi/LAN:** server in ra địa chỉ dạng `http://192.168.x.x:3000` — bạn bè mở link đó (có thể cần cho phép Node.js qua Windows Firewall).
+- **Cùng wifi/LAN:** server in ra link dạng `http://192.168.x.x:3000` — gửi link đó cho bạn bè. Giữ cửa sổ chạy server mở suốt lúc chơi.
 - **Qua Internet:** chạy thêm `npx cloudflared tunnel --url http://localhost:3000` rồi gửi link `https://....trycloudflare.com`.
 
-Ghế trống có thể cho **Bot** ngồi. Mỗi tab trình duyệt là một người chơi riêng (tiện để tự test).
+F5 hoặc rớt mạng thì tự vào lại đúng ghế. Hết giờ lượt hoặc mất kết nối thì máy tự đi giúp. Mỗi tab trình duyệt là một người chơi riêng (tiện để tự test).
 
-## Cấu trúc
+## Phát triển
 
-| File | Nội dung |
-|---|---|
-| `index.html` | Toàn bộ giao diện: bàn cờ SVG, xúc xắc 3D, hiệu ứng hạt, âm thanh tổng hợp bằng WebAudio |
-| `game.js` | Luật chơi + bot AI, dùng chung cho server và trình duyệt |
-| `server.js` | Server Node thuần: phục vụ file, phòng chơi, đồng bộ realtime bằng Server-Sent Events |
+Mỗi game là một thư mục trong `games/`. Cách thêm game mới, interface và giao thức: xem **[CLAUDE.md](CLAUDE.md)**.
 
-Server giữ trạng thái ván (chống gian lận), mất kết nối thì F5 là vào lại đúng ghế. Hết 30 giây không đi thì máy tự đi giúp.
+```bash
+HUB_DEV=1 node server.js                 # hiện cả game mẫu games/_template
+node tools/simulate.js cocangua 50        # mô phỏng 50 ván toàn bot
+node tools/smoke.js cocangua 3000         # kiểm tra đầu-cuối với server đang chạy (Node 22+)
+```

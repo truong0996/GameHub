@@ -1,10 +1,16 @@
 {
-  "name": "co-ca-ngua-luc-ma-hon-chien",
-  "version": "1.0.0",
-  "description": "Cờ cá ngựa 6 người online — Lục Mã Hỗn Chiến",
+  "name": "san-dinh-game-hub",
+  "version": "2.0.0",
+  "description": "Sân Đình — game hub chơi cùng bạn bè qua LAN/Internet. Không cần npm install.",
+  "type": "module",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "sim": "node tools/simulate.js",
+    "smoke": "node tools/smoke.js"
   },
   "license": "MIT"
 }

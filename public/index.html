@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sân Đình — chơi game cùng bạn bè</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏮</text></svg>">
+<link rel="stylesheet" href="/hub.css">
+</head>
+<body>
+<div id="stars"></div>
+
+<!-- ============ MÀN HÌNH CHÍNH ============ -->
+<section id="scr-home" class="screen">
+  <div class="home card">
+    <div class="logo">🏮</div>
+    <h1 class="title">SÂN ĐÌNH</h1>
+    <div class="subtitle">Chơi game cùng bạn bè · LAN / Internet</div>
+    <div id="showcase" class="showcase"></div>
+    <label>Tên của bạn <input id="in-name" maxlength="16" placeholder="Nhập tên..." autocomplete="off"></label>
+    <button id="btn-create" class="gold big">✨ Tạo phòng mới</button>
+    <div class="or">— hoặc vào phòng của bạn bè —</div>
+    <div class="row"><input id="in-code" maxlength="4" placeholder="MÃ" autocomplete="off"><button id="btn-join">Vào phòng</button></div>
+  </div>
+  <div id="parade"></div>
+</section>
+
+<!-- ============ PHÒNG CHỜ ============ -->
+<section id="scr-room" class="screen hidden">
+  <div class="room card">
+    <div class="room-top">
+      <span>Phòng</span><span id="room-code" class="code"></span>
+      <span class="grow"></span>
+      <button id="btn-copy" class="ghost">📋 Copy link mời</button>
+      <button id="btn-leave" class="ghost">🚪 Rời phòng</button>
+    </div>
+    <div id="room-links" class="links small muted"></div>
+    <div class="section-title">Chọn trò chơi</div>
+    <div id="games" class="games"></div>
+    <div id="game-desc" class="gdesc"></div>
+    <div class="section-title">Chỗ ngồi</div>
+    <div id="seats" class="seats"></div>
+    <div id="room-opts" class="opts"></div>
+    <div id="room-members" class="small muted"></div>
+    <div class="room-actions">
+      <span id="room-wait" class="muted grow"></span>
+      <button id="btn-unsit" class="ghost">Rời ghế</button>
+      <button id="btn-bots" class="ghost">🤖 Lấp ghế trống bằng Bot</button>
+      <button id="btn-start" class="gold big">🚀 Bắt đầu</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GAME (game tự vẽ giao diện vào đây) ============ -->
+<section id="scr-game" class="hidden"><div id="game-root"></div></section>
+<section id="scr-loading" class="screen hidden"><div id="loading">⏳ Đang tải trò chơi...</div></section>
+
+<canvas id="fx"></canvas>
+<div id="modal" class="hidden"></div>
+<div id="toast"></div>
+<div id="net" class="hidden">⚠️ Mất kết nối — đang thử lại...</div>
+
+<script type="module" src="/hub.js"></script>
+</body>
+</html>

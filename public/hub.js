@@ -1,0 +1,364 @@
+// Client của hub: kết nối WebSocket, màn hình chính, phòng chờ, nạp/gỡ game, hàng đợi tin nhắn game.
+// Game cắm vào qua games/<dir>/client.js — xem "Game client interface" trong CLAUDE.md.
+import * as UI from './ui.js';
+import { $, el, esc, toast, closeModal, modalOpen, floatAt, initFx } from './ui.js';
+import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
+
+const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
+const ME = { pid: null, uid: null, code: null, lan: [] };
+let CATALOG = [], ROOM = null;
+let current = null;            // game đang mount: { matchId, key, entry, realtime, inst, css: [] }
+const GQ = [];                 // hàng đợi tin 'game' (phát lần lượt để animation không chồng nhau)
+let pumping = false;
+
+const mySeat = () => (ROOM ? ROOM.seats.findIndex(s => s.kind === 'human' && s.uid === ME.uid) : -1);
+const isHost = () => !!ROOM && ROOM.host === ME.uid;
+const entryOf = id => CATALOG.find(g => g.id === id);
+const session = () => JSON.parse(sessionStorage.getItem('hub_session') || 'null');
+
+// ================= KẾT NỐI =================
+const net = (() => {
+  let ws = null, seq = 0, backoff = 400, ready = false;
+  const pending = new Map(), waiting = [];
+  function connect() {
+    ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+    ws.onopen = async () => {
+      backoff = 400;
+      $('#net').classList.add('hidden');
+      await onConnected();
+      ready = true;
+      while (waiting.length) waiting.shift()();
+    };
+    ws.onmessage = e => {
+      const m = JSON.parse(e.data);
+      if (m.t === 'res') { const cb = pending.get(m.id); if (cb) { pending.delete(m.id); cb(m); } return; }
+      onMessage(m);
+    };
+    ws.onclose = () => {
+      ready = false;
+      for (const cb of pending.values()) cb({ ok: false, err: 'Mất kết nối tới server' });
+      pending.clear();
+      $('#net').classList.remove('hidden');
+      setTimeout(connect, backoff);
+      backoff = Math.min(backoff * 2, 5000);
+    };
+  }
+  // raw: gửi ngay (dùng lúc vừa kết nối để vào lại phòng). request: chờ tới khi đã vào lại phòng xong.
+  function raw(t, data = {}) {
+    return new Promise(res => {
+      if (!ws || ws.readyState !== 1) return res({ ok: false, err: 'Chưa kết nối tới server' });
+      const id = ++seq;
+      pending.set(id, res);
+      ws.send(JSON.stringify({ id, t, ...data }));
+    });
+  }
+  const request = (t, data) => (ready ? raw(t, data) : new Promise(res => waiting.push(() => raw(t, data).then(res))));
+  connect();
+  return { raw, request };
+})();
+
+async function act(t, data) {
+  const r = await net.request(t, data);
+  if (!r.ok) { toast('⚠️ ' + esc(r.err)); sfx.error(); }
+  return r;
+}
+
+async function onConnected() {
+  const h = await net.raw('hello');
+  if (h.ok) { CATALOG = h.catalog; ME.lan = h.lan; renderHome(); }
+  const s = session();
+  if (!s) return;
+  const j = await net.raw('join', { code: s.code, pid: s.pid });
+  if (j.ok) enterRoom(j);
+  else { sessionStorage.removeItem('hub_session'); if (ROOM) resetToHome('⚠️ ' + esc(j.err)); }
+}
+
+function enterRoom(j) {
+  Object.assign(ME, { code: j.code, pid: j.pid, uid: j.uid, lan: j.lan || ME.lan });
+  CATALOG = j.catalog || CATALOG;
+  sessionStorage.setItem('hub_session', JSON.stringify({ code: j.code, pid: j.pid }));
+  history.replaceState(null, '', '?room=' + j.code);
+}
+
+function onMessage(m) {
+  if (m.t === 'room') onRoom(m.room);
+  else if (m.t === 'game') { m.recvAt = Date.now(); GQ.push(m); pump(); }
+  else if (m.t === 'emote') onEmote(m);
+}
+
+function onRoom(room) {
+  ROOM = room;
+  if (!room.playing) {
+    GQ.length = 0;
+    if (current) unmountGame();
+    show('room');
+    renderRoom();
+  } else if (current && current.matchId === room.matchId) {
+    if (current.inst.onRoom) current.inst.onRoom(room);
+  } else if (!current) show('loading');
+}
+
+function onEmote(m) {
+  const pt = current && current.inst.emoteAnchor ? current.inst.emoteAnchor(m.seat) : null;
+  floatAt(pt || { x: innerWidth * (0.3 + Math.random() * 0.4), y: innerHeight * 0.8 }, m.e, 'emote');
+  if (current && current.inst.onEmote) current.inst.onEmote(m);
+}
+
+// ================= NẠP / GỠ GAME =================
+async function pump() {
+  if (pumping) return;
+  pumping = true;
+  while (GQ.length) {
+    let m = GQ.shift();
+    if (!ROOM || !ROOM.playing || m.matchId !== ROOM.matchId) continue;
+    try {
+      const g = await ensureGame(m);
+      if (!g) continue;
+      // Game real-time: gộp các tin đang chờ, chỉ vẽ trạng thái mới nhất (không mất sự kiện).
+      if (g.realtime) while (GQ.length && GQ[0].matchId === m.matchId) {
+        const n = GQ.shift();
+        n.events = m.events.concat(n.events);
+        n.meta = n.meta || m.meta;
+        m = n;
+      }
+      await g.inst.update(m, { backlog: GQ.length, hidden: document.hidden });
+    } catch (e) { console.error('[game]', e); }
+  }
+  pumping = false;
+}
+
+async function ensureGame(m) {
+  if (current && current.matchId === m.matchId) return current;
+  if (current) unmountGame();
+  const entry = entryOf(m.game);
+  if (!entry) throw new Error('Game lạ: ' + m.game);
+  show('loading');
+  const mod = await import(`/games/${entry.dir}/client.js`);
+  if (!ROOM || ROOM.matchId !== m.matchId) return null;
+  const root = $('#game-root');
+  root.innerHTML = '';
+  const cur = { matchId: m.matchId, key: m.game, entry, realtime: entry.realtime, css: [], inst: {} };
+  current = cur;
+  cur.inst = (await mod.default.mount(root, makeCtx(cur))) || {};
+  show('game');
+  return cur;
+}
+
+function unmountGame() {
+  const cur = current;
+  current = null;
+  try { if (cur.inst.unmount) cur.inst.unmount(); } catch (e) { console.error(e); }
+  cur.css.forEach(l => l.remove());
+  $('#game-root').innerHTML = '';
+  if (modalOpen()) closeModal();
+}
+
+// ctx: mọi thứ hub cung cấp cho game.
+function makeCtx(cur) {
+  return {
+    game: cur.entry,
+    me: () => ({ uid: ME.uid, seat: mySeat(), isHost: isHost() }),
+    room: () => ROOM,
+    send: action => act('act', { action }),
+    backToLobby: () => act('lobby'),
+    restart: () => act('start'),
+    exit: exitGame,
+    loadCss(href) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = String(href);
+      document.head.appendChild(l);
+      cur.css.push(l);
+      return new Promise(r => { l.onload = l.onerror = r; });
+    },
+    ui: { ...UI, emoteBar, toolbar },
+    sfx: { ...sfx, tone, noise, ac },
+  };
+}
+
+function exitGame() {
+  if (isHost()) { if (confirm('Kết thúc ván này và đưa mọi người về phòng chờ?')) act('lobby'); }
+  else if (confirm('Rời khỏi phòng? (máy sẽ tự đi giúp phần của bạn)')) leaveRoom();
+}
+
+// Thanh emoji dùng chung.
+function emoteBar(container) {
+  container.classList.add('emotes');
+  for (const e of EMOTES) {
+    const b = el('button', '', e);
+    b.onclick = () => net.request('emote', { e });
+    container.appendChild(b);
+  }
+}
+// Thanh công cụ dùng chung: âm thanh, nhạc, luật chơi, thoát.
+function toolbar(container, { help } = {}) {
+  container.classList.add('toolbar');
+  const snd = el('button', 'ghost'), mus = el('button', 'ghost', '🎵');
+  snd.title = 'Âm thanh'; mus.title = 'Nhạc nền';
+  const paint = () => { snd.textContent = soundOn() ? '🔊' : '🔇'; mus.style.opacity = musicOn() ? 1 : 0.45; };
+  snd.onclick = () => { setSound(!soundOn()); paint(); };
+  mus.onclick = () => { setMusic(!musicOn()); paint(); };
+  container.append(snd, mus);
+  if (help) { const h = el('button', 'ghost', '📖'); h.title = 'Luật chơi'; h.onclick = help; container.appendChild(h); }
+  const x = el('button', 'ghost', '🏠');
+  x.title = 'Thoát';
+  x.onclick = exitGame;
+  container.appendChild(x);
+  paint();
+}
+
+// ================= MÀN HÌNH =================
+function show(name) {
+  for (const s of ['home', 'room', 'game', 'loading']) $('#scr-' + s).classList.toggle('hidden', s !== name);
+}
+
+function renderHome() {
+  $('#showcase').innerHTML = CATALOG.map(g => `<span>${g.icon} ${esc(g.name)}</span>`).join('');
+  const parade = $('#parade');
+  parade.innerHTML = '';
+  const icons = CATALOG.map(g => g.icon);
+  for (let i = 0; i < 6; i++) {
+    const sp = el('span', '', `<i>${icons[i % icons.length]}</i>`);
+    sp.style.bottom = (i % 3) * 14 + 'px';
+    sp.style.animationDuration = 7 + Math.random() * 5 + 's';
+    sp.style.animationDelay = -Math.random() * 10 + 's';
+    parade.appendChild(sp);
+  }
+}
+
+function inviteLink() {
+  const local = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+  const base = local && ME.lan.length ? ME.lan[0] : location.origin;
+  return `${base}/?room=${ROOM.code}`;
+}
+
+function renderRoom() {
+  const host = isHost(), me = mySeat(), entry = entryOf(ROOM.game);
+  $('#room-code').textContent = ROOM.code;
+  const local = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+  $('#room-links').innerHTML = `Mời bạn bè: <code>${esc(inviteLink())}</code>` +
+    (local && ME.lan.length ? '<br>Bạn đang mở bằng localhost — bạn bè cùng wifi dùng link trên. Chơi qua Internet: xem README.' : '');
+
+  // chọn game
+  const box = $('#games');
+  box.innerHTML = '';
+  for (const g of CATALOG) {
+    const b = el('button', 'gcard' + (g.id === ROOM.game ? ' sel' : ''),
+      `<span class="gi">${g.icon}</span><span><b>${esc(g.name)}</b><span class="small muted">${esc(g.tagline)} · ${g.minPlayers}–${g.maxPlayers} người</span></span>`);
+    b.disabled = !host && g.id !== ROOM.game;
+    if (host) b.onclick = () => { if (g.id !== ROOM.game) { sfx.pop(); act('selectGame', { game: g.id }); } };
+    box.appendChild(b);
+  }
+  $('#game-desc').textContent = entry ? entry.description : '';
+
+  // ghế
+  const seats = $('#seats');
+  seats.innerHTML = '';
+  ROOM.seats.forEach((s, i) => {
+    const info = entry.seats[i];
+    const d = el('div', `seat seat-${s.kind}${s.uid && s.uid === ME.uid ? ' mine' : ''}`);
+    d.style.setProperty('--c', info.color);
+    const who = s.kind === 'human' ? `👤 ${esc(s.name)}${s.uid === ME.uid ? ' (bạn)' : ''}${s.online ? '' : ' <span class="muted small">(offline)</span>'}`
+      : s.kind === 'bot' ? `🤖 ${esc(s.name)}`
+      : s.kind === 'closed' ? '<span class="muted">🚫 Đã đóng</span>'
+      : '<span class="muted">Trống — bấm để ngồi</span>';
+    const dot = s.kind === 'human' ? esc([...s.name][0] || '?').toUpperCase() : s.kind === 'bot' ? '🤖' : '';
+    d.innerHTML = `<div class="seat-dot">${dot}</div><div><div class="seat-color">${esc(info.name)}${info.label ? ' · ' + esc(info.label) : ''}</div><div class="seat-who">${who}</div></div>`;
+    if (s.kind === 'open') d.onclick = () => { sfx.pop(); act('sit', { seat: i }); };
+    if (host) {
+      const sel = el('select', 'seat-sel');
+      sel.innerHTML = (s.kind === 'human' ? '<option value="human">👤 Người</option>' : '') +
+        '<option value="open">Trống</option><option value="bot">🤖 Bot</option><option value="closed">🚫 Đóng</option>';
+      sel.value = s.kind;
+      sel.onclick = e => e.stopPropagation();
+      sel.onchange = () => act('seatKind', { seat: i, kind: sel.value });
+      d.appendChild(sel);
+    }
+    seats.appendChild(d);
+  });
+
+  // tuỳ chọn của game đang chọn
+  const opts = $('#room-opts');
+  opts.innerHTML = '';
+  for (const o of entry.options) {
+    const lab = el('label', '', esc(o.label));
+    const sel = el('select');
+    sel.innerHTML = o.choices.map((c, i) => `<option value="${i}">${esc(c.label)}</option>`).join('');
+    sel.value = String(o.choices.findIndex(c => c.value === ROOM.opts[o.key]));
+    sel.disabled = !host;
+    sel.onchange = () => act('opts', { key: o.key, value: o.choices[+sel.value].value });
+    lab.appendChild(sel);
+    opts.appendChild(lab);
+  }
+  if (ROOM.estimate) opts.appendChild(el('label', '', `Thời lượng ước tính<input value="${esc(ROOM.estimate)}" disabled>`));
+
+  const filled = ROOM.seats.filter(s => s.kind === 'human' || s.kind === 'bot').length;
+  const watchers = ROOM.members.filter(m => m.seat < 0);
+  $('#room-members').innerHTML = `👑 Chủ phòng: <b>${esc(ROOM.hostName)}</b>` +
+    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => esc(m.name) + (m.online ? '' : ' (offline)')).join(', ')}` : '');
+  $('#btn-unsit').classList.toggle('hidden', me < 0);
+  $('#btn-start').classList.toggle('hidden', !host);
+  $('#btn-bots').classList.toggle('hidden', !host || !ROOM.seats.some(s => s.kind === 'open'));
+  $('#btn-start').disabled = filled < entry.minPlayers;
+  $('#room-wait').textContent = host ? (filled < entry.minPlayers ? `Cần ít nhất ${entry.minPlayers} người/bot` : '') : 'Chờ chủ phòng chọn game và bắt đầu...';
+}
+
+function resetToHome(msg) {
+  GQ.length = 0;
+  if (current) unmountGame();
+  ROOM = null;
+  Object.assign(ME, { code: null, pid: null, uid: null });
+  sessionStorage.removeItem('hub_session');
+  history.replaceState(null, '', location.pathname);
+  closeModal();
+  show('home');
+  if (msg) toast(msg);
+}
+async function leaveRoom() {
+  await net.request('leave');
+  resetToHome();
+}
+
+// ================= KHỞI ĐỘNG =================
+function getName() {
+  const n = $('#in-name').value.trim();
+  if (!n) { toast('Nhập tên của bạn trước đã nhé!'); $('#in-name').focus(); return null; }
+  localStorage.setItem('hub_name', n);
+  return n;
+}
+
+initFx($('#fx'));
+$('#in-name').value = localStorage.getItem('hub_name') || '';
+const qRoom = new URLSearchParams(location.search).get('room');
+if (qRoom) $('#in-code').value = qRoom.toUpperCase();
+
+$('#btn-create').onclick = async () => {
+  ac();
+  const name = getName();
+  if (!name) return;
+  const j = await act('create', { name });
+  if (j.ok) enterRoom(j);
+};
+const join = async () => {
+  ac();
+  const name = getName();
+  if (!name) return;
+  const code = $('#in-code').value.trim().toUpperCase();
+  if (code.length !== 4) return toast('Mã phòng gồm 4 chữ cái');
+  const s = session();
+  const j = await act('join', { code, name, pid: s && s.code === code ? s.pid : undefined });
+  if (j.ok) enterRoom(j);
+};
+$('#btn-join').onclick = join;
+$('#in-code').onkeydown = e => { if (e.key === 'Enter') join(); };
+$('#btn-copy').onclick = () => {
+  const link = inviteLink();
+  const done = () => toast('📋 Đã copy link mời!');
+  if (navigator.clipboard && isSecureContext) navigator.clipboard.writeText(link).then(done);
+  else { const t = el('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
+};
+$('#btn-leave').onclick = leaveRoom;
+$('#btn-unsit').onclick = () => act('unsit');
+$('#btn-bots').onclick = () => act('fillBots');
+$('#btn-start').onclick = () => { ac(); act('start'); };
+addEventListener('keydown', e => { if (e.key === 'Escape' && modalOpen()) closeModal(); });
