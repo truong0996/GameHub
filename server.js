@@ -2,6 +2,7 @@
 //   node server.js                 chạy ở cổng 3000
 //   PORT=8080 node server.js       đổi cổng
 //   HUB_DEV=1 node server.js       hiện cả các game trong thư mục bắt đầu bằng "_" (vd _template)
+//   node server.js --online        mở luôn tunnel Cloudflare để chơi qua Internet (= npm run online)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,12 +11,15 @@ import { fileURLToPath } from 'node:url';
 import { loadGames } from './hub/registry.js';
 import { createHub } from './hub/rooms.js';
 import { acceptUpgrade } from './hub/ws.js';
+import { startTunnel } from './hub/tunnel.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, 'public');
 const GAMES = path.join(ROOT, 'games');
 const PORT = Number(process.env.PORT) || 3000;
 const DEV = process.env.HUB_DEV === '1';
+const ONLINE = process.argv.includes('--online') || process.env.HUB_ONLINE === '1';
+let publicUrl = null; // link tunnel *.trycloudflare.com khi chạy --online
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -35,7 +39,7 @@ function lanUrls() {
 
 const games = await loadGames(GAMES, { dev: DEV });
 const gameDirs = new Set([...games.values()].map(g => g.dir));
-const hub = createHub({ games, lanUrls });
+const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl });
 
 // Chỉ phục vụ file nằm trong base; chặn ../ và chặn file logic phía server của game.
 function resolveStatic(urlPath) {
@@ -76,5 +80,13 @@ server.listen(PORT, () => {
   console.log('   Game: ' + hub.catalog.map(g => `${g.icon} ${g.name}`).join(' · ') + (DEV ? '   (chế độ dev)' : ''));
   console.log(`\n   Máy này:          http://localhost:${PORT}`);
   for (const u of lanUrls()) console.log(`   Bạn bè cùng wifi: ${u}`);
-  console.log(`\n   Chơi qua Internet: npx cloudflared tunnel --url http://localhost:${PORT}\n`);
+  if (!ONLINE) { console.log(`\n   Chơi qua Internet: chạy  npm run online  (hoặc node server.js --online)\n`); return; }
+  console.log('\n   🌐 Đang mở tunnel Cloudflare để chơi qua Internet... (lần đầu có thể mất ~30s để tải cloudflared)');
+  startTunnel(PORT, {
+    onUrl: url => {
+      publicUrl = url;
+      console.log(`\n   🌐 Chơi qua Internet: ${url}   ← gửi link này cho bạn bè (nút "Copy link mời" cũng dùng link này)\n`);
+    },
+    onExit: why => { publicUrl = null; console.log(`\n   ⚠️  Tunnel Cloudflare đã dừng (${why}). Vẫn chơi được qua wifi/LAN.\n`); },
+  });
 });

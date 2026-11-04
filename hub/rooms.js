@@ -14,7 +14,7 @@ const AFTER = Symbol('after');
 const rid = n => crypto.randomBytes(n).toString('hex');
 const cleanName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 16) || 'Ẩn danh';
 
-export function createHub({ games, lanUrls = () => [] }) {
+export function createHub({ games, lanUrls = () => [], publicUrl = () => null }) {
   const rooms = new Map();
   const catalog = [...games.values()].map(catalogEntry).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
@@ -194,7 +194,7 @@ export function createHub({ games, lanUrls = () => [] }) {
         broadcastRoom(r);
         if (r.match && room === r) send(ws, gameMsg(r, [], null, seatOf(r, m.pid)));
       };
-      return { code: r.code, pid: m.pid, uid: m.uid, lan: lanUrls(), catalog, [AFTER]: after };
+      return { code: r.code, pid: m.pid, uid: m.uid, lan: lanUrls(), pub: publicUrl(), catalog, [AFTER]: after };
     }
     function addMember(r, name) {
       const m = { pid: rid(12), uid: rid(4), name: cleanName(name), conns: new Set(), lastEmote: 0 };
@@ -204,7 +204,7 @@ export function createHub({ games, lanUrls = () => [] }) {
     }
 
     const handlers = {
-      hello: () => ({ catalog, lan: lanUrls() }),
+      hello: () => ({ catalog, lan: lanUrls(), pub: publicUrl() }),
       create(msg) {
         const r = makeRoom(msg.game);
         const m = addMember(r, msg.name);

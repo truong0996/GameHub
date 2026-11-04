@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node server.js",
+    "online": "node server.js --online",
     "sim": "node tools/simulate.js",
     "smoke": "node tools/smoke.js"
   },

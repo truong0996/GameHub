@@ -14,13 +14,14 @@ Cần Node.js 18+. Không cần `npm install`.
 
 ```bash
 node server.js            # hoặc: npm start
+npm run online            # như trên + tự mở tunnel Cloudflare để chơi qua Internet
 PORT=8080 node server.js  # đổi cổng
 ```
 
 Mở http://localhost:3000 → nhập tên → **Tạo phòng** → gửi link mời → chọn game → **Bắt đầu**.
 
 - **Cùng wifi/LAN:** server in ra link dạng `http://192.168.x.x:3000` — gửi link đó cho bạn bè. Giữ cửa sổ chạy server mở suốt lúc chơi.
-- **Qua Internet:** chạy thêm `npx cloudflared tunnel --url http://localhost:3000` rồi gửi link `https://....trycloudflare.com`.
+- **Qua Internet:** trên Windows bấm đúp **`choi-online.cmd`**, hoặc chạy `npm run online` (= `node server.js --online`) — chỉ cần một cửa sổ. Server tự bật tunnel Cloudflare và in ra link `https://....trycloudflare.com`; nút **Copy link mời** trong phòng cũng copy link này. Dùng `cloudflared` nếu máy đã cài, không thì tự tải qua `npx` (lần đầu hơi lâu). Tắt server là tunnel tắt theo; mỗi lần chạy sẽ có link mới.
 
 F5 hoặc rớt mạng thì tự vào lại đúng ghế. Hết giờ lượt hoặc mất kết nối thì máy tự đi giúp. Mỗi tab trình duyệt là một người chơi riêng (tiện để tự test).
 

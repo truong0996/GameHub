@@ -5,7 +5,7 @@ import { $, el, esc, toast, closeModal, modalOpen, floatAt, initFx } from './ui.
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
-const ME = { pid: null, uid: null, code: null, lan: [] };
+const ME = { pid: null, uid: null, code: null, lan: [], pub: null };
 let CATALOG = [], ROOM = null;
 let current = null;            // game đang mount: { matchId, key, entry, realtime, inst, css: [] }
 const GQ = [];                 // hàng đợi tin 'game' (phát lần lượt để animation không chồng nhau)
@@ -65,7 +65,7 @@ async function act(t, data) {
 
 async function onConnected() {
   const h = await net.raw('hello');
-  if (h.ok) { CATALOG = h.catalog; ME.lan = h.lan; renderHome(); }
+  if (h.ok) { CATALOG = h.catalog; ME.lan = h.lan; ME.pub = h.pub; renderHome(); }
   const s = session();
   if (!s) return;
   const j = await net.raw('join', { code: s.code, pid: s.pid });
@@ -74,7 +74,7 @@ async function onConnected() {
 }
 
 function enterRoom(j) {
-  Object.assign(ME, { code: j.code, pid: j.pid, uid: j.uid, lan: j.lan || ME.lan });
+  Object.assign(ME, { code: j.code, pid: j.pid, uid: j.uid, lan: j.lan || ME.lan, pub: j.pub || ME.pub });
   CATALOG = j.catalog || CATALOG;
   sessionStorage.setItem('hub_session', JSON.stringify({ code: j.code, pid: j.pid }));
   history.replaceState(null, '', '?room=' + j.code);
@@ -218,7 +218,7 @@ function renderHome() {
 
 function inviteLink() {
   const local = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
-  const base = local && ME.lan.length ? ME.lan[0] : location.origin;
+  const base = ME.pub || (local && ME.lan.length ? ME.lan[0] : location.origin);
   return `${base}/?room=${ROOM.code}`;
 }
 
@@ -227,7 +227,8 @@ function renderRoom() {
   $('#room-code').textContent = ROOM.code;
   const local = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
   $('#room-links').innerHTML = `Mời bạn bè: <code>${esc(inviteLink())}</code>` +
-    (local && ME.lan.length ? '<br>Bạn đang mở bằng localhost — bạn bè cùng wifi dùng link trên. Chơi qua Internet: xem README.' : '');
+    (ME.pub ? (ME.lan.length ? `<br>Cùng wifi thì vào nhanh hơn: <code>${esc(ME.lan[0])}/?room=${ROOM.code}</code>` : '')
+      : local && ME.lan.length ? '<br>Bạn đang mở bằng localhost — bạn bè cùng wifi dùng link trên. Chơi qua Internet: chạy <code>npm run online</code>.' : '');
 
   // chọn game
   const box = $('#games');

@@ -11,6 +11,7 @@ Hub chơi game nhiều người qua LAN/Internet. Người chơi tạo **phòng*
 ## Chạy & kiểm thử
 ```bash
 node server.js                         # http://localhost:3000
+node server.js --online                # + tunnel Cloudflare (npm run online), link in ra console & dùng cho "Copy link mời"
 HUB_DEV=1 PORT=3917 node server.js     # hiện cả game trong thư mục "_..." (vd _template)
 node tools/simulate.js <gameId> [n] [key=value...]   # n ván toàn bot: phát hiện lỗi/kẹt, ước lượng thời lượng
 node tools/smoke.js <gameId> [port] [giây]           # E2E qua WebSocket với server đang chạy (Node 22+)
@@ -19,7 +20,8 @@ Trước khi coi một game là xong: `simulate` không lỗi/không kẹt, `smo
 
 ## Cấu trúc
 ```
-server.js            HTTP tĩnh + nâng cấp WebSocket tại /ws; nạp game; in link LAN
+server.js            HTTP tĩnh + nâng cấp WebSocket tại /ws; nạp game; in link LAN; --online thì mở tunnel
+hub/tunnel.js        chạy cloudflared (hoặc npx cloudflared) quick tunnel, bắt link *.trycloudflare.com, tắt theo server
 hub/ws.js            WebSocket server tự viết (RFC 6455), có ping/pong phát hiện kết nối chết
 hub/registry.js      nạp games/*/ (manifest.js + server.js), kiểm tra interface, tạo catalog cho client
 hub/rooms.js         phòng, thành viên, ghế, chủ phòng, bot, hẹn giờ lượt, tick real-time, giao thức tin nhắn
