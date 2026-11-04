@@ -8,7 +8,7 @@ const TEMPLATE = `
     <div id="players"></div>
     <div id="g-info" class="infobox"></div>
   </aside>
-  <main id="board-wrap">
+  <main id="board-wrap" class="dark">
     <svg id="board" viewBox="-640 -640 1280 1280"></svg>
     <div id="weather"></div>
     <div id="dice"><div class="cube"></div></div>
@@ -41,7 +41,7 @@ const esc = s => UI.esc(s);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const mySeat = () => CTX.me().seat;
 const canAct = () => !!GAME && !playing && !pending && GAME.phase !== 'over' && mySeat() >= 0 && GAME.turn === mySeat();
-const nm = p => (p == null ? '???' : `<b style="color:${C.SEATS[p].color}">${esc(NAMES[p] || C.SEATS[p].name)}</b>`);
+const nm = p => (p == null ? '???' : `<b class="pn" style="--c:${C.SEATS[p].color}">${esc(NAMES[p] || C.SEATS[p].name)}</b>`);
 function S(tag, attrs, parent) {
   const e = document.createElementNS(SVGNS, tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -97,13 +97,13 @@ function buildBoard(st) {
   svg.innerHTML = '';
   const defs = S('defs', {}, svg);
   defs.innerHTML = `
-    <radialGradient id="gBoard" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#2d3388"/><stop offset="1" stop-color="#0f1238"/></radialGradient>
+    <radialGradient id="gBoard" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#456e5d"/><stop offset="1" stop-color="#253f36"/></radialGradient>
     <radialGradient id="gCenter"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".45"/><stop offset="1" stop-color="#ffd23f" stop-opacity="0"/></radialGradient>
     <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     ${C.SEATS.map((s, p) => `<radialGradient id="hg${p}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".38" stop-color="${s.color}"/><stop offset="1" stop-color="${shade(s.color, -0.5)}"/></radialGradient>`).join('')}`;
   const bg = S('g', {}, svg);
   const hex = r => [0, 1, 2, 3, 4, 5].map(k => { const q = polar(r, k); return q.x + ',' + q.y; }).join(' ');
-  S('polygon', { points: hex(R + 50), fill: 'url(#gBoard)', stroke: 'rgba(255,255,255,.2)', 'stroke-width': 5, 'stroke-linejoin': 'round' }, bg);
+  S('polygon', { points: hex(R + 50), fill: 'url(#gBoard)', stroke: '#8b6243', 'stroke-width': 14, 'stroke-linejoin': 'round' }, bg);
   for (let p = 0; p < 6; p++) {
     const a = polar(R - 22, p), b = polar(R - 22, (p + 1) % 6), on = st.players[p].active;
     S('polygon', { points: `0,0 ${a.x},${a.y} ${b.x},${b.y}`, fill: on ? C.SEATS[p].color : '#888', opacity: on ? 0.1 : 0.03 }, bg);
@@ -112,7 +112,7 @@ function buildBoard(st) {
   S('polygon', { points: hex(R), fill: 'none', stroke: 'rgba(255,255,255,.07)', 'stroke-width': 36, 'stroke-linejoin': 'round' }, bg);
   // đường đua
   for (let c = 0; c < C.L; c++) {
-    const q = trackPos(c), p = Math.floor(c / C.SIDE), on = st.players[p].active, col = on ? C.SEATS[p].color : '#8a90b0';
+    const q = trackPos(c), p = Math.floor(c / C.SIDE), on = st.players[p].active, col = on ? C.SEATS[p].color : '#8f978f';
     if (c % C.SIDE === 0) {
       const g = S('circle', { cx: q.x, cy: q.y, r: 17, fill: col, 'fill-opacity': 0.25, stroke: col, 'stroke-width': 4 }, bg);
       S('title', {}, g).textContent = `Cửa chuồng ${C.SEATS[p].name}`;
@@ -133,13 +133,13 @@ function buildBoard(st) {
   }
   // tâm bàn
   S('circle', { r: 92, fill: 'url(#gCenter)' }, bg);
-  S('circle', { r: 72, fill: 'rgba(8,10,36,.7)', stroke: 'rgba(255,210,63,.4)', 'stroke-width': 2.5 }, bg);
+  S('circle', { r: 72, fill: 'rgba(16,30,25,.6)', stroke: 'rgba(255,210,63,.4)', 'stroke-width': 2.5 }, bg);
   // chuồng xuất phát
   for (let p = 0; p < 6; p++) {
-    const pl = st.players[p], on = pl.active, col = on ? C.SEATS[p].color : '#5a6080', c = stableCenter(p);
+    const pl = st.players[p], on = pl.active, col = on ? C.SEATS[p].color : '#a39b8f', c = stableCenter(p);
     S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': on ? 0.16 : 0.05, stroke: col, 'stroke-width': 3, 'stroke-dasharray': on ? 'none' : '8 6' }, bg);
-    if (on) pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(0,0,0,.35)', stroke: col, 'stroke-opacity': 0.5 }, bg); });
-    S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: col, class: 'lbl' }, bg).textContent = on ? pl.name : '';
+    if (on) pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(42,39,35,.1)', stroke: col, 'stroke-opacity': 0.6 }, bg); });
+    S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: shade(col, -0.42), class: 'lbl lbl-out' }, bg).textContent = on ? pl.name : '';
   }
   L_SPEC = S('g', {}, svg); L_MET = S('g', {}, svg); L_HINT = S('g', {}, svg); L_HORSE = S('g', {}, svg);
   HE = st.players.map((pl, p) => pl.horses.map((_, h) => makeHorse(p, h)));
@@ -483,7 +483,7 @@ function renderPanels() {
     d.style.setProperty('--c', C.SEATS[p].color);
     const status = pl.kind === 'bot' ? '🤖' : seat && seat.online ? '🟢' : '⚫';
     d.innerHTML = `
-      <div class="p-top"><span class="p-name" style="color:${C.SEATS[p].color}">${esc(pl.name)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
+      <div class="p-top"><span class="p-name pn">${esc(pl.name)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
       <div class="p-sub">${C.SEATS[p].horse} · 🏠${cnt('stable')} 🏇${cnt('track')} 🏁${cnt('home')}${pl.frozen ? ` · ❄️×${pl.frozen}` : ''}</div>
       ${GAME.opts.chaos ? `<div class="p-cards">${pl.cards.map(c => `<span title="${C.CARDS[c].name}: ${C.CARDS[c].desc}">${C.CARDS[c].icon}</span>`).join('') || '<span class="muted small">chưa có thẻ</span>'}</div>` : ''}
       <div class="p-bar"><i style="width:${pct}%"></i></div>
@@ -494,7 +494,7 @@ function renderPanels() {
 function renderInfo() {
   const parts = [`🔁 Lượt thứ <b>${GAME.turnCount + 1}</b>`];
   if (GAME.opts.chaos) parts.push(`⏳ Biến cố toàn bàn sau <b>${GAME.nextEventIn}</b> lượt`);
-  if (GAME.meteors) parts.push(`☄️ Sao băng rơi sau <b style="color:#ff8a3d">${GAME.meteors.in}</b> lượt — tránh xa ô ☄️!`);
+  if (GAME.meteors) parts.push(`☄️ Sao băng rơi sau <b style="color:#c4551b">${GAME.meteors.in}</b> lượt — tránh xa ô ☄️!`);
   parts.push(`📜 ${GAME.opts.home === 'classic' ? 'Về chuồng truyền thống' : 'Về chuồng nhanh'} · ${GAME.opts.block ? 'có luật cản' : 'không cản'}`);
   $('#g-info').innerHTML = parts.join('<br>');
   $('#g-turns').textContent = GAME.opts.horses + ' ngựa/người';

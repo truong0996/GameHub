@@ -35,7 +35,7 @@ Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `
 1. `cp -r games/_template games/<tengame>` (tên thư mục không có `_` thì mới hiện trên hub thường).
 2. `manifest.js`: đổi `id` (duy nhất), `name`, `icon`, `tagline`, `description`, `minPlayers`, `maxPlayers`, `seats` (đủ `maxPlayers` phần tử `{name, color, label?}`), `options`, `order`, `turnMs` (game theo lượt).
 3. `server.js`: viết luật theo interface bên dưới. Game theo lượt: bỏ `tickRate/tick`, thêm `turn/bot/animDuration`.
-4. `client.js` + `style.css`: giao diện. Mọi selector CSS bọc trong class gốc riêng của game (vd `.ccn`, `.px`).
+4. `client.js` + `style.css`: giao diện. Mọi selector CSS bọc trong class gốc riêng của game (vd `.ccn`, `.px`). Hub dùng theme sáng "Bàn gỗ dịu": dùng biến trong `public/hub.css` (`--surface`, `--chip`, `--line`, `--ink`, `--muted`, `--primary`, `--accent`, `--danger`, `--felt`, `--wood`, `--shadow`) thay vì tự đặt màu; tránh glow/gradient neon. Tên người chơi in màu ghế thì dùng `<b class="pn" style="--c:màu">` (tự đậm lại trên nền sáng); vùng nền tối (bàn nỉ, bàn cờ) gắn class `dark` để giữ màu gốc.
 5. Chạy `node tools/simulate.js <id> 50`, `node tools/smoke.js <id> <port>`, rồi chơi thử trên trình duyệt (cả khổ điện thoại).
 6. Cập nhật bảng game trong README.md.
 

@@ -2,15 +2,15 @@
 .px { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 16px; max-width: 900px; margin: 0 auto; }
 .px header { display: flex; align-items: center; gap: 12px; width: 100%; font-size: 20px; }
 .px #px-pad { flex: 1; width: 100%; min-height: 240px; border-radius: 32px; font-size: clamp(32px, 7vw, 72px); font-weight: 900; letter-spacing: .04em;
-  color: #fff; text-shadow: 0 4px 14px rgba(0,0,0,.5); user-select: none; touch-action: manipulation; transition: background .08s; }
-.px #px-pad.wait { background: radial-gradient(circle, #ff5a6e, #8b1022); box-shadow: 0 8px 0 #4d0812, 0 0 60px rgba(255,60,80,.4); }
-.px #px-pad.go { background: radial-gradient(circle, #5cff9a, #0f8a3d); box-shadow: 0 8px 0 #07461f, 0 0 80px rgba(60,255,140,.6); }
-.px #px-pad.result, .px #px-pad.over { background: radial-gradient(circle, #5f6fff, #2a2f8a); box-shadow: 0 8px 0 #161a5a; }
+  color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.35); user-select: none; touch-action: manipulation; transition: background .08s; }
+.px #px-pad.wait { background: radial-gradient(circle, #ff5a6e, #8b1022); box-shadow: 0 6px 0 #4d0812; }
+.px #px-pad.go { background: radial-gradient(circle, #5cff9a, #0f8a3d); box-shadow: 0 6px 0 #07461f; }
+.px #px-pad.result, .px #px-pad.over { background: radial-gradient(circle, #3f8a7a, #24594e); box-shadow: 0 6px 0 #183d36; }
 .px #px-pad.out { filter: grayscale(.7) brightness(.7); }
 .px #px-pad small { display: block; font-size: .35em; font-weight: 600; opacity: .85; margin-top: 8px; }
 .px #px-scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; width: 100%; }
-.px .sc { padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.05); border-left: 5px solid var(--c); }
+.px .sc { padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--c); }
 .px .sc b { font-size: 26px; float: right; }
-.px .sc.me { box-shadow: 0 0 0 2px #fff; }
-.px .sc.lead { background: color-mix(in srgb, var(--c) 22%, transparent); }
+.px .sc.me { box-shadow: 0 0 0 2px var(--ink); }
+.px .sc.lead { background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
 .px .bottom { display: flex; gap: 12px; width: 100%; align-items: center; flex-wrap: wrap; }

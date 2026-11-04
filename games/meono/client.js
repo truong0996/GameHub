@@ -11,7 +11,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => ST.players[p];
 const nm = p => UI.esc(ST.players[p] ? ST.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#fff');
-const who = p => `<b style="color:${col(p)}">${nm(p)}</b>`;
+const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
 const cname = c => `${CARDS[c].icon} ${CARDS[c].name}`;
 const sortHand = h => h.slice().sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
 const myHand = () => (mySeat() >= 0 && P(mySeat()).hand ? sortHand(P(mySeat()).hand) : []);
@@ -66,7 +66,7 @@ function cardHTML(c, cls = '') {
 const TEMPLATE = `<div class="mn">
   <div class="mn-main">
     <div id="mn-players"></div>
-    <div id="mn-table">
+    <div id="mn-table" class="dark">
       <div class="pile" id="mn-deck" title="Bấm để rút bài"><div class="stack"></div><div class="pile-info" id="mn-deck-info"></div></div>
       <div id="mn-stage"></div>
       <div class="pile" id="mn-discard"><div class="stack"></div><div class="pile-info" id="mn-discard-info"></div></div>
@@ -263,7 +263,7 @@ async function fly(card, from, to, { ms = 520, delay = 0, scale = 1 } = {}) {
 }
 // Lá bài to giữa màn hình (rút trúng mèo, gỡ bom...).
 async function spot(card, caption, cls = '', ms = 900) {
-  const d = UI.el('div', 'mn-spot ' + cls, `${cardHTML(card, 'xl')}<div class="cap">${caption}</div>`);
+  const d = UI.el('div', 'mn-spot dark ' + cls, `${cardHTML(card, 'xl')}<div class="cap">${caption}</div>`);
   $('.mn').appendChild(d);
   await sleep(ms);
   d.classList.add('out');

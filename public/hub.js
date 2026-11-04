@@ -214,16 +214,6 @@ function show(name) {
 
 function renderHome() {
   $('#showcase').innerHTML = CATALOG.map(g => `<span>${g.icon} ${esc(g.name)}</span>`).join('');
-  const parade = $('#parade');
-  parade.innerHTML = '';
-  const icons = CATALOG.map(g => g.icon);
-  for (let i = 0; i < 6; i++) {
-    const sp = el('span', '', `<i>${icons[i % icons.length]}</i>`);
-    sp.style.bottom = (i % 3) * 14 + 'px';
-    sp.style.animationDuration = 7 + Math.random() * 5 + 's';
-    sp.style.animationDelay = -Math.random() * 10 + 's';
-    parade.appendChild(sp);
-  }
 }
 
 function inviteLink() {
