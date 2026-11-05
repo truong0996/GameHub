@@ -57,6 +57,8 @@ function guessAction(g, seat) {
   if (s.phase === 'bid') return { type: 'pass' };
   if (s.phase === 'flip') return { type: 'flip', s: s.options[0] };
   if (s.phase === 'discard') return { type: 'discard', k: hand[0] };
+  if (s.endAt) return { buy: { type: 'buy' }, rent: { type: 'pay' }, buyout: { type: 'skip' }, casino: { type: 'bet', amt: 0 }, stock: { type: 'invest', amt: 0 }, // Cờ Tỷ Phú
+    train: { type: 'train', to: -1 }, auction: { type: 'bid', amt: 0 } }[s.phase] || { type: 'roll' };
   return { type: 'roll' };
 }
 const end = Date.now() + +secs * 1000;
@@ -69,7 +71,8 @@ while (Date.now() < end) {
     const me = g.state.players && g.state.players[seat];
     const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go'
       || (g.state.phase === 'decide' && me.status === 'in' && !me.choice)
-      || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat);
+      || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat)
+      || (g.state.phase === 'auction' && g.state.auc && !(seat in g.state.auc.bids));
     if (myTurn) { const r = await c.req('act', { action: guessAction(g, seat) }); if (r.ok) acted++; }
   }
 }
