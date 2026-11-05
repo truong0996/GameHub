@@ -1,11 +1,9 @@
 // Cờ Cá Ngựa — Lục Mã Hỗn Chiến: luật chơi thuần (không I/O), dùng chung cho server và trình duyệt.
 
-const NP = 6;            // số ghế
-const SIDE = 12;         // số ô mỗi cạnh lục giác
-const L = NP * SIDE;     // 72 ô đường đua
-const HOME = 6;          // 6 bậc chuồng đích
-const GATE = L - 1;      // progress của cửa chuồng (ô góc ngay trước ô xuất phát)
+const HOME = 6;           // 6 bậc chuồng đích
 const MAX_CARDS = 3;
+// Hình bàn theo số người chơi: [số cạnh, số ô mỗi cạnh]. Mỗi người giữ 1 cạnh; 2 người ngồi đối diện trên bàn vuông.
+const LAYOUT = { 2: [4, 12], 3: [3, 16], 4: [4, 12], 5: [5, 12], 6: [6, 12] };
 
 const SEATS = [
   { color: '#ff4d6d', name: 'Đỏ',   horse: 'Xích Thố' },
@@ -64,19 +62,23 @@ function weighted(obj) {
 }
 const randCard = () => pick(CARD_KEYS);
 
-const startCell = p => (p * SIDE + 1) % L;
-const gateCell = p => p * SIDE;
-const absOf = (p, prog) => (startCell(p) + prog) % L;
-const progOf = (p, cell) => ((cell - startCell(p)) % L + L) % L;
-const isCorner = c => c % SIDE === 0;
-const isStart = c => c % SIDE === 1;
+// Đường đua dài st.L ô, cạnh k gồm các ô k*st.side ... ; st.ring[k] = ghế giữ cạnh k (null = cạnh trống).
+// Ô đầu cạnh là cửa chuồng, ô kế tiếp là ô xuất phát của ghế đó.
+const gateOf = st => st.L - 1;   // progress của cửa chuồng (ô góc ngay trước ô xuất phát)
+const startCell = (st, p) => st.players[p].side * st.side + 1;
+const gateCell = (st, p) => st.players[p].side * st.side;
+const absOf = (st, p, prog) => (startCell(st, p) + prog) % st.L;
+const progOf = (st, p, cell) => ((cell - startCell(st, p)) % st.L + st.L) % st.L;
+const sideSeat = (st, c) => st.ring[Math.floor(c / st.side)];
+const isCorner = (st, c) => c % st.side === 0 && sideSeat(st, c) != null;
+const isStart = (st, c) => c % st.side === 1 && sideSeat(st, c) != null;
 const newHorse = () => ({ loc: 'stable', prog: 0, step: 0, shield: false });
 
 function occMap(st) {
   const m = {};
   st.players.forEach((pl, p) => {
     if (!pl.active) return;
-    pl.horses.forEach((hs, h) => { if (hs.loc === 'track') m[absOf(p, hs.prog)] = { p, h }; });
+    pl.horses.forEach((hs, h) => { if (hs.loc === 'track') m[absOf(st, p, hs.prog)] = { p, h }; });
   });
   return m;
 }
@@ -90,21 +92,22 @@ function trackHorses(st) {
 }
 function locKey(st, p, h) {
   const hs = st.players[p].horses[h];
-  if (hs.loc === 'track') return 'T' + absOf(p, hs.prog);
+  if (hs.loc === 'track') return 'T' + absOf(st, p, hs.prog);
   if (hs.loc === 'home') return 'H' + p + ':' + hs.step;
   return 'S' + p + ':' + h;
 }
-function scoreOf(pl) {
+function scoreOf(st, pl) {
   let s = 0;
-  for (const hs of pl.horses) s += hs.loc === 'track' ? hs.prog + 1 : hs.loc === 'home' ? GATE + 1 + hs.step : 0;
+  for (const hs of pl.horses) s += hs.loc === 'track' ? hs.prog + 1 : hs.loc === 'home' ? st.L + hs.step : 0;
   return s;
 }
-const maxScore = pl => pl.horses.length * (GATE + 1 + HOME);
+const maxScore = (st, pl) => pl.horses.length * (st.L + HOME);
 
 // ---------- ô đặc biệt ----------
+// Số ô quà/bí ẩn theo tỉ lệ độ dài đường đua (72 ô: 6 ô quà, 5 ô bí ẩn); luôn có 2 cặp cổng.
 function placeSpecials(st) {
-  const o = occMap(st);
-  const free = shuffle([...Array(L).keys()].filter(c => !isCorner(c) && !isStart(c) && !o[c]));
+  const L = st.L, o = occMap(st);
+  const free = shuffle([...Array(L).keys()].filter(c => !isCorner(st, c) && !isStart(st, c) && !o[c]));
   const taken = new Set();
   const ok = c => !taken.has(c) && !taken.has((c + 1) % L) && !taken.has((c + L - 1) % L);
   const take = (cond = () => true) => {
@@ -115,32 +118,37 @@ function placeSpecials(st) {
   const sp = [];
   for (let pair = 0; pair < 2; pair++) {
     const a = take(); if (a == null) break;
-    const b = take(c => Math.min((c - a + L) % L, (a - c + L) % L) >= 18);
+    const b = take(c => Math.min((c - a + L) % L, (a - c + L) % L) >= L / 4);
     if (b == null) { taken.delete(a); continue; }
     sp.push({ cell: a, type: 'portal', pair }, { cell: b, type: 'portal', pair });
   }
-  for (let i = 0; i < 6; i++) { const c = take(); if (c != null) sp.push({ cell: c, type: 'card' }); }
-  for (let i = 0; i < 5; i++) { const c = take(); if (c != null) sp.push({ cell: c, type: 'mystery' }); }
+  for (let i = 0; i < Math.round(L / 12); i++) { const c = take(); if (c != null) sp.push({ cell: c, type: 'card' }); }
+  for (let i = 0; i < Math.round(L * 5 / 72); i++) { const c = take(); if (c != null) sp.push({ cell: c, type: 'mystery' }); }
   st.specials = sp;
 }
 function freeSpecialCell(st) {
-  const o = occMap(st);
+  const L = st.L, o = occMap(st);
   const near = c => st.specials.some(s => s.cell === c || s.cell === (c + 1) % L || s.cell === (c + L - 1) % L);
-  const cells = [...Array(L).keys()].filter(c => !isCorner(c) && !isStart(c) && !o[c] && !near(c));
+  const cells = [...Array(L).keys()].filter(c => !isCorner(st, c) && !isStart(st, c) && !o[c] && !near(c));
   return cells.length ? pick(cells) : null;
 }
 
 // ---------- tạo ván ----------
 function newGame(seatInfo, opts) {
-  opts = Object.assign({ horses: 3, block: true, chaos: true, eventEvery: 10, home: 'fast' }, opts);
+  opts = Object.assign({ horses: 4, block: true, chaos: true, eventEvery: 10, home: 'fast' }, opts);
   const players = seatInfo.map(s => ({
     active: !!s, kind: s ? s.kind : null, name: s ? s.name : '',
     horses: s ? Array.from({ length: opts.horses }, newHorse) : [],
-    cards: [], frozen: 0, sixStreak: 0, finished: false,
+    cards: [], frozen: 0, sixStreak: 0, finished: false, side: -1,
   }));
   const actives = players.map((pl, i) => (pl.active ? i : -1)).filter(i => i >= 0);
+  // Xếp các ghế có người lên các cạnh theo thứ tự ghế (cũng là thứ tự lượt, theo chiều kim đồng hồ).
+  const [sides, side] = LAYOUT[Math.min(6, Math.max(2, actives.length))];
+  const ring = Array(sides).fill(null), gap = sides / actives.length;
+  actives.forEach((p, i) => { ring[i * gap] = p; players[p].side = i * gap; });
   const st = {
-    opts, players, turn: pick(actives), phase: 'roll', dice: null, moveVal: null, legal: [],
+    opts, players, ring, side, L: sides * side,
+    turn: pick(actives), phase: 'roll', dice: null, moveVal: null, legal: [],
     cardUsed: false, ghost: false, turbo: false, specials: [], meteors: null,
     turnCount: 0, nextEventIn: opts.eventEvery, lastEvent: null, winner: null,
   };
@@ -153,14 +161,14 @@ function newGame(seatInfo, opts) {
 
 // ---------- nước đi hợp lệ ----------
 function legalMoves(st, p, d) {
-  const pl = st.players[p], o = occMap(st), res = [];
+  const pl = st.players[p], o = occMap(st), res = [], GATE = gateOf(st);
   const mv = st.turbo ? d * 2 : d;
   const block = st.opts.block && !st.ghost, fast = st.opts.home !== 'classic';
   const blockedBy = x => x && (x.p === p || horseOf(st, x).shield);
   pl.horses.forEach((hs, h) => {
     if (hs.loc === 'stable') {
       if (d !== 1 && d !== 6) return;
-      const c = startCell(p), x = o[c];
+      const c = startCell(st, p), x = o[c];
       if (blockedBy(x)) return;
       res.push({ h, kind: 'out', to: 'T' + c, kick: x || null });
     } else if (hs.loc === 'track') {
@@ -170,13 +178,13 @@ function legalMoves(st, p, d) {
         const step = hs.prog === GATE ? d : np - GATE;
         if (hs.prog !== GATE && !fast) return;
         if (step > HOME) return;
-        if (block) for (let k = hs.prog + 1; k <= GATE; k++) if (o[absOf(p, k)]) return;
+        if (block) for (let k = hs.prog + 1; k <= GATE; k++) if (o[absOf(st, p, k)]) return;
         for (let s = 1; s <= step; s++) if (homeOcc(pl, s)) return;
         res.push({ h, kind: 'enter', to: 'H' + p + ':' + step, step, kick: null });
         return;
       }
-      if (block) for (let k = 1; k < mv; k++) if (o[absOf(p, hs.prog + k)]) return;
-      const c = absOf(p, np), x = o[c];
+      if (block) for (let k = 1; k < mv; k++) if (o[absOf(st, p, hs.prog + k)]) return;
+      const c = absOf(st, p, np), x = o[c];
       if (blockedBy(x)) return;
       res.push({ h, kind: 'track', to: 'T' + c, kick: x || null });
     } else {
@@ -287,10 +295,10 @@ function doMove(st, p, m, ev) {
   if (m.kind === 'out') {
     path.push(m.to); hs.loc = 'track'; hs.prog = 0;
   } else if (m.kind === 'track') {
-    for (let k = 1; k <= st.moveVal; k++) path.push('T' + absOf(p, hs.prog + k));
+    for (let k = 1; k <= st.moveVal; k++) path.push('T' + absOf(st, p, hs.prog + k));
     hs.prog += st.moveVal;
   } else if (m.kind === 'enter') {
-    for (let k = hs.prog + 1; k <= GATE; k++) path.push('T' + absOf(p, k));
+    for (let k = hs.prog + 1; k <= gateOf(st); k++) path.push('T' + absOf(st, p, k));
     for (let s = 1; s <= m.step; s++) path.push('H' + p + ':' + s);
     hs.loc = 'home'; hs.step = m.step; hs.shield = false;
   } else {
@@ -329,9 +337,9 @@ function gainCard(st, p, card, ev) {
 
 function swapHorses(st, A, B, ev, kind) {
   const ha = horseOf(st, A), hb = horseOf(st, B);
-  const ca = absOf(A.p, ha.prog), cb = absOf(B.p, hb.prog);
-  ha.prog = progOf(A.p, cb);
-  hb.prog = progOf(B.p, ca);
+  const ca = absOf(st, A.p, ha.prog), cb = absOf(st, B.p, hb.prog);
+  ha.prog = progOf(st, A.p, cb);
+  hb.prog = progOf(st, B.p, ca);
   const moves = [{ p: A.p, h: A.h, from: 'T' + ca, to: 'T' + cb }, { p: B.p, h: B.h, from: 'T' + cb, to: 'T' + ca }];
   if (ev) ev.push({ t: 'swap', kind, moves });
   return moves;
@@ -340,7 +348,7 @@ function swapHorses(st, A, B, ev, kind) {
 // Trả về true nếu được thêm lượt.
 function landSpecial(st, p, h, ev) {
   const pl = st.players[p], hs = pl.horses[h];
-  const cell = absOf(p, hs.prog), sp = specialAt(st, cell);
+  const cell = absOf(st, p, hs.prog), sp = specialAt(st, cell);
   if (!sp) return false;
   if (sp.type === 'card') { gainCard(st, p, randCard(), ev); return false; }
   if (sp.type === 'portal') {
@@ -349,7 +357,7 @@ function landSpecial(st, p, h, ev) {
     const x = occMap(st)[dest.cell];
     if (x && (x.p === p || horseOf(st, x).shield)) { ev.push({ t: 'msg', p, text: 'cổng dịch chuyển bị chặn 🌀' }); return false; }
     if (x) kick(st, x, p, ev);
-    hs.prog = progOf(p, dest.cell);
+    hs.prog = progOf(st, p, dest.cell);
     ev.push({ t: 'fly', p, h, from: 'T' + cell, to: 'T' + dest.cell, kind: 'portal' });
     return false;
   }
@@ -363,8 +371,8 @@ function landSpecial(st, p, h, ev) {
       const dir = outcome === 'boost' ? 1 : -1, max = outcome === 'boost' ? 4 : 3;
       for (let k = max; k >= 1; k--) {
         const np = hs.prog + dir * k;
-        if (np < 0 || np > GATE || o[absOf(p, np)]) continue;
-        ev.push({ t: 'fly', p, h, from: 'T' + cell, to: 'T' + absOf(p, np), kind: outcome });
+        if (np < 0 || np > gateOf(st) || o[absOf(st, p, np)]) continue;
+        ev.push({ t: 'fly', p, h, from: 'T' + cell, to: 'T' + absOf(st, p, np), kind: outcome });
         hs.prog = np; break;
       }
       break;
@@ -395,7 +403,7 @@ function endTurn(st, ev) {
   if (st.opts.chaos && --st.nextEventIn <= 0) { triggerGlobal(st, ev); st.nextEventIn = st.opts.eventEvery; }
   let p = st.turn;
   for (let guard = 0; guard < 60; guard++) {
-    p = (p + 1) % NP;
+    p = (p + 1) % st.players.length;
     const pl = st.players[p];
     if (!pl.active || pl.finished) continue;
     if (pl.frozen > 0) { pl.frozen--; ev.push({ t: 'skip', p }); continue; }
@@ -409,13 +417,13 @@ function endTurn(st, ev) {
 function shiftAll(st, delta, moves) {
   for (const x of shuffle(trackHorses(st).filter(x => !horseOf(st, x).shield))) {
     const hs = horseOf(st, x);
-    if (delta > 0 && hs.prog === GATE) continue;
+    if (delta > 0 && hs.prog === gateOf(st)) continue;
     for (let k = Math.abs(delta); k >= 1; k--) {
       const np = hs.prog + Math.sign(delta) * k;
-      if (np < 0 || np > GATE) continue;
-      const c = absOf(x.p, np);
+      if (np < 0 || np > gateOf(st)) continue;
+      const c = absOf(st, x.p, np);
       if (occMap(st)[c]) continue;
-      moves.push({ p: x.p, h: x.h, from: 'T' + absOf(x.p, hs.prog), to: 'T' + c });
+      moves.push({ p: x.p, h: x.h, from: 'T' + absOf(st, x.p, hs.prog), to: 'T' + c });
       hs.prog = np;
       break;
     }
@@ -441,9 +449,10 @@ function triggerGlobal(st, ev) {
     }
     case 'meteor': {
       const o = occMap(st);
-      const cand = [...Array(L).keys()].filter(c => !isCorner(c) && !isStart(c));
+      const cand = [...Array(st.L).keys()].filter(c => !isCorner(st, c) && !isStart(st, c));
       const hot = shuffle(cand.filter(c => o[c] && !horseOf(st, o[c]).shield)).slice(0, 2);
-      const cells = hot.concat(shuffle(cand.filter(c => !hot.includes(c))).slice(0, 5 - hot.length));
+      const n = Math.max(3, Math.round(st.L * 5 / 72));
+      const cells = hot.concat(shuffle(cand.filter(c => !hot.includes(c))).slice(0, n - hot.length));
       st.meteors = { cells, in: st.players.filter(pl => pl.active && !pl.finished).length };
       e.cells = cells;
       break;
@@ -487,10 +496,10 @@ function danger(st, p, cell) {
     if (q === p || !pl.active || pl.finished) return;
     pl.horses.forEach(hs => {
       if (hs.loc !== 'track') return;
-      const dist = ((cell - absOf(q, hs.prog)) % L + L) % L;
-      if (dist >= 1 && dist <= 6 && hs.prog + dist <= GATE) d++;
+      const dist = ((cell - absOf(st, q, hs.prog)) % st.L + st.L) % st.L;
+      if (dist >= 1 && dist <= 6 && hs.prog + dist <= gateOf(st)) d++;
     });
-    if (cell === startCell(q) && pl.horses.some(hs => hs.loc === 'stable')) d++;
+    if (cell === startCell(st, q) && pl.horses.some(hs => hs.loc === 'stable')) d++;
   });
   return d;
 }
@@ -499,20 +508,20 @@ function scoreMove(st, p, m, d, mv) {
   const pl = st.players[p], hs = pl.horses[m.h];
   let s = Math.random() * 4;
   if (m.kick) s += 60 + horseOf(st, m.kick).prog * 0.5;
-  if (m.kind === 'out') s += 32 - danger(st, p, startCell(p)) * 6;
+  if (m.kind === 'out') s += 32 - danger(st, p, startCell(st, p)) * 6;
   else if (m.kind === 'enter') s += 42 + m.step;
   else if (m.kind === 'home') s += 38;
   else {
-    const np = hs.prog + mv, c = absOf(p, np), from = absOf(p, hs.prog);
+    const np = hs.prog + mv, c = absOf(st, p, np), from = absOf(st, p, hs.prog);
     s += mv * 0.8 + np * 0.05;
     const sp = st.opts.chaos ? specialAt(st, c) : null;
     if (sp && sp.type === 'card') s += pl.cards.length < MAX_CARDS ? 14 : 2;
     if (sp && sp.type === 'mystery') s += 7;
     if (sp && sp.type === 'portal') {
       const dst = st.specials.find(x => x.type === 'portal' && x.pair === sp.pair && x.cell !== c);
-      if (dst) s += (progOf(p, dst.cell) - np) * 0.7;
+      if (dst) s += (progOf(st, p, dst.cell) - np) * 0.7;
     }
-    if (np === GATE) s += 14;
+    if (np === gateOf(st)) s += 14;
     if (!hs.shield) s += (danger(st, p, from) - danger(st, p, c)) * (8 + hs.prog * 0.35);
     if (st.meteors) {
       if (st.meteors.cells.includes(c)) s -= 45;
@@ -525,12 +534,12 @@ function scoreMove(st, p, m, d, mv) {
 function botCard(st, p) {
   const pl = st.players[p], has = c => pl.cards.includes(c);
   if (!pl.cards.length) return null;
-  const my = scoreOf(pl);
+  const my = scoreOf(st, pl);
   if (has('freeze')) {
     let lead = -1, ls = -1;
     st.players.forEach((q, i) => {
       if (i === p || !q.active || q.finished || q.frozen) return;
-      const s = scoreOf(q); if (s > ls) { ls = s; lead = i; }
+      const s = scoreOf(st, q); if (s > ls) { ls = s; lead = i; }
     });
     if (lead >= 0 && ls >= my * 0.9 && Math.random() < 0.6) return { type: 'card', card: 'freeze', target: lead };
   }
@@ -543,25 +552,25 @@ function botCard(st, p) {
     if (bestS >= 60) return { type: 'card', card: 'golden', value: bestV };
   }
   if (has('shield')) {
-    const h = pl.horses.findIndex(hs => hs.loc === 'track' && !hs.shield && hs.prog > 20 && danger(st, p, absOf(p, hs.prog)) > 0);
+    const h = pl.horses.findIndex(hs => hs.loc === 'track' && !hs.shield && hs.prog > st.L * 0.28 && danger(st, p, absOf(st, p, hs.prog)) > 0);
     if (h >= 0) return { type: 'card', card: 'shield', h };
   }
   if (has('swap')) {
-    let best = null, gain = 30;
+    let best = null, gain = st.L * 0.4;
     pl.horses.forEach((hs, h) => {
       if (hs.loc !== 'track') return;
       st.players.forEach((q, qi) => {
         if (qi === p || !q.active) return;
         q.horses.forEach((th, thi) => {
           if (th.loc !== 'track' || th.shield) return;
-          const g = progOf(p, absOf(qi, th.prog)) - hs.prog;
+          const g = progOf(st, p, absOf(st, qi, th.prog)) - hs.prog;
           if (g > gain) { gain = g; best = { h, target: { p: qi, h: thi } }; }
         });
       });
     });
     if (best) return { type: 'card', card: 'swap', h: best.h, target: best.target };
   }
-  const onTrack = pl.horses.some(hs => hs.loc === 'track' && hs.prog < GATE - 8);
+  const onTrack = pl.horses.some(hs => hs.loc === 'track' && hs.prog < gateOf(st) - 8);
   if (onTrack && has('turbo') && Math.random() < 0.3) return { type: 'card', card: 'turbo' };
   if (onTrack && has('ghost') && Math.random() < 0.25) return { type: 'card', card: 'ghost' };
   return null;
@@ -581,7 +590,7 @@ function botAction(st, p, noCards) {
 }
 
 export {
-  NP, SIDE, L, HOME, GATE, MAX_CARDS, SEATS, CARDS, MYSTERY, EVENTS, DUR,
-  startCell, gateCell, absOf, progOf, occMap, specialAt, locKey, scoreOf, maxScore,
+  HOME, MAX_CARDS, SEATS, CARDS, MYSTERY, EVENTS, DUR,
+  gateOf, startCell, gateCell, sideSeat, absOf, progOf, occMap, specialAt, locKey, scoreOf, maxScore,
   legalMoves, distinctMoves, newGame, act, botAction, animDuration,
 };

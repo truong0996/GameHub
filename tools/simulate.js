@@ -1,6 +1,7 @@
 // Mô phỏng nhiều ván chỉ có bot để kiểm tra luật (không lỗi, không kẹt) và ước lượng độ dài ván.
 //   node tools/simulate.js <gameId> [số ván] [key=value ...]
 //   vd: node tools/simulate.js cocangua 50 horses=4 chaos=false
+//   players=<n>: chỉ có n bot, ngồi ở n ghế ngẫu nhiên (mặc định ngồi kín maxPlayers ghế)
 // Game theo lượt: dùng turn() + bot(). Game real-time: gọi tick() với đồng hồ giả (tickRate).
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,8 +16,10 @@ if (!id || !games.has(id)) {
 }
 const { manifest: M, logic: L } = games.get(id);
 const opts = defaultOpts(M);
+let players = M.maxPlayers;
 for (const pair of kv) {
   const [k, v] = pair.split('=');
+  if (k === 'players') { players = Math.max(M.minPlayers, Math.min(M.maxPlayers, +v)); continue; }
   opts[k] = v === 'true' ? true : v === 'false' ? false : isNaN(+v) ? v : +v;
 }
 const N = +nArg || 20, MAX_STEPS = 200000;
@@ -24,7 +27,8 @@ let steps = 0, simMs = 0, stuck = 0;
 const t0 = Date.now();
 
 for (let g = 0; g < N; g++) {
-  const seats = Array.from({ length: M.maxPlayers }, (_, i) => ({ kind: 'bot', name: 'Bot ' + i }));
+  const sat = new Set([...Array(M.maxPlayers).keys()].sort(() => Math.random() - 0.5).slice(0, players));
+  const seats = Array.from({ length: M.maxPlayers }, (_, i) => (sat.has(i) ? { kind: 'bot', name: 'Bot ' + i } : null));
   let now = 1e12;
   const { state } = L.create({ seats, opts: { ...opts }, now });
   let s = 0, lastKey;
@@ -49,6 +53,6 @@ for (let g = 0; g < N; g++) {
   simMs += now - 1e12;
 }
 
-console.log(`${M.icon} ${M.name} — ${N} ván, ${M.maxPlayers} bot, opts ${JSON.stringify(opts)}`);
+console.log(`${M.icon} ${M.name} — ${N} ván, ${players} bot, opts ${JSON.stringify(opts)}`);
 console.log(`  bước TB/ván: ${Math.round(steps / N)} · thời lượng TB (giả lập): ${(simMs / N / 60000).toFixed(1)} phút · kẹt: ${stuck} · chạy mất ${Date.now() - t0} ms`);
 if (stuck) process.exit(1);

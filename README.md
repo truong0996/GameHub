@@ -4,7 +4,7 @@ Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game r
 
 | Game | Kiểu | Người chơi |
 |---|---|---|
-| 🐴 **Cờ Cá Ngựa — Lục Mã Hỗn Chiến** | theo lượt | 2–6 |
+| 🐴 **Cờ Cá Ngựa — Lục Mã Hỗn Chiến** — bàn đổi hình theo số người (2 vuông đối diện, 3 tam giác, 4 vuông, 5 ngũ giác, 6 lục giác) | theo lượt | 2–6 |
 | 💣 **Mèo Nổ** — Exploding Kittens, thêm chế độ Hỗn Loạn (Mèo Hẹn Giờ, Bom Tổng Lực, hồn ma...) | theo lượt + hô "Không!" ngoài lượt | 2–6 |
 | 💎 **Kho Báu Inca** — Incan Gold, thêm chế độ Hỗn Loạn (bùa, lá bí ẩn, đền có luật riêng, chơi xấu nhau) | chọn bí mật cùng lúc | 2–8 |
 | ⚡ Phản Xạ *(game mẫu, chỉ hiện khi `HUB_DEV=1`)* | real-time | 2–6 |
@@ -34,6 +34,6 @@ Mỗi game là một thư mục trong `games/`. Cách thêm game mới, interfac
 
 ```bash
 HUB_DEV=1 node server.js                 # hiện cả game mẫu games/_template
-node tools/simulate.js cocangua 50        # mô phỏng 50 ván toàn bot
+node tools/simulate.js cocangua 50        # mô phỏng 50 ván toàn bot (thêm players=3 để thử 3 người)
 node tools/smoke.js cocangua 3000         # kiểm tra đầu-cuối với server đang chạy (Node 22+)
 ```

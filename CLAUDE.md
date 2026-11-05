@@ -13,7 +13,7 @@ Hub chơi game nhiều người qua LAN/Internet. Người chơi tạo **phòng*
 node server.js                         # http://localhost:3000
 node server.js --online                # + tunnel Cloudflare (npm run online), link in ra console & dùng cho "Copy link mời"
 HUB_DEV=1 PORT=3917 node server.js     # hiện cả game trong thư mục "_..." (vd _template)
-node tools/simulate.js <gameId> [n] [key=value...]   # n ván toàn bot: phát hiện lỗi/kẹt, ước lượng thời lượng
+node tools/simulate.js <gameId> [n] [key=value...]   # n ván toàn bot: phát hiện lỗi/kẹt, ước lượng thời lượng; players=<k> = chỉ k bot ở ghế ngẫu nhiên
 node tools/smoke.js <gameId> [port] [giây]           # E2E qua WebSocket với server đang chạy (Node 22+)
 ```
 Trước khi coi một game là xong: `simulate` không lỗi/không kẹt, `smoke` OK, và mở trình duyệt chơi thử (skill playwright-cli). Lưu ý: mỗi lệnh `playwright-cli` mất ~2s nên không đủ nhanh cho game real-time — với game đó, cài một đoạn script tự động ngay trong trang qua `eval`.
@@ -90,3 +90,4 @@ Server → client: `room {room}`, `game {matchId, game, state, events, meta, dea
 - Mèo Nổ: `cards.js` dùng chung (tên lá, combo, thời lượng animation); luật + bot nằm trong `server.js` để không lộ chồng bài. `state.ask` = ghế đang phải quyết định (khác `turn` khi bị Xin Bài). `resolve` kiểm tra `now >= react.until` để client không tự đóng cửa sổ sớm.
 - Kho Báu Inca: `data.js` dùng chung (lá, bùa, đền, thời lượng animation); luật + bot trong `server.js`. `view` ẩn chồng bài, ngọc trong lều và lựa chọn của người khác (trừ khi người xem dùng bùa Mắt Kền Kền), bùa "bí ẩn" che tên trong `viewEvents`. Client giữ bản `V` cập nhật dần theo từng sự kiện để vẽ, diễn xong thì thay bằng state thật.
 - Cờ cá ngựa: luật ở `games/cocangua/rules.js` (dùng chung server + client). Mặc định luật về chuồng "nhanh" vì luật truyền thống làm ván 6 người dài gần gấp đôi (đo bằng simulate).
+- Cờ cá ngựa: bàn là đa giác đều dựng lúc bắt đầu ván theo số ghế có người (`LAYOUT` trong rules.js: 2 → vuông 4×12 ngồi đối diện, 3 → tam giác 3×16, 4/5/6 → N×12 ô). `st.ring[k]` = ghế giữ cạnh k (null = cạnh trống), `players[p].side` = cạnh của ghế p, `st.L`/`st.side` = số ô; mọi hàm toạ độ (`absOf`, `startCell`, `gateOf`...) nhận `st`. Số ô quà/bí ẩn/sao băng tỉ lệ theo `st.L`. Client tính hình + viewBox vừa khít trong `setGeometry`.

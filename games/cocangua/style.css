@@ -38,7 +38,7 @@
 .ccn .hint { fill: rgba(255,255,255,.12); stroke: #fff; stroke-width: 2.5; stroke-dasharray: 5 4; transform-box: fill-box; transform-origin: center; animation: ccn-spin 2s linear infinite; pointer-events: none; }
 
 /* Xúc xắc 3D */
-.ccn #dice { position: absolute; left: 50%; top: 50%; width: 7.5cqw; height: 7.5cqw; margin: -3.75cqw 0 0 -3.75cqw; perspective: 40cqw; z-index: 3; pointer-events: none; }
+.ccn #dice { position: absolute; left: var(--cx, 50%); top: var(--cy, 50%); width: 7.5cqw; height: 7.5cqw; margin: -3.75cqw 0 0 -3.75cqw; perspective: 40cqw; z-index: 3; pointer-events: none; }
 .ccn #dice.can { pointer-events: auto; cursor: pointer; }
 .ccn #dice.can::after { content: ''; position: absolute; inset: -1.6cqw; border-radius: 30%; border: .35cqw solid var(--accent); animation: ccn-halo 1s ease-in-out infinite; }
 .ccn #dice::before { content: ''; position: absolute; inset: -2cqw; border-radius: 50%; background: radial-gradient(circle, var(--glow, #fff) 0%, transparent 65%); opacity: .45; z-index: -1; }
@@ -57,7 +57,7 @@
 .ccn .f3 { transform: rotateX(90deg) translateZ(3.75cqw); }
 .ccn .f4 { transform: rotateX(-90deg) translateZ(3.75cqw); }
 .ccn #dice.golden .face { background: linear-gradient(145deg, #fff6c2, #f0b400); }
-.ccn #dice-mods { position: absolute; color: #fff; left: 50%; top: calc(50% + 5.6cqw); transform: translateX(-50%); font-size: 2cqw; font-weight: 800; white-space: nowrap; text-shadow: 0 2px 6px #000; pointer-events: none; }
+.ccn #dice-mods { position: absolute; color: #fff; left: var(--cx, 50%); top: calc(var(--cy, 50%) + 5.6cqw); transform: translateX(-50%); font-size: 2cqw; font-weight: 800; white-space: nowrap; text-shadow: 0 2px 6px #000; pointer-events: none; }
 
 /* Banner */
 .ccn #banner { position: absolute; left: 50%; top: 29%; width: 92%; transform: translate(-50%, -50%) scale(.4); opacity: 0; pointer-events: none; text-align: center; z-index: 6;

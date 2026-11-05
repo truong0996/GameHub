@@ -29,7 +29,6 @@ const TEMPLATE = `
 
 const SVGNS = 'http://www.w3.org/2000/svg';
 const KNIGHT = '♞︎';
-const R = 400;
 
 // ---------- trạng thái của instance (chỉ 1 ván được mount tại 1 thời điểm) ----------
 let CTX, UI, SFX, ROOT;
@@ -67,14 +66,39 @@ const snd = {
 };
 
 // ================= HÌNH HỌC =================
-const ang = k => (-90 + 60 * k) * Math.PI / 180;
+// Bàn là đa giác đều N cạnh (N = st.ring.length), đỉnh k là cửa chuồng của ghế giữ cạnh k.
+// r = bán kính tới đỉnh, rot = góc đỉnh đầu tiên (độ): bàn vuông xoay cho cạnh nằm ngang.
+const SHAPE = { 3: { r: 450, rot: -90 }, 4: { r: 490, rot: -135 }, 5: { r: 410, rot: -90 }, 6: { r: 400, rot: -90 } };
+const EDGE = 43;           // lề gỗ quanh đường đua (đo vuông góc với cạnh)
+let N, SIDE, R, ROT, RIN, ROUT, RSTB, SIDE_OF, VB;
+function setGeometry(st) {
+  N = st.ring.length; SIDE = st.side; ({ r: R, rot: ROT } = SHAPE[N]);
+  RIN = R * Math.cos(Math.PI / N);             // bán kính nội tiếp (tâm → giữa cạnh)
+  ROUT = R + EDGE / Math.cos(Math.PI / N);     // đỉnh của khung gỗ
+  RSTB = ROUT + 58;                            // tâm chuồng xuất phát, ngay ngoài đỉnh
+  SIDE_OF = st.players.map(pl => pl.side);
+  // Khung nhìn vuông vừa khít khung gỗ + chuồng + tên, căn giữa theo hình thật (tam giác lệch lên trên).
+  const pts = [];
+  for (let k = 0; k < N; k++) { const q = polar(ROUT, k), s = polar(RSTB, k); pts.push(q, { x: s.x - 90, y: s.y - 96 }, { x: s.x + 90, y: s.y + 96 }); }
+  const xs = pts.map(q => q.x), ys = pts.map(q => q.y);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const s = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + 40;
+  VB = { x: Math.round(cx - s / 2), y: Math.round(cy - s / 2), s: Math.round(s) };
+  $('#board').setAttribute('viewBox', `${VB.x} ${VB.y} ${VB.s} ${VB.s}`);
+  // xúc xắc (HTML phủ lên) đặt đúng tâm bàn, vốn không trùng tâm khung khi bàn lệch
+  const wrap = $('#board-wrap');
+  wrap.style.setProperty('--cx', (-VB.x / VB.s * 100).toFixed(2) + '%');
+  wrap.style.setProperty('--cy', (-VB.y / VB.s * 100).toFixed(2) + '%');
+}
+const ang = k => (ROT + 360 / N * k) * Math.PI / 180;
 const polar = (r, k) => ({ x: r * Math.cos(ang(k)), y: r * Math.sin(ang(k)) });
+const poly = r => Array.from({ length: N }, (_, k) => { const q = polar(r, k); return q.x + ',' + q.y; }).join(' ');
 function trackPos(c) {
-  const s = Math.floor(c / C.SIDE), t = (c % C.SIDE) / C.SIDE, a = polar(R, s), b = polar(R, (s + 1) % 6);
+  const s = Math.floor(c / SIDE), t = (c % SIDE) / SIDE, a = polar(R, s), b = polar(R, (s + 1) % N);
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
-const homePos = (p, s) => polar(R * (1 - s * 0.12), p);
-const stableCenter = p => polar(R + 108, p);
+const homePos = (p, s) => polar(R * (1 - s * 0.12), SIDE_OF[p]);
+const stableCenter = p => polar(RSTB, SIDE_OF[p]);
 const SLOT = [[-21, -21], [21, -21], [-21, 21], [21, 21]];
 const stablePos = (p, h) => { const c = stableCenter(p); return { x: c.x + SLOT[h][0], y: c.y + SLOT[h][1] }; };
 function locPos(loc) {
@@ -85,7 +109,7 @@ function locPos(loc) {
 }
 function toScreen(q) {
   const r = $('#board').getBoundingClientRect();
-  return { x: r.left + (q.x + 640) / 1280 * r.width, y: r.top + (q.y + 640) / 1280 * r.height };
+  return { x: r.left + (q.x - VB.x) / VB.s * r.width, y: r.top + (q.y - VB.y) / VB.s * r.height };
 }
 const floatBoard = (q, html, cls) => UI.floatAt(toScreen(q), html, cls);
 
@@ -95,6 +119,7 @@ function emoji(g, ch, size, y = 0, x = 0) { const t = S('text', { x, y, 'font-si
 function buildBoard(st) {
   const svg = $('#board');
   svg.innerHTML = '';
+  setGeometry(st);
   const defs = S('defs', {}, svg);
   defs.innerHTML = `
     <radialGradient id="gBoard" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#456e5d"/><stop offset="1" stop-color="#253f36"/></radialGradient>
@@ -102,27 +127,26 @@ function buildBoard(st) {
     <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     ${C.SEATS.map((s, p) => `<radialGradient id="hg${p}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".38" stop-color="${s.color}"/><stop offset="1" stop-color="${shade(s.color, -0.5)}"/></radialGradient>`).join('')}`;
   const bg = S('g', {}, svg);
-  const hex = r => [0, 1, 2, 3, 4, 5].map(k => { const q = polar(r, k); return q.x + ',' + q.y; }).join(' ');
-  S('polygon', { points: hex(R + 50), fill: 'url(#gBoard)', stroke: '#8b6243', 'stroke-width': 14, 'stroke-linejoin': 'round' }, bg);
-  for (let p = 0; p < 6; p++) {
-    const a = polar(R - 22, p), b = polar(R - 22, (p + 1) % 6), on = st.players[p].active;
-    S('polygon', { points: `0,0 ${a.x},${a.y} ${b.x},${b.y}`, fill: on ? C.SEATS[p].color : '#888', opacity: on ? 0.1 : 0.03 }, bg);
+  S('polygon', { points: poly(ROUT), fill: 'url(#gBoard)', stroke: '#8b6243', 'stroke-width': 14, 'stroke-linejoin': 'round' }, bg);
+  for (let k = 0; k < N; k++) {
+    const a = polar(R - 22, k), b = polar(R - 22, (k + 1) % N), p = st.ring[k];
+    S('polygon', { points: `0,0 ${a.x},${a.y} ${b.x},${b.y}`, fill: p != null ? C.SEATS[p].color : '#888', opacity: p != null ? 0.1 : 0.03 }, bg);
   }
-  for (const r of [140, 220, 300]) S('circle', { r, fill: 'none', stroke: 'rgba(255,255,255,.06)', 'stroke-width': 2, 'stroke-dasharray': '3 12' }, bg);
-  S('polygon', { points: hex(R), fill: 'none', stroke: 'rgba(255,255,255,.07)', 'stroke-width': 36, 'stroke-linejoin': 'round' }, bg);
-  // đường đua
-  for (let c = 0; c < C.L; c++) {
-    const q = trackPos(c), p = Math.floor(c / C.SIDE), on = st.players[p].active, col = on ? C.SEATS[p].color : '#8f978f';
-    if (c % C.SIDE === 0) {
-      const g = S('circle', { cx: q.x, cy: q.y, r: 17, fill: col, 'fill-opacity': 0.25, stroke: col, 'stroke-width': 4 }, bg);
+  for (const f of [0.4, 0.63, 0.86]) S('circle', { r: RIN * f, fill: 'none', stroke: 'rgba(255,255,255,.06)', 'stroke-width': 2, 'stroke-dasharray': '3 12' }, bg);
+  S('polygon', { points: poly(R), fill: 'none', stroke: 'rgba(255,255,255,.07)', 'stroke-width': 36, 'stroke-linejoin': 'round' }, bg);
+  // đường đua (cạnh trống của bàn 2 người chỉ có ô thường)
+  for (let c = 0; c < st.L; c++) {
+    const q = trackPos(c), p = C.sideSeat(st, c);
+    if (p != null && c % SIDE === 0) {
+      const col = C.SEATS[p].color, g = S('circle', { cx: q.x, cy: q.y, r: 17, fill: col, 'fill-opacity': 0.25, stroke: col, 'stroke-width': 4 }, bg);
       S('title', {}, g).textContent = `Cửa chuồng ${C.SEATS[p].name}`;
-    } else if (c % C.SIDE === 1) {
-      S('circle', { cx: q.x, cy: q.y, r: 15, fill: col, 'fill-opacity': on ? 0.9 : 0.3, stroke: '#fff', 'stroke-width': 2 }, bg);
+    } else if (p != null && c % SIDE === 1) {
+      S('circle', { cx: q.x, cy: q.y, r: 15, fill: C.SEATS[p].color, 'fill-opacity': 0.9, stroke: '#fff', 'stroke-width': 2 }, bg);
       S('text', { x: q.x, y: q.y + 1, 'font-size': 15, fill: '#fff', class: 'lbl', style: 'stroke-width:3px' }, bg).textContent = '★';
     } else S('circle', { cx: q.x, cy: q.y, r: 12.5, class: 'cell' }, bg);
   }
   // chuồng đích (6 bậc)
-  for (let p = 0; p < 6; p++) {
+  for (let p = 0; p < st.players.length; p++) {
     if (!st.players[p].active) continue;
     const col = C.SEATS[p].color, need = C.HOME - st.opts.horses;
     for (let s = 1; s <= C.HOME; s++) {
@@ -135,12 +159,13 @@ function buildBoard(st) {
   S('circle', { r: 92, fill: 'url(#gCenter)' }, bg);
   S('circle', { r: 72, fill: 'rgba(16,30,25,.6)', stroke: 'rgba(255,210,63,.4)', 'stroke-width': 2.5 }, bg);
   // chuồng xuất phát
-  for (let p = 0; p < 6; p++) {
-    const pl = st.players[p], on = pl.active, col = on ? C.SEATS[p].color : '#a39b8f', c = stableCenter(p);
-    S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': on ? 0.16 : 0.05, stroke: col, 'stroke-width': 3, 'stroke-dasharray': on ? 'none' : '8 6' }, bg);
-    if (on) pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(42,39,35,.1)', stroke: col, 'stroke-opacity': 0.6 }, bg); });
-    S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: shade(col, -0.42), class: 'lbl lbl-out' }, bg).textContent = on ? pl.name : '';
-  }
+  st.players.forEach((pl, p) => {
+    if (!pl.active) return;
+    const col = C.SEATS[p].color, c = stableCenter(p);
+    S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': 0.16, stroke: col, 'stroke-width': 3 }, bg);
+    pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(42,39,35,.1)', stroke: col, 'stroke-opacity': 0.6 }, bg); });
+    S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: shade(col, -0.42), class: 'lbl lbl-out' }, bg).textContent = pl.name;
+  });
   L_SPEC = S('g', {}, svg); L_MET = S('g', {}, svg); L_HINT = S('g', {}, svg); L_HORSE = S('g', {}, svg);
   HE = st.players.map((pl, p) => pl.horses.map((_, h) => makeHorse(p, h)));
   syncHorses(st);
@@ -477,7 +502,7 @@ function renderPanels() {
     if (!pl.active) return;
     const seat = room.seats[p];
     const cnt = k => pl.horses.filter(h => h.loc === k).length;
-    const pct = Math.round(C.scoreOf(pl) / C.maxScore(pl) * 100);
+    const pct = Math.round(C.scoreOf(GAME, pl) / C.maxScore(GAME, pl) * 100);
     const d = UI.el('div', 'pcard' + (p === GAME.turn && GAME.phase !== 'over' ? ' active' : ''));
     d.dataset.p = p;
     d.style.setProperty('--c', C.SEATS[p].color);
@@ -566,11 +591,11 @@ function showGameOver() {
   overShown = true;
   const host = CTX.me().isHost;
   const ranks = GAME.players.map((pl, p) => ({ pl, p })).filter(x => x.pl.active)
-    .sort((a, b) => (b.p === GAME.winner) - (a.p === GAME.winner) || C.scoreOf(b.pl) - C.scoreOf(a.pl));
+    .sort((a, b) => (b.p === GAME.winner) - (a.p === GAME.winner) || C.scoreOf(GAME, b.pl) - C.scoreOf(GAME, a.pl));
   const medal = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
   UI.openModal(`
     <h2 class="center">🏆 ${nm(GAME.winner)} vô địch!</h2>
-    <ol class="rank">${ranks.map((x, i) => `<li style="--c:${C.SEATS[x.p].color}"><span>${medal[i]}</span><span class="grow">${nm(x.p)} <span class="muted small">${C.SEATS[x.p].horse}</span></span><span>${Math.round(C.scoreOf(x.pl) / C.maxScore(x.pl) * 100)}%</span></li>`).join('')}</ol>
+    <ol class="rank">${ranks.map((x, i) => `<li style="--c:${C.SEATS[x.p].color}"><span>${medal[i]}</span><span class="grow">${nm(x.p)} <span class="muted small">${C.SEATS[x.p].horse}</span></span><span>${Math.round(C.scoreOf(GAME, x.pl) / C.maxScore(GAME, x.pl) * 100)}%</span></li>`).join('')}</ol>
     <div class="btns">
       <button class="ghost" data-a="close">👀 Xem bàn cờ</button>
       ${host ? '<button class="ghost" data-a="lobby">🏠 Về phòng chờ</button><button class="gold" data-a="again">🔁 Ván mới</button>' : '<span class="muted small">Chờ chủ phòng mở ván mới...</span>'}
@@ -637,6 +662,7 @@ function showHelp() {
     <h2>📖 Luật chơi — Lục Mã Hỗn Chiến</h2>
     <h3>Cơ bản (cờ cá ngựa Việt Nam)</h3>
     <ul>
+      <li>Bàn cờ đổi hình theo số người: 2 người — bàn vuông ngồi đối diện, 3 — tam giác, 4 — vuông, 5 — ngũ giác, 6 — lục giác. Càng ít người đường đua càng ngắn.</li>
       <li>Mỗi người có 2–4 ngựa trong chuồng. Gieo <b>1 hoặc 6</b> để xuất quân ra ô ★ màu của mình.</li>
       <li>Ngựa chạy theo chiều kim đồng hồ đúng số bước của xúc xắc. Gieo <b>6</b> được gieo thêm lượt.</li>
       <li><b>Luật cản:</b> không được nhảy qua đầu ngựa khác (trừ khi dùng thẻ 👻).</li>
