@@ -32,7 +32,7 @@ const KNIGHT = '♞︎';
 
 // ---------- trạng thái của instance (chỉ 1 ván được mount tại 1 thời điểm) ----------
 let CTX, UI, SFX, ROOT;
-let GAME, NAMES, HE, L_SPEC, L_MET, L_HINT, L_HORSE;
+let GAME, NAMES, HE, STB, TURN_P, L_SPEC, L_MET, L_HINT, L_HORSE;
 let DEADLINE, pending, cardMode, SPEED, playing, overShown, spinN, timerInt, keyHandler;
 
 const $ = s => ROOT.querySelector(s);
@@ -161,16 +161,18 @@ function buildBoard(st) {
   // tâm bàn
   S('circle', { r: 92, fill: 'url(#gCenter)' }, bg);
   S('circle', { r: 72, fill: 'rgba(16,30,25,.6)', stroke: 'rgba(255,210,63,.4)', 'stroke-width': 2.5 }, bg);
-  // chuồng xuất phát
+  // chuồng xuất phát (STB[p] = vòng chuồng, sáng lên khi tới lượt ghế p)
+  STB = [];
   st.players.forEach((pl, p) => {
     if (!pl.active) return;
     const col = C.SEATS[p].color, c = stableCenter(p);
-    S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': 0.16, stroke: edge(col), 'stroke-width': 3 }, bg);
+    STB[p] = S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': 0.16, stroke: edge(col), 'stroke-width': 3, class: 'stb' }, bg);
     pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(42,39,35,.1)', stroke: edge(col), 'stroke-opacity': 0.6 }, bg); });
     S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: shade(col, isLight(col) ? -0.6 : -0.42), class: 'lbl lbl-out' }, bg).textContent = pl.name;
   });
   L_SPEC = S('g', {}, svg); L_MET = S('g', {}, svg); L_HINT = S('g', {}, svg); L_HORSE = S('g', {}, svg);
   HE = st.players.map((pl, p) => pl.horses.map((_, h) => makeHorse(p, h)));
+  TURN_P = undefined;
   syncHorses(st);
 }
 
@@ -178,11 +180,22 @@ function makeHorse(p, h) {
   const g = S('g', { class: 'horse', 'data-p': p, 'data-h': h }, L_HORSE);
   S('circle', { r: 30, fill: 'transparent' }, g); // vùng chạm rộng cho điện thoại
   S('ellipse', { cx: 0, cy: 14, rx: 13, ry: 4, fill: 'rgba(0,0,0,.45)' }, g);
+  S('circle', { class: 'turnc', r: 22, style: `--c:${C.SEATS[p].color}` }, g);
   S('circle', { class: 'halo', r: 21 }, g);
   S('circle', { class: 'shieldc', r: 23 }, g);
-  S('circle', { r: 16, fill: `url(#hg${p})`, stroke: '#fff', 'stroke-width': 2.5 }, g);
-  S('text', { y: 1, class: 'knight' }, g).textContent = KNIGHT;
+  const body = S('g', { class: 'body' }, g); // nhún nhẹ khi tới lượt (transform của g dùng để đặt vị trí)
+  S('circle', { r: 16, fill: `url(#hg${p})`, stroke: '#fff', 'stroke-width': 2.5 }, body);
+  S('text', { y: 1, class: 'knight' }, body).textContent = KNIGHT;
   return g;
+}
+// Làm nổi ngựa + chuồng của ghế đang tới lượt (p = null: không ai, vd hết ván); ngựa người khác mờ bớt.
+function markTurn(p) {
+  if (!HE || p === TURN_P) return;
+  TURN_P = p;
+  $('#board').classList.toggle('has-turn', p != null);
+  HE.forEach((row, q) => row.forEach(g => g.classList.toggle('turn', q === p)));
+  STB.forEach((c, q) => c && c.classList.toggle('turn', q === p));
+  if (p != null && HE[p]) HE[p].forEach(raise); // nằm trên ngựa khác khi chung ô
 }
 function placeHorse(g, x, y, extra) { g._x = x; g._y = y; g.setAttribute('transform', `translate(${x} ${y})${extra ? ' ' + extra : ''}`); }
 const raise = g => g.parentNode.appendChild(g);
@@ -489,6 +502,7 @@ function renderGame() {
   renderSpecials(GAME.specials);
   renderMeteors(GAME.meteors);
   syncHorses(GAME);
+  markTurn(GAME.phase === 'over' ? null : GAME.turn);
   renderPanels();
   renderInfo();
   renderControls();
@@ -496,6 +510,7 @@ function renderGame() {
 }
 function setTurnUI(p) {
   ROOT.querySelectorAll('.pcard').forEach(d => d.classList.toggle('active', +d.dataset.p === p));
+  markTurn(p);
   $('#dice').style.setProperty('--glow', C.SEATS[p].color);
 }
 function renderPanels() {

@@ -28,6 +28,18 @@
 .ccn .horse.sel .halo { opacity: 1; animation: ccn-halo .9s ease-in-out infinite; }
 .ccn .horse.sel-opp .halo { stroke: #ff5a5a; }
 @keyframes ccn-halo { 0%,100% { transform: scale(1); opacity: .95; } 50% { transform: scale(1.4); opacity: .2; } }
+/* Ngựa của người đang tới lượt: vòng màu ghế nhấp nháy + nhún nhẹ; ngựa người khác mờ bớt */
+.ccn .horse { transition: opacity .3s; }
+.ccn #board.has-turn .horse:not(.turn) { opacity: .62; }
+.ccn .horse .turnc { fill: color-mix(in srgb, var(--c) 30%, transparent); stroke: var(--c); stroke-width: 4; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.ccn .horse.turn .turnc { opacity: 1; animation: ccn-turnc 1.1s ease-in-out infinite; }
+.ccn .horse.turn.sel .turnc { animation: none; opacity: .5; }  /* ngựa đi được đã có vòng trắng riêng */
+.ccn .horse.turn .body { animation: ccn-bob 1.1s ease-in-out infinite; }
+@keyframes ccn-turnc { 0%,100% { transform: scale(1); stroke-width: 4; } 50% { transform: scale(1.22); stroke-width: 2.5; } }
+@keyframes ccn-bob { 50% { transform: translateY(-3px); } }
+.ccn .stb { transition: fill-opacity .3s, stroke-width .3s; }
+.ccn .stb.turn { fill-opacity: .32; stroke-width: 6; animation: ccn-stb 1.1s ease-in-out infinite; }
+@keyframes ccn-stb { 50% { stroke-width: 3; stroke-opacity: .55; } }
 .ccn .horse .shieldc { fill: rgba(126,232,255,.16); stroke: #7ee8ff; stroke-width: 2.5; stroke-dasharray: 6 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
 .ccn .horse.shielded .shieldc { opacity: 1; animation: ccn-spin 3s linear infinite; }
 .ccn .spin { transform-box: fill-box; transform-origin: center; animation: ccn-spin 4s linear infinite; }
