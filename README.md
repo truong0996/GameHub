@@ -8,6 +8,7 @@ Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game r
 | 💣 **Mèo Nổ** — Exploding Kittens, thêm chế độ Hỗn Loạn (Mèo Hẹn Giờ, Bom Tổng Lực, hồn ma...) | theo lượt + hô "Không!" ngoài lượt | 2–6 |
 | 💎 **Kho Báu Inca** — Incan Gold, thêm chế độ Hỗn Loạn (bùa, lá bí ẩn, đền có luật riêng, chơi xấu nhau) | chọn bí mật cùng lúc | 2–8 |
 | 💀 **Hoa & Sọ** — Skull, thêm chế độ Hỗn Loạn (đĩa đặc biệt, điềm báo mỗi vòng, hồn ma ám chồng đĩa) | theo lượt + úp đĩa đầu cùng lúc | 3–6 |
+| 🃏 **Flip 7** — rút hay dừng, trùng số là cháy; chế độ Bất Ngờ (Đổi Chác, Nam Châm, Tiên Tri, Cầu Vồng, sự kiện mỗi vòng, Sương Mù) | theo lượt | 2–8 |
 | ⚡ Phản Xạ *(game mẫu, chỉ hiện khi `HUB_DEV=1`)* | real-time | 2–6 |
 
 ## Chạy

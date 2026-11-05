@@ -46,6 +46,7 @@ function guessAction(g, seat) {
   const s = g.state, hand = s.players && s.players[seat] && s.players[seat].hand;
   if (s.phase === 'move' && s.legal) return { type: 'move', h: s.legal[0].h };
   if (s.phase === 'go' || s.phase === 'wait') return { type: 'press' };
+  if (s.dealQ) { const d = s.pend[0]; return !d ? { type: Math.random() < 0.6 ? 'hit' : 'stay' } : d.see ? { type: 'peek', bury: false } : { type: 'target', to: d.opts[0] }; } // Flip 7
   if (s.phase === 'play') return { type: 'draw' };                      // Mèo Nổ
   if (s.phase === 'bury') return { type: 'bury', pos: 0 };
   if (s.phase === 'favor') return { type: 'give', card: hand[0] };
