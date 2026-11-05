@@ -51,6 +51,11 @@ function guessAction(g, seat) {
   if (s.phase === 'favor') return { type: 'give', card: hand[0] };
   if (s.phase === 'alter') return { type: 'order', order: s.alter.cards.map((c, i) => i) };
   if (s.phase === 'decide') return { type: 'decide', stay: Math.random() < 0.6 };  // Kho Báu Inca (chọn cùng lúc)
+  const disc = hand && hand.find(k => k !== 'eye');                     // Hoa & Sọ
+  if (s.phase === 'place0' || s.phase === 'place') return disc ? { type: 'place', k: disc } : { type: 'bid', n: 1 };
+  if (s.phase === 'bid') return { type: 'pass' };
+  if (s.phase === 'flip') return { type: 'flip', s: s.options[0] };
+  if (s.phase === 'discard') return { type: 'discard', k: hand[0] };
   return { type: 'roll' };
 }
 const end = Date.now() + +secs * 1000;
@@ -62,7 +67,8 @@ while (Date.now() < end) {
     if (!g) continue;
     const me = g.state.players && g.state.players[seat];
     const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go'
-      || (g.state.phase === 'decide' && me.status === 'in' && !me.choice);
+      || (g.state.phase === 'decide' && me.status === 'in' && !me.choice)
+      || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat);
     if (myTurn) { const r = await c.req('act', { action: guessAction(g, seat) }); if (r.ok) acted++; }
   }
 }

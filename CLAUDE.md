@@ -29,6 +29,7 @@ public/              client hub: index.html, hub.js (kết nối, phòng chờ, 
 games/cocangua/      Cờ Cá Ngựa (theo lượt) — ví dụ đầy đủ, nhiều animation
 games/meono/         Mèo Nổ (theo lượt + cửa sổ phản ứng "Không!", che bài bằng view/viewEvents)
 games/incagold/      Kho Báu Inca (mọi người chọn bí mật CÙNG LÚC qua turn() → { seats, key })
+games/skull/         Hoa & Sọ / Skull (pha đầu chọn cùng lúc, sau đó theo lượt; người bị loại vẫn act được khi là hồn ma)
 games/_template/     ⚡ Phản Xạ (real-time) — GAME MẪU tối giản, copy thư mục này khi làm game mới
 tools/               simulate.js, smoke.js
 ```
@@ -91,3 +92,4 @@ Server → client: `room {room}`, `game {matchId, game, state, events, meta, dea
 - Kho Báu Inca: `data.js` dùng chung (lá, bùa, đền, thời lượng animation); luật + bot trong `server.js`. `view` ẩn chồng bài, ngọc trong lều và lựa chọn của người khác (trừ khi người xem dùng bùa Mắt Kền Kền), bùa "bí ẩn" che tên trong `viewEvents`. Client giữ bản `V` cập nhật dần theo từng sự kiện để vẽ, diễn xong thì thay bằng state thật.
 - Cờ cá ngựa: luật ở `games/cocangua/rules.js` (dùng chung server + client). Mặc định luật về chuồng "nhanh" vì luật truyền thống làm ván 6 người dài gần gấp đôi (đo bằng simulate).
 - Cờ cá ngựa: bàn là đa giác đều dựng lúc bắt đầu ván theo số ghế có người (`LAYOUT` trong rules.js: 2 → vuông 4×12 ngồi đối diện, 3 → tam giác 3×16, 4/5/6 → N×12 ô). `st.ring[k]` = ghế giữ cạnh k (null = cạnh trống), `players[p].side` = cạnh của ghế p, `st.L`/`st.side` = số ô; mọi hàm toạ độ (`absOf`, `startCell`, `gateOf`...) nhận `st`. Số ô quà/bí ẩn/sao băng tỉ lệ theo `st.L`. Client tính hình + viewBox vừa khít trong `setGeometry`.
+- Hoa & Sọ (Skull): `data.js` dùng chung (đĩa, điềm báo, thời lượng animation); luật + bot trong `server.js`. Đĩa là `{id, k, o}` (o = chủ), `st.stacks[s]` = chồng đĩa đang nằm TRƯỚC MẶT ghế s (Lốc Xoáy xoay cả chồng sang ghế kế, chủ đĩa giữ nguyên — trúng Sọ của chính mình xét theo `o`). Pha `place0` đặt cùng lúc qua `{ seats, key }`, sau đó `place → bid → flip (auto khi chỉ 1 chồng được lật) → discard?`. Hồn ma (`pl.ghost`) không nằm trong `turn()`: hồn ma người tự gửi `haunt` lúc nào cũng được trước khi lật, hồn ma bot ám ngay trong `startRound`. Bot chỉ dùng thông tin mình được biết (đĩa của mình, đĩa ngửa/đã lật, `pl.know` từ Mắt Thần) — đừng cho bot đọc `d.k` của người khác.
