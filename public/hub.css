@@ -189,6 +189,7 @@ select:disabled, input:disabled { opacity: .75; }
 .vchip:hover:not(:disabled) { filter: none; background: var(--chip); }
 .vchip.wait { opacity: .55; }
 .vchip.fail { border-color: var(--danger); color: var(--danger); }
+.vchip.relay { border-style: dashed; }
 .vchip.deaf { text-decoration: line-through; opacity: .6; }
 .vchip.talking, .vmic.talking { box-shadow: 0 0 0 2px var(--primary); }
 .vb-btn { padding: 3px 12px; font-size: 13px; }

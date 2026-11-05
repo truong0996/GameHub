@@ -1,5 +1,5 @@
 // WebSocket server tối giản theo RFC 6455 — không dùng thư viện ngoài.
-// Hỗ trợ: text frame, phân mảnh (continuation), ping/pong, close. Không hỗ trợ nén (permessage-deflate).
+// Hỗ trợ: text/binary frame, phân mảnh (continuation), ping/pong, close. Không hỗ trợ nén (permessage-deflate).
 import crypto from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
@@ -16,6 +16,7 @@ export class WebSocketConn extends EventEmitter {
     this.buf = Buffer.alloc(0);
     this.frags = [];
     this.fragLen = 0;
+    this.fragOp = 0x1;
     this.open = true;
     this.alive = true;
     socket.setNoDelay(true);
@@ -55,14 +56,16 @@ export class WebSocketConn extends EventEmitter {
     if (op === 0x9) return this._send(0xA, data);
     if (op === 0xA) { this.alive = true; return; }
     if (op > 0x2) return this.close(1002);
+    if (op) this.fragOp = op;
     this.frags.push(data);
     this.fragLen += data.length;
     if (this.fragLen > MAX_PAYLOAD) return this.close(1009);
     if (!fin) return;
-    const msg = Buffer.concat(this.frags).toString('utf8');
+    const buf = Buffer.concat(this.frags);
     this.frags = []; this.fragLen = 0;
     this.alive = true;
-    this.emit('message', msg);
+    if (this.fragOp === 0x2) this.emit('binary', buf);
+    else this.emit('message', buf.toString('utf8'));
   }
 
   _send(op, payload) {
@@ -76,6 +79,8 @@ export class WebSocketConn extends EventEmitter {
   }
 
   send(str) { this._send(0x1, Buffer.from(str, 'utf8')); }
+  sendBinary(buf) { this._send(0x2, buf); }
+  get buffered() { return this.socket.writableLength; }
   ping() { this._send(0x9, Buffer.alloc(0)); }
 
   close(code = 1000) {

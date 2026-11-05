@@ -4,7 +4,7 @@ import * as UI from './ui.js';
 import { $, el, esc, toast, openModal, closeModal, modalOpen, floatAt, initFx } from './ui.js';
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
 import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
-import { initVoice, voiceRoom, voiceSignal, voiceReset, voiceReconnected } from './voice.js';
+import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected } from './voice.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
 const ME = { pid: null, uid: null, code: null, lan: [], pub: null };
@@ -26,6 +26,7 @@ const net = (() => {
   const pending = new Map(), waiting = [];
   function connect() {
     ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+    ws.binaryType = 'arraybuffer';
     ws.onopen = async () => {
       backoff = 400;
       $('#net').classList.add('hidden');
@@ -34,6 +35,7 @@ const net = (() => {
       while (waiting.length) waiting.shift()();
     };
     ws.onmessage = e => {
+      if (typeof e.data !== 'string') return voiceAudio(e.data);   // tiếng đàm thoại đi vòng qua server
       const m = JSON.parse(e.data);
       if (m.t === 'res') { const cb = pending.get(m.id); if (cb) { pending.delete(m.id); cb(m); } return; }
       onMessage(m);
@@ -59,8 +61,10 @@ const net = (() => {
   const request = (t, data) => (ready ? raw(t, data) : new Promise(res => waiting.push(() => raw(t, data).then(res))));
   // post: gửi không cần trả lời (tin bắt tay đàm thoại); mất kết nối thì bỏ.
   const post = (t, data = {}) => { if (ready && ws.readyState === 1) ws.send(JSON.stringify({ t, ...data })); };
+  // sendBin: gói tiếng đàm thoại; mạng đang ứ thì bỏ (thà mất một đoạn còn hơn trễ dần).
+  const sendBin = buf => { if (ready && ws.readyState === 1 && ws.bufferedAmount < 32768) ws.send(buf); };
   connect();
-  return { raw, request, post };
+  return { raw, request, post, sendBin };
 })();
 
 async function act(t, data) {
@@ -411,6 +415,7 @@ initChat({
 initVoice({
   request: (t, data) => act(t, data),
   post: net.post,
+  sendBin: net.sendBin,
   myUid: () => ME.uid,
   anchorOf: seat => (current && current.inst.emoteAnchor ? current.inst.emoteAnchor(seat) : null),
 });

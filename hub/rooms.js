@@ -13,6 +13,8 @@ const CHAT_LEN = 200;             // độ dài tối đa một tin nhắn
 const CHAT_KEEP = 50;             // số tin gần nhất phòng giữ lại (người mới vào / F5 vẫn thấy)
 const CHAT_GAP_MS = 400;          // chống spam
 const RTC_MAX = 16000;            // tin bắt tay WebRTC (SDP/ICE) tối đa ~16KB
+const RELAY_MAX = 2048;           // một gói tiếng chuyển qua server (μ-law 16kHz, 40ms = 640 byte)
+const RELAY_BACKLOG = 64 * 1024;  // người nhận mạng chậm, đang ứ quá nhiều thì bỏ gói tiếng
 
 const AFTER = Symbol('after');
 const rid = n => crypto.randomBytes(n).toString('hex');
@@ -359,12 +361,18 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
         return 'nobroadcast';
       },
       // Đàm thoại: tiếng đi thẳng giữa các trình duyệt (WebRTC), server chỉ giữ ai đang vào/tắt mic và chuyển tin bắt tay.
+      // Cặp nào mạng chặn nối thẳng (4G, mạng công ty...) thì tiếng của cặp đó đi vòng qua server (xem 'relay' + ws.on('binary')).
       // Gắn với kết nối (tab) đã bật: tab đó đóng/rớt mạng là tự ra khỏi đàm thoại.
       voice(msg, r, m) {
         if (!msg.on) { if (m.voice && m.voice.ws === ws) m.voice = null; return; }
         if (m.voice && m.voice.ws === ws) { m.voice.muted = !!msg.muted; return { vid: m.voice.v }; }
-        m.voice = { ws, muted: !!msg.muted, v: rid(3) };
+        m.voice = { ws, muted: !!msg.muted, v: rid(3), relay: new Set() };
         return { vid: m.voice.v };
+      },
+      // { to: [uid...] } = những người mình gửi tiếng qua server (thay cả danh sách).
+      relay(msg, r, m) {
+        if (m.voice && m.voice.ws === ws && Array.isArray(msg.to)) m.voice.relay = new Set(msg.to.slice(0, 32).map(String));
+        return 'nobroadcast';
       },
       // { to: uid, tv: mã phiên của người nhận, d: SDP/ICE } → người nhận được { from, fv, d }. Lệch phiên (tin cũ) thì bỏ.
       rtc(msg, r, m) {
@@ -378,6 +386,16 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
     };
     const needHost = (r, m) => { if (r.host !== m.uid) throw new Error('Chỉ chủ phòng mới làm được'); };
     const needLobby = r => { if (r.match) throw new Error('Ván đang diễn ra'); };
+
+    // Gói tiếng đi vòng qua server: [μ-law...] → người nhận được [độ dài uid][uid người nói][μ-law...].
+    ws.on('binary', buf => {
+      const v = member && member.voice;
+      if (!v || v.ws !== ws || v.muted || !v.relay.size || buf.length > RELAY_MAX) return;
+      const tag = Buffer.from(member.uid, 'latin1'), out = Buffer.concat([Buffer.from([tag.length]), tag, buf]);
+      for (const x of room.members.values()) {
+        if (x.voice && v.relay.has(x.uid) && x.voice.ws.buffered < RELAY_BACKLOG) x.voice.ws.sendBinary(out);
+      }
+    });
 
     ws.on('message', raw => {
       let msg;
