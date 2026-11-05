@@ -11,6 +11,7 @@ Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game r
 | 🃏 **Flip 7** — rút hay dừng, trùng số là cháy; chế độ Bất Ngờ (Đổi Chác, Nam Châm, Tiên Tri, Cầu Vồng, sự kiện mỗi vòng, Sương Mù) | theo lượt | 2–8 |
 | 🎴 **UNO** — hô UNO! kẻo bị bắt; luật nhà cộng dồn, 7-0, chặn ngang, rút tới khi đánh được; chế độ Bất Ngờ (Gương, Bom Màu, Quà, Tăng Tốc, Đổi Tay, Lốc Xoáy, sự kiện mỗi vòng bàn) | theo lượt + chặn ngang/bắt lỗi chen ngang | 2–8 |
 | 🎩 **Cờ Tỷ Phú** — Monopoly rút gọn ~30 phút: chia đất đầu ván, đấu giá kín, mua lại cưỡng chế, thắng ngay khi đủ 3 bộ màu; chế độ Bất Ngờ (thẻ kỹ năng, biến cố toàn bàn, Sòng Bạc, Tàu Cao Tốc, Cổng Dịch Chuyển, Hũ Vàng) | theo lượt + đấu giá cùng lúc | 2–6 |
+| 🛸 **Kẻ Mạo Danh** — kiểu Among Us 2D: làm nhiệm vụ mini-game, Kẻ Mạo Danh giết/phá hoại/chui cống, báo xác → họp & bỏ phiếu. 5 bản đồ có cơ chế riêng (Trạm Vũ Trụ, Tàu Tốc Hành Đêm, Trạm Bắc Cực, Công Viên Ma, Tàu Ngầm), vai trò ẩn (Cảnh Sát, Hộ Vệ, Thám Tử, Kỹ Sư, Thầy Đồng, Kẻ Ngốc, Kẻ Biến Hình, Bóng Ma, Cặp Đôi), biến cố ngẫu nhiên, thùng vật phẩm, đàm thoại theo khoảng cách | real-time | 4–10 |
 | ⚡ Phản Xạ *(game mẫu, chỉ hiện khi `HUB_DEV=1`)* | real-time | 2–6 |
 
 ## Chạy
@@ -29,6 +30,8 @@ Mở http://localhost:3000 → nhập tên → **Tạo phòng** → gửi link m
 - **Qua Internet:** trên Windows bấm đúp **`choi-online.cmd`**, hoặc chạy `npm run online` (= `node server.js --online`) — chỉ cần một cửa sổ. Server tự bật tunnel Cloudflare và in ra link `https://....trycloudflare.com`; nút **Copy link mời** trong phòng cũng copy link này. Dùng `cloudflared` nếu máy đã cài, không thì tự tải qua `npx` (lần đầu hơi lâu). Tắt server là tunnel tắt theo; mỗi lần chạy sẽ có link mới.
 
 Trong phòng có **chat** 💬 ở góc dưới-trái (bấm hoặc nhấn Enter): dùng được cả lúc chờ lẫn lúc đang chơi, tin nhắn hiện thành bong bóng trên ghế người gửi. Nút **đàm thoại** 🎙️ ngay trên đó để nói chuyện bằng mic (bấm lần nữa hoặc phím M để tắt/bật mic; rời hoặc tắt tiếng từng người trong khung chat). Đàm thoại cần mở bằng link online (https) hoặc localhost — trình duyệt chặn mic trên link wifi/LAN (http).
+
+Riêng 🛸 Kẻ Mạo Danh làm giống bản gốc: người còn sống chỉ chat được trong cuộc họp, hồn ma (và người xem, Thầy Đồng) có kênh 👻 riêng; đàm thoại mặc định *theo khoảng cách* — chỉ nghe rõ người đứng gần, người chết thì im (đổi được trong tuỳ chọn ván).
 
 F5 hoặc rớt mạng thì tự vào lại đúng ghế. Hết giờ lượt hoặc mất kết nối thì máy tự đi giúp. Mỗi tab trình duyệt là một người chơi riêng (tiện để tự test).
 

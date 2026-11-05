@@ -44,6 +44,10 @@ check((await host.req('start')).ok, 'bắt đầu ván');
 // Game có thể đặt state.ask = ghế đang phải quyết định (khi khác state.turn, vd bị Xin Bài).
 function guessAction(g, seat) {
   const s = g.state, hand = s.players && s.players[seat] && s.players[seat].hand;
+  if (s.self && s.map) {                                                 // Kẻ Mạo Danh (real-time): đi lung tung, họp thì bỏ qua phiếu
+    if (s.phase === 'meet') return { type: 'vote', to: -1 };
+    return { type: 'mv', x: s.self.x + (Math.random() - 0.5) * 0.6, y: s.self.y + (Math.random() - 0.5) * 0.6, w: s.self.warp };
+  }
   if (s.phase === 'move' && s.legal) return { type: 'move', h: s.legal[0].h };
   if (s.phase === 'go' || s.phase === 'wait') return { type: 'press' };
   if (s.dealQ) { const d = s.pend[0]; return !d ? { type: Math.random() < 0.6 ? 'hit' : 'stay' } : d.see ? { type: 'peek', bury: false } : { type: 'target', to: d.opts[0] }; } // Flip 7
@@ -72,7 +76,8 @@ while (Date.now() < end) {
     const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go'
       || (g.state.phase === 'decide' && me.status === 'in' && !me.choice)
       || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat)
-      || (g.state.phase === 'auction' && g.state.auc && !(seat in g.state.auc.bids));
+      || (g.state.phase === 'auction' && g.state.auc && !(seat in g.state.auc.bids))
+      || (g.state.self && g.state.self.alive && (g.state.phase === 'play' || g.state.phase === 'meet'));
     if (myTurn) { const r = await c.req('act', { action: guessAction(g, seat) }); if (r.ok) acted++; }
   }
 }

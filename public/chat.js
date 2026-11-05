@@ -80,7 +80,8 @@ function setOpen(v) {
   } else if (document.activeElement === $('#chat-in')) $('#chat-in').blur();
 }
 
-const who = m => `<b class="pn" style="--c:${esc(m.color || 'var(--muted)')}">${esc(m.name)}</b>`;
+// tag: nhãn kênh do game đặt (vd 👻 = chỉ hồn ma thấy).
+const who = m => `${m.tag ? `<span class="ctag">${esc(m.tag)}</span>` : ''}<b class="pn" style="--c:${esc(m.color || 'var(--muted)')}">${esc(m.name)}</b>`;
 const hhmm = t => new Date(t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 function addLine(m) {

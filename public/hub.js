@@ -4,7 +4,7 @@ import * as UI from './ui.js';
 import { $, el, esc, toast, openModal, closeModal, modalOpen, floatAt, initFx } from './ui.js';
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
 import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
-import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected } from './voice.js';
+import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected, voiceVolumes } from './voice.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
 const ME = { pid: null, uid: null, code: null, lan: [], pub: null, user: null, accounts: false };   // user: tài khoản đã đăng nhập { id, name }
@@ -173,6 +173,7 @@ function unmountGame() {
   current = null;
   try { if (cur.inst.unmount) cur.inst.unmount(); } catch (e) { console.error(e); }
   cur.css.forEach(l => l.remove());
+  voiceVolumes(null);
   $('#game-root').innerHTML = '';
   if (modalOpen()) closeModal();
 }
@@ -197,6 +198,8 @@ function makeCtx(cur) {
     },
     ui: { ...UI, emoteBar, toolbar },
     sfx: { ...sfx, tone, noise, ac },
+    // volumes({ uid: 0..1 } | null): âm lượng nghe từng người trong đàm thoại (vd theo khoảng cách); gỡ game thì tự trả lại.
+    voice: { volumes: map => { if (current === cur) voiceVolumes(map); } },
   };
 }
 

@@ -173,6 +173,7 @@ select:disabled, input:disabled { opacity: .75; }
 #chat-log { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 4px; font-size: 14px; padding-right: 2px; }
 #chat-log:empty::before { content: 'Chưa có tin nhắn nào — chào cả phòng một câu đi!'; color: var(--muted); font-size: 13px; margin: auto; text-align: center; }
 .cm { padding: 5px 10px; border-radius: 10px; background: var(--chip); align-self: flex-start; max-width: 92%; overflow-wrap: anywhere; line-height: 1.35; }
+.ctag { margin-right: 4px; }
 .cm.me { align-self: flex-end; background: color-mix(in srgb, var(--primary) 12%, var(--surface)); }
 .cm.me .pn { display: none; }
 #chat-form { display: flex; gap: 6px; }

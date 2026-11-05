@@ -99,6 +99,30 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
       deadlineIn: mt.deadline ? Math.max(0, mt.deadline - Date.now()) : 0,
     };
   }
+  // Tin chat riêng do game giới hạn người nhận (vd hồn ma chỉ nói với nhau): c.to = mảng ghế (-1 = người xem), c.mid = ván lúc gửi.
+  // Về phòng chờ / sang ván khác thì ai vào lại cũng thấy.
+  function chatVisible(room, c, m) {
+    if (!c.to) return true;
+    const mt = room.match;
+    if (!mt || mt.id !== c.mid) return true;
+    return c.uid === m.uid || c.to.includes(seatOf(room, m.pid));
+  }
+  function pushChat(room, c) {
+    room.chat.push(c);
+    if (room.chat.length > CHAT_KEEP) room.chat.shift();
+    const data = JSON.stringify({ t: 'chat', msg: c });
+    eachConn(room, (w, m) => { if (chatVisible(room, c, m)) send(w, data); });
+  }
+  // Game cho ghế (thường là bot) nói một câu vào khung chat: say = [{ p: ghế, text, to?: [ghế...] }].
+  function gameSay(room, say) {
+    const mt = room.match, seats = gameOf(room).manifest.seats;
+    for (const x of say || []) {
+      const text = String(x.text || '').replace(/\s+/g, ' ').trim().slice(0, CHAT_LEN);
+      if (!text || !seats[x.p]) continue;
+      pushChat(room, { id: ++room.chatSeq, uid: 'seat' + x.p, name: seatName(room, x.p), seat: x.p, color: seats[x.p].color, text, at: Date.now(),
+        ...(x.to ? { to: x.to, mid: mt.id } : {}), ...(x.tag ? { tag: x.tag } : {}) });
+    }
+  }
   function broadcastGame(room, events = [], meta) {
     const L = room.match.logic;
     if (!L.view && !L.viewEvents) {
@@ -128,6 +152,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         if (room.match !== mt) return clearInterval(mt.tick);
         const r = mt.logic.tick(mt.state, Date.now());
         if (r && ((r.events && r.events.length) || r.changed)) broadcastGame(room, r.events || []);
+        if (r && r.say) gameSay(room, r.say);
         if (mt.logic.isOver(mt.state)) { clearInterval(mt.tick); record(room); }
       }, 1000 / g.logic.tickRate);
     }
@@ -268,7 +293,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
       attach(r, m);
       const after = () => {
         broadcastRoom(r);
-        if (room === r) send(ws, { t: 'chatLog', log: r.chat });
+        if (room === r) send(ws, { t: 'chatLog', log: r.chat.filter(c => chatVisible(r, c, m)) });
         if (r.match && room === r) send(ws, gameMsg(r, [], null, seatOf(r, m.pid)));
       };
       return { code: r.code, pid: m.pid, uid: m.uid, lan: lanUrls(), pub: publicUrl(), catalog, [AFTER]: after };
@@ -403,7 +428,9 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         if (seat < 0) throw new Error('Bạn đang ở chế độ xem');
         const res = mt.logic.act(mt.state, seat, msg.action || {}, Date.now());
         if (!res.ok) throw new Error(res.err || 'Không hợp lệ');
-        afterAction(r, res.events || []);
+        // quiet: hành động liên tục (vd di chuyển trong game real-time) — không phát ngay, tick() sau sẽ gửi gộp.
+        if (!res.quiet) afterAction(r, res.events || []);
+        if (res.say) gameSay(r, res.say);
         return 'nobroadcast';
       },
       emote(msg, r, m) {
@@ -421,10 +448,15 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         // Lưu luôn màu ghế lúc gửi: đổi game/đổi ghế sau đó thì tin cũ vẫn giữ màu cũ.
         const seat = seatOf(r, m.pid), info = seat >= 0 ? gameOf(r).manifest.seats[seat] : null;
         const c = { id: ++r.chatSeq, uid: m.uid, name: m.name, seat, color: info ? info.color : null, text, at: m.lastChat };
-        r.chat.push(c);
-        if (r.chat.length > CHAT_KEEP) r.chat.shift();
-        const data = JSON.stringify({ t: 'chat', msg: c });
-        eachConn(r, w => send(w, data));
+        // Game được giới hạn chat trong ván (vd chỉ chat lúc họp, hồn ma chat riêng): chatTo → undefined/true = cả phòng,
+        // chuỗi = báo lỗi không cho gửi, { to: [ghế...], tag? } = chỉ những ghế đó (và chính người gửi) thấy.
+        const mt = r.match, L = mt && mt.logic;
+        if (L && L.chatTo && !L.isOver(mt.state)) {
+          const w = L.chatTo(mt.state, seat, m.lastChat);
+          if (typeof w === 'string') { m.lastChat = 0; throw new Error(w); }
+          if (w && w.to) { c.to = w.to; c.mid = mt.id; if (w.tag) c.tag = w.tag; }
+        }
+        pushChat(r, c);
         return 'nobroadcast';
       },
       // Đàm thoại: tiếng đi thẳng giữa các trình duyệt (WebRTC), server chỉ giữ ai đang vào/tắt mic và chuyển tin bắt tay.

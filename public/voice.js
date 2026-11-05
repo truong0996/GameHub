@@ -82,6 +82,7 @@ let stream = null, actx = null, selfMeter = null, vid = null, joining = false, m
 const peers = new Map();    // uid → { vid, pc, polite, makingOffer, ignoreOffer, q, audio, meter, timer, relay, node, gain }
 const talkUntil = new Map(); // uid → hết "đang nói" lúc
 const deaf = new Set();     // uid mình tự tắt tiếng (chỉ phía mình)
+let vols = null;            // uid → âm lượng 0..1 do game đặt (vd đàm thoại theo khoảng cách); null = nghe đủ mọi người
 let talkers = new Set(), meterTimer = 0, raf = 0;
 let wl = null;              // Promise<bool>: đã nạp WORKLET vào actx hiện tại
 let cap = null, gateUntil = 0, prevChunk = null;   // thu tiếng gửi qua server
@@ -91,6 +92,19 @@ const usable = () => !!(window.isSecureContext && window.RTCPeerConnection && na
 const active = () => !!(stream && vid);
 const inVoice = () => (room ? room.members.filter(m => m.voice) : []);
 const memberOf = uid => room && room.members.find(m => m.uid === uid);
+const volOf = uid => (deaf.has(uid) ? 0 : vols && uid in vols ? vols[uid] : 1);
+function applyVol(uid, p) {
+  const v = Math.max(0, Math.min(1, volOf(uid)));
+  if (p.audio) { p.audio.volume = v; p.audio.muted = v === 0; }
+  if (p.gain) p.gain.gain.value = v;
+}
+
+// Game đặt âm lượng nghe từng người ({ uid: 0..1 }, uid không có trong bảng = nghe đủ); null = trả lại bình thường.
+// Người đang bị đặt 0 cũng không sáng "đang nói" (để không lộ ai đang nói chuyện ở kênh mình không được nghe).
+export function voiceVolumes(map) {
+  vols = map;
+  for (const [uid, p] of peers) applyVol(uid, p);
+}
 
 // request(t, data) → Promise {ok, ...} (lỗi tự toast); post(t, data) gửi không cần trả lời; anchorOf(seat) → {x,y}|null.
 export function initVoice(opts) {
@@ -156,6 +170,7 @@ export function voiceReset() {
   stopLocal();
   room = null;
   deaf.clear();
+  vols = null;
   paint();
 }
 
@@ -244,7 +259,7 @@ function addPeer(uid, v) {
   pc.ontrack = e => {
     if (!p.audio) { p.audio = el('audio'); p.audio.autoplay = true; p.audio.playsInline = true; document.body.appendChild(p.audio); }
     p.audio.srcObject = e.streams[0] || new MediaStream([e.track]);
-    p.audio.muted = deaf.has(uid);
+    applyVol(uid, p);
     p.audio.play().catch(() => {});
     if (p.meter) p.meter.src.disconnect();
     p.meter = meter(p.audio.srcObject);
@@ -320,7 +335,7 @@ async function relayIn(uid, p) {
   if (!actx || !(await worklet()) || peers.get(uid) !== p) return;
   p.node = new AudioWorkletNode(actx, 'vr-play', { numberOfInputs: 0, outputChannelCount: [1] });
   p.gain = actx.createGain();
-  p.gain.gain.value = deaf.has(uid) ? 0 : 1;
+  applyVol(uid, p);
   p.node.connect(p.gain).connect(mixIn());
   p.meter = meterNode(p.node);
   paint();
@@ -388,7 +403,7 @@ function level(mt) {
 function measure() {
   const now = Date.now();
   if (selfMeter && !muted && level(selfMeter) > TALK_LEVEL) talkUntil.set(o.myUid(), now + TALK_HOLD);
-  for (const [uid, p] of peers) if (p.meter && !deaf.has(uid) && level(p.meter) > TALK_LEVEL) talkUntil.set(uid, now + TALK_HOLD);
+  for (const [uid, p] of peers) if (p.meter && volOf(uid) > 0.02 && level(p.meter) > TALK_LEVEL) talkUntil.set(uid, now + TALK_HOLD);
   const next = new Set([...talkUntil].filter(([, t]) => t > now).map(([uid]) => uid));
   if (next.size !== talkers.size || [...next].some(u => !talkers.has(u))) { talkers = next; paintTalk(); }
 }
@@ -444,8 +459,7 @@ function paint() {
         (deaf.has(m.uid) ? 'Bấm để nghe lại' : 'Bấm để tắt tiếng người này (chỉ phía bạn)');
       c.onclick = () => {
         if (deaf.has(m.uid)) deaf.delete(m.uid); else deaf.add(m.uid);
-        if (p && p.audio) p.audio.muted = deaf.has(m.uid);
-        if (p && p.gain) p.gain.gain.value = deaf.has(m.uid) ? 0 : 1;
+        if (p) applyVol(m.uid, p);
         paint();
       };
     }
