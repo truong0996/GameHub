@@ -20,12 +20,15 @@ Trước khi coi một game là xong: `simulate` không lỗi/không kẹt, `smo
 
 ## Cấu trúc
 ```
-server.js            HTTP tĩnh + nâng cấp WebSocket tại /ws; nạp game; in link LAN; --online thì mở tunnel
+server.js            HTTP tĩnh + nâng cấp WebSocket tại /ws + GET /api/report; nạp game; in link LAN; --online thì mở tunnel
 hub/tunnel.js        chạy cloudflared (hoặc npx cloudflared) quick tunnel, bắt link *.trycloudflare.com, tắt theo server
 hub/ws.js            WebSocket server tự viết (RFC 6455), có ping/pong phát hiện kết nối chết
 hub/registry.js      nạp games/*/ (manifest.js + server.js), kiểm tra interface, tạo catalog cho client
-hub/rooms.js         phòng, thành viên, ghế, chủ phòng, bot, hẹn giờ lượt, tick real-time, giao thức tin nhắn
-public/              client hub: index.html, hub.js (kết nối, phòng chờ, nạp game), chat.js (khung chat nổi), voice.js (đàm thoại WebRTC, chặn thì chuyển tiếng qua server), ui.js, sfx.js, hub.css
+hub/rooms.js         phòng, thành viên, ghế, chủ phòng, mời ra, bot, hẹn giờ lượt, tick real-time, ghi kết quả ván, giao thức tin nhắn
+hub/accounts.js      tài khoản tên + PIN (scrypt), token đăng nhập → data/accounts.json
+hub/stats.js         lịch sử ván (data/matches.jsonl), ranksOf (thứ hạng từ result()), buildReport (bảng xếp hạng: điểm ván −1…+1, chỉ số trung bình có trọng số theo thời lượng ván)
+public/              client hub: index.html, hub.js (kết nối, đăng nhập, phòng chờ, nạp game), chat.js (khung chat nổi), voice.js (đàm thoại WebRTC, chặn thì chuyển tiếng qua server), ui.js, sfx.js, hub.css; report.html/js/css (trang /report)
+data/                (không vào git) tài khoản + lịch sử ván; đổi chỗ bằng HUB_DATA=<thư mục>
 games/cocangua/      Cờ Cá Ngựa (theo lượt) — ví dụ đầy đủ, nhiều animation
 games/meono/         Mèo Nổ (theo lượt + cửa sổ phản ứng "Không!", che bài bằng view/viewEvents)
 games/incagold/      Kho Báu Inca (mọi người chọn bí mật CÙNG LÚC qua turn() → { seats, key })
@@ -41,7 +44,7 @@ Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `
 ## Thêm game mới (checklist)
 1. `cp -r games/_template games/<tengame>` (tên thư mục không có `_` thì mới hiện trên hub thường).
 2. `manifest.js`: đổi `id` (duy nhất), `name`, `icon`, `tagline`, `description`, `minPlayers`, `maxPlayers`, `seats` (đủ `maxPlayers` phần tử `{name, color, label?}`), `options`, `order`, `tags` (thể loại — chip lọc + tìm kiếm trong bảng "Đổi game"; dùng lại tag đã có như `Bài`, `Cờ`, `Phản xạ`), `turnMs` (game theo lượt).
-3. `server.js`: viết luật theo interface bên dưới. Game theo lượt: bỏ `tickRate/tick`, thêm `turn/bot/animDuration`.
+3. `server.js`: viết luật theo interface bên dưới. Game theo lượt: bỏ `tickRate/tick`, thêm `turn/bot/animDuration`. Viết `result` để bảng xếp hạng biết thứ hạng cả bàn, không chỉ người thắng.
 4. `client.js` + `style.css`: giao diện. Mọi selector CSS bọc trong class gốc riêng của game (vd `.ccn`, `.px`). Hub dùng theme sáng "Bàn gỗ dịu": dùng biến trong `public/hub.css` (`--surface`, `--chip`, `--line`, `--ink`, `--muted`, `--primary`, `--accent`, `--danger`, `--felt`, `--wood`, `--shadow`) thay vì tự đặt màu; tránh glow/gradient neon. Tên người chơi in màu ghế thì dùng `<b class="pn" style="--c:màu">` (tự đậm lại trên nền sáng); vùng nền tối (bàn nỉ, bàn cờ) gắn class `dark` để giữ màu gốc.
 5. Chạy `node tools/simulate.js <id> 50`, `node tools/smoke.js <id> <port>`, rồi chơi thử trên trình duyệt (cả khổ điện thoại).
 6. Cập nhật bảng game trong README.md.
@@ -52,6 +55,7 @@ Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `
 | `create({ seats, opts, now })` → `{ state, events }` | ✔ | `seats[i]` = `{ kind: 'human'\|'bot', name }` hoặc `null` (ghế trống/đóng). `opts` = giá trị đã chọn theo `manifest.options`. |
 | `act(state, seat, action, now)` → `{ ok, err?, events? }` | ✔ | Kiểm tra & áp dụng hành động của ghế `seat` (sửa `state` tại chỗ). `ok:false` + `err` (tiếng Việt) sẽ hiện toast cho người chơi. |
 | `isOver(state)` → bool | ✔ | Ván kết thúc thì hub dừng hẹn giờ/tick. |
+| `result(state)` → `[{ p, s? }]` | nên có | Thứ hạng khi hết ván, cho bảng xếp hạng: mọi ghế có người, xếp từ **tốt nhất**; hai phần tử liền nhau có `s` giống nhau (so bằng JSON) là đồng hạng, không có `s` là hơn kém hẳn. Không có hàm này thì hub lấy `state.winners`/`state.winner` (thắng = hạng 1, còn lại đồng hạng 2). `tools/simulate.js` kiểm tra mỗi ván. |
 | `turn(state)` → `{ seat, auto?, autoDelay? }` \| `null` | game theo lượt | Ghế đang phải quyết định. `auto`: hành động hub tự làm thay sau `autoDelay` ms (vd chỉ có 1 lựa chọn) — ưu tiên hơn bot, nên dùng được làm **cửa sổ phản ứng**: trả `{ seat, auto: {type:'resolve'}, autoDelay: 3000 }` rồi cho mọi ghế `act` chen vào trong lúc chờ (xem games/meono). Hub tự gọi bot cho ghế bot, và gọi `bot(...,{timeout:true})` khi người chơi hết giờ (`manifest.turnMs`, mất mạng thì 3s). |
 | `turn(state)` → `{ seats: [...], key }` | game chọn cùng lúc | Thay cho `{ seat }`: mọi ghế trong `seats` (những ai chưa chốt) quyết định song song, chung **một** hạn chót `turnMs`. `key` đổi = pha mới (hạn chót mới). Hub gọi `bot()` cho ghế bot (rải rác 0.3–1.7s), người mất mạng sau 3s; hết giờ thì `bot(...,{timeout:true})` cho mọi người chưa chốt, `meta.auto` khi đó là **mảng** ghế. Xem games/incagold. |
 | `bot(state, seat, { timeout })` → action | game theo lượt | AI cho bot; `timeout:true` = đi giúp người hết giờ (nên chọn nước an toàn, không dùng tài nguyên quý). |
@@ -81,15 +85,19 @@ Chỉ một game được mount tại một thời điểm nên dùng biến c�
 
 ## Giao thức WebSocket (`/ws`, JSON)
 Client → server: `{ id?, t, ...}` — có `id` thì server trả `{ t:'res', id, ok, err?, ... }`.
-- Không cần phòng: `hello`, `create {name, game?}`, `join {code, name?, pid?}`, `leave`.
-- Trong phòng: `sit {seat}`, `unsit`, `seatKind {seat, kind:'open'|'bot'|'closed'}`*, `fillBots`*, `selectGame {game}`*, `opts {key, value}`*, `start`*, `lobby`*, `act {action}`, `emote {e}`, `chat {text}` (≤200 ký tự, cách nhau ≥0.4s), `voice {on, muted?}` → `{vid}`, `rtc {to, tv, d}`. (*chỉ chủ phòng)
+- Không cần phòng: `hello` → `{catalog, lan, pub, accounts}`, `register {name, pin}` / `login {name, pin}` → `{token, user}`, `auth {token}` → `{user}`, `logout {token}`, `create {name, game?}`, `join {code, name?, pid?}`, `leave`. Đăng nhập gắn vào kết nối và có hiệu lực từ lần `create`/`join` sau (client gửi `auth` trước `join` khi kết nối lại).
+- Trong phòng: `sit {seat}`, `unsit`, `seatKind {seat, kind:'open'|'bot'|'closed'}`*, `fillBots`*, `selectGame {game}`*, `opts {key, value}`*, `start`*, `lobby`*, `kick {uid}`*, `act {action}`, `emote {e}`, `chat {text}` (≤200 ký tự, cách nhau ≥0.4s), `voice {on, muted?}` → `{vid}`, `rtc {to, tv, d}`. (*chỉ chủ phòng)
 
-Server → client: `room {room}`, `game {matchId, game, state, events, meta, deadlineIn}`, `emote {uid, name, seat, e}`, `chat {msg: {id, uid, name, seat, color, text, at}}`, `chatLog {log}` (≤50 tin gần nhất, gửi lúc vào/vào lại phòng), `rtc {from, fv, d}`.
-`pid` là mã bí mật (lưu sessionStorage để F5/rớt mạng vào lại đúng ghế); `uid` là mã công khai hiển thị trong `room`.
+Server → client: `room {room}`, `game {matchId, game, state, events, meta, deadlineIn}`, `emote {uid, name, seat, e}`, `chat {msg: {id, uid, name, seat, color, text, at}}`, `chatLog {log}` (≤50 tin gần nhất, gửi lúc vào/vào lại phòng), `rtc {from, fv, d}`, `kicked {code}` (bị chủ phòng mời ra — kết nối đã rời phòng).
+`pid` là mã bí mật (lưu sessionStorage để F5/rớt mạng vào lại đúng ghế); `uid` là mã công khai hiển thị trong `room`. `room.seats[].acct` / `room.members[].acct` = đã đăng nhập (client hiện nhãn "khách" cho người chưa đăng nhập).
 
 ## Ghi chú
-- Phòng chỉ nằm trong RAM: khởi động lại server là mất phòng.
+- Phòng chỉ nằm trong RAM: khởi động lại server là mất phòng. Tài khoản + lịch sử ván thì nằm trong `data/` (giữ qua các lần khởi động lại).
 - Chủ phòng offline >15s thì quyền chủ phòng chuyển cho người khác đang online.
+- Tài khoản: tên (không phân biệt hoa/thường) + PIN 4–8 số, sai 5 lần thì khoá 60s; token lưu `localStorage.hub_token`, server chỉ giữ mã băm (tối đa 10 máy mỗi người). Người đã đăng nhập vào phòng thì tên = tên tài khoản; cùng tài khoản vào từ máy/tab khác thì dùng lại đúng thành viên cũ (cùng ghế). Khách vào lại bằng `pid` rồi đăng nhập thì thành viên đó được gắn tài khoản.
+- Lịch sử ván: `startMatch` chụp lại ai ngồi ghế nào (`match.players`, kèm tài khoản); hết ván (`afterAction`/`tick` thấy `isOver`) thì `record()` ghi một dòng `{at, dur, room, game, opts, players: [{seat, acct, name, bot?, rank}]}` — chỉ khi có ≥2 người đăng nhập, mỗi ván một lần. Chủ phòng `lobby` khi ván chưa xong (hoặc phòng bỏ hoang bị dọn) → ghi `aborted: true, by` (không tính điểm, báo cáo đếm theo người bỏ). Rời phòng/rớt mạng giữa ván vẫn được tính (máy đi giúp).
+- Bảng xếp hạng (`buildReport`): điểm một ván = điểm đối đầu (mỗi cặp người đã đăng nhập: hạng cao hơn +1, thấp hơn −1, bằng hạng 0; bot/khách bỏ qua) chia cho (số người − 1) → −1…+1 bất kể bàn mấy người, tổng cả bàn bằng 0. Trọng số ván `weightOf(dur)` theo thời lượng thật: phút/10, làm tròn 0.5, kẹp trong ×1…×3 (cùng game thì bàn đông, lâu hơn cũng nặng hơn). Chỉ số (−100…+100) = `Σ(trọng số × điểm ván) / (Σ trọng số + PRIOR) × 100` với `PRIOR` = 3 ván hoà ảo. Trọng số tính lúc xem báo cáo từ `dur` đã lưu, nên đổi công thức là áp dụng cho cả lịch sử cũ. Xếp theo trung bình nên số ván chơi nhiều hay ít không làm lệch. Kèm số ván, số lần hạng 1, phong độ 6 ván gần nhất, game hay thắng, ma trận đối đầu, 40 ván gần nhất. Dưới `MIN_GAMES` (5) ván thì xếp cuối, nhãn "chưa đủ ván".
+- Mời ra (`kick`): chỉ chủ phòng, không tự mời mình; người đang ngồi trong ván đang chạy thì phải về phòng chờ trước. Bị mời ra thì 2 phút sau mới vào lại phòng đó được (chặn theo tài khoản, khách thì theo tên).
 - Chat: lịch sử nằm trong phòng (RAM, giữ 50 tin) nên F5/vào lại vẫn thấy; màu tên lưu theo ghế lúc gửi. Phím gõ trong ô chat bị chặn `stopPropagation` để không lọt xuống phím tắt của game; Enter (khi không ở ô nhập liệu) mở chat, Esc đóng.
 - Đàm thoại (`public/voice.js`): WebRTC nối thẳng giữa các trình duyệt (mỗi cặp một kết nối, STUN Cloudflare/Google, không có TURN), tiếng không qua server. Cặp nào sau 10s chưa nối thẳng được hoặc kết nối `failed` (4G/CGNAT, mạng công ty chặn UDP) thì bên phát hiện gửi `rtc {d:{relay:true}}` cho bên kia, cả hai đóng WebRTC của cặp đó và gửi tiếng qua WebSocket của hub: frame nhị phân μ-law 16kHz 40ms/gói, chỉ gửi lúc đang nói (AudioWorklet `vr-cap`/`vr-play` nhúng trong voice.js); `relay {to:[uid]}` báo server chuyển gói cho ai, server gắn `[độ dài uid][uid]` vào đầu gói rồi gửi, bỏ gói khi người nhận ứ >64KB. Tiếng nhận qua server phát qua một cặp RTCPeerConnection nối vòng trong máy để Chrome khử tiếng vọng. Chip đàm thoại viền nét đứt = đang nối qua server. Server chỉ giữ `member.voice = { ws, muted, v }` (gắn với tab đã bật — tab đóng/rớt mạng là ra) và chuyển tin bắt tay `rtc` (SDP/ICE) tới đúng tab của người nhận; `v` = mã phiên, đổi mỗi lần vào lại nên client dựng lại kết nối, tin lệch phiên bị bỏ. `room.members[].voice = { m: tắt mic?, v }`. Client dùng mẫu "perfect negotiation" (uid nhỏ hơn là bên polite). Mic chỉ chạy trên https (link online) hoặc localhost — link LAN http thì nút 🎙️ mờ và báo lý do. Phím M tắt/bật mic; rớt mạng thì giữ mic và tự xin phiên mới, F5 thì phải bấm vào lại. Kiểm thử nhiều người: Chromium/Edge với cờ `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` (mic giả phát tiếng bíp); giả lập mạng chặn bằng cách bọc `RTCPeerConnection` cho `iceServers: [], iceTransportPolicy: 'relay'` (chỉ với kết nối có iceServers, để không chặn vòng khử vọng).
 - Mèo Nổ: `cards.js` dùng chung (tên lá, combo, thời lượng animation); luật + bot nằm trong `server.js` để không lộ chồng bài. `state.ask` = ghế đang phải quyết định (khác `turn` khi bị Xin Bài). `resolve` kiểm tra `now >= react.until` để client không tự đóng cửa sổ sớm.

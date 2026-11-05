@@ -15,10 +15,12 @@
     <h1 class="title">CELESTIALS</h1>
     <div class="subtitle">Game Hub · chơi cùng bạn bè qua LAN / Internet</div>
     <div id="showcase" class="showcase"></div>
-    <label>Tên của bạn <input id="in-name" maxlength="16" placeholder="Nhập tên..." autocomplete="off"></label>
+    <div id="acct" class="acct hidden"></div>
+    <label id="lab-name">Tên của bạn <input id="in-name" maxlength="16" placeholder="Nhập tên..." autocomplete="off"></label>
     <button id="btn-create" class="gold big">Tạo phòng mới</button>
     <div class="or">— hoặc vào phòng của bạn bè —</div>
     <div class="row"><input id="in-code" maxlength="4" placeholder="MÃ" autocomplete="off"><button id="btn-join">Vào phòng</button></div>
+    <a class="small rank-link" href="/report" target="_blank">🏆 Bảng xếp hạng</a>
   </div>
 </section>
 
@@ -28,6 +30,7 @@
     <div class="room-top">
       <span>Phòng</span><span id="room-code" class="code"></span>
       <span class="grow"></span>
+      <button id="btn-rank" class="ghost" title="Bảng xếp hạng (mở tab mới)">🏆</button>
       <button id="btn-copy" class="ghost">Copy link mời</button>
       <button id="btn-leave" class="ghost">Rời phòng</button>
     </div>

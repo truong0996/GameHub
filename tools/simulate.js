@@ -6,6 +6,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadGames, defaultOpts } from '../hub/registry.js';
+import { ranksOf } from '../hub/stats.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const [id, nArg, ...kv] = process.argv.slice(2);
@@ -24,6 +25,7 @@ for (const pair of kv) {
 }
 const N = +nArg || 20, MAX_STEPS = 200000;
 let steps = 0, simMs = 0, stuck = 0;
+const rankTally = { one: 0, tie: 0 };
 const t0 = Date.now();
 
 for (let g = 0; g < N; g++) {
@@ -49,10 +51,18 @@ for (let g = 0; g < N; g++) {
     } else throw new Error('turn() trả về null nhưng game không có tick() — ván bị kẹt');
   }
   if (!L.isOver(state)) stuck++;
+  else {
+    // Thứ hạng ghi vào bảng xếp hạng: mọi ghế có người đều phải có hạng, có đúng người hạng 1.
+    const seated = [...sat].sort((a, b) => a - b), ranks = ranksOf(L, state, seated);
+    if (ranks.some(r => !Number.isInteger(r) || r < 1 || r > seated.length) || !ranks.includes(1) ||
+      (L.result && new Set(L.result(state).map(x => x.p)).size !== seated.length))
+      throw new Error(`Ván ${g}: result() xếp hạng sai: ${JSON.stringify(L.result ? L.result(state) : ranks)} (ghế ${seated})`);
+    rankTally[ranks.filter(r => r === 1).length > 1 ? 'tie' : 'one']++;
+  }
   steps += s;
   simMs += now - 1e12;
 }
 
 console.log(`${M.icon} ${M.name} — ${N} ván, ${players} bot, opts ${JSON.stringify(opts)}`);
-console.log(`  bước TB/ván: ${Math.round(steps / N)} · thời lượng TB (giả lập): ${(simMs / N / 60000).toFixed(1)} phút · kẹt: ${stuck} · chạy mất ${Date.now() - t0} ms`);
+console.log(`  bước TB/ván: ${Math.round(steps / N)} · thời lượng TB (giả lập): ${(simMs / N / 60000).toFixed(1)} phút · kẹt: ${stuck} · đồng hạng nhất: ${rankTally.tie} · chạy mất ${Date.now() - t0} ms`);
 if (stuck) process.exit(1);

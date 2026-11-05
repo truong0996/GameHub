@@ -7,7 +7,7 @@ import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
 import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected } from './voice.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
-const ME = { pid: null, uid: null, code: null, lan: [], pub: null };
+const ME = { pid: null, uid: null, code: null, lan: [], pub: null, user: null, accounts: false };   // user: tài khoản đã đăng nhập { id, name }
 let CATALOG = [], ROOM = null;
 let current = null;            // game đang mount: { matchId, key, entry, realtime, inst, css: [] }
 const GQ = [];                 // hàng đợi tin 'game' (phát lần lượt để animation không chồng nhau)
@@ -75,7 +75,15 @@ async function act(t, data) {
 
 async function onConnected() {
   const h = await net.raw('hello');
-  if (h.ok) { CATALOG = withTags(h.catalog); ME.lan = h.lan; ME.pub = h.pub; renderHome(); }
+  if (h.ok) { CATALOG = withTags(h.catalog); ME.lan = h.lan; ME.pub = h.pub; ME.accounts = !!h.accounts; renderHome(); }
+  // Đăng nhập lại bằng token đã lưu (trước khi vào lại phòng, để server gắn đúng tài khoản).
+  const token = localStorage.getItem('hub_token');
+  if (token && ME.accounts) {
+    const a = await net.raw('auth', { token });
+    if (a.ok) ME.user = a.user;
+    else if (/hết hạn/.test(a.err || '')) { localStorage.removeItem('hub_token'); ME.user = null; toast('⚠️ ' + esc(a.err)); }
+  }
+  renderAccount();
   const s = session();
   if (!s) return;
   const j = await net.raw('join', { code: s.code, pid: s.pid });
@@ -97,6 +105,7 @@ function onMessage(m) {
   else if (m.t === 'chatLog') chatLog(m.log);
   else if (m.t === 'chat') chatMsg(m.msg);
   else if (m.t === 'rtc') voiceSignal(m);
+  else if (m.t === 'kicked' && m.code === ME.code) resetToHome('🚪 Chủ phòng đã mời bạn ra khỏi phòng');
 }
 
 function onRoom(room) {
@@ -247,6 +256,14 @@ function vmic(uid) {
   return m && m.voice ? ` <span class="vmic${m.voice.m ? ' off' : ''}" data-vuid="${esc(uid)}" title="${m.voice.m ? 'Đang tắt mic' : 'Trong đàm thoại'}">${m.voice.m ? '🔇' : '🎙️'}</span>` : '';
 }
 
+// Nhãn "khách" cạnh người chưa đăng nhập (ván của họ không được tính vào bảng xếp hạng).
+const guestTag = x => (ME.accounts && !x.acct ? ' <span class="guest" title="Chưa đăng nhập — không được tính vào bảng xếp hạng">khách</span>' : '');
+
+function kickMember(uid, name) {
+  if (!confirm(`Mời ${name} ra khỏi phòng? (2 phút sau mới vào lại được)`)) return;
+  act('kick', { uid }).then(r => { if (r.ok) toast(`🚪 Đã mời ${esc(name)} ra khỏi phòng`); });
+}
+
 function renderRoom() {
   const host = isHost(), me = mySeat(), entry = entryOf(ROOM.game);
   $('#room-code').textContent = ROOM.code;
@@ -274,7 +291,7 @@ function renderRoom() {
     const info = entry.seats[i];
     const d = el('div', `seat seat-${s.kind}${s.uid && s.uid === ME.uid ? ' mine' : ''}`);
     d.style.setProperty('--c', info.color);
-    const who = s.kind === 'human' ? `👤 ${esc(s.name)}${s.uid === ME.uid ? ' (bạn)' : ''}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(offline)</span>'}`
+    const who = s.kind === 'human' ? `👤 ${esc(s.name)}${s.uid === ME.uid ? ' (bạn)' : ''}${guestTag(s)}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(offline)</span>'}`
       : s.kind === 'bot' ? `🤖 ${esc(s.name)}`
       : s.kind === 'closed' ? '<span class="muted">🚫 Đã đóng</span>'
       : '<span class="muted">Trống — bấm để ngồi</span>';
@@ -283,11 +300,17 @@ function renderRoom() {
     if (s.kind === 'open') d.onclick = () => { sfx.pop(); act('sit', { seat: i }); };
     if (host) {
       const sel = el('select', 'seat-sel');
+      const other = s.kind === 'human' && s.uid !== ME.uid;
       sel.innerHTML = (s.kind === 'human' ? '<option value="human">👤 Người</option>' : '') +
-        '<option value="open">Trống</option><option value="bot">🤖 Bot</option><option value="closed">🚫 Đóng</option>';
+        '<option value="open">Trống</option><option value="bot">🤖 Bot</option><option value="closed">🚫 Đóng</option>' +
+        (other ? '<option value="kick">🚪 Mời ra</option>' : '');
       sel.value = s.kind;
       sel.onclick = e => e.stopPropagation();
-      sel.onchange = () => act('seatKind', { seat: i, kind: sel.value });
+      sel.onchange = () => {
+        if (sel.value !== 'kick') return act('seatKind', { seat: i, kind: sel.value });
+        sel.value = s.kind;
+        kickMember(s.uid, s.name);
+      };
       d.appendChild(sel);
     }
     seats.appendChild(d);
@@ -311,7 +334,12 @@ function renderRoom() {
   const filled = ROOM.seats.filter(s => s.kind === 'human' || s.kind === 'bot').length;
   const watchers = ROOM.members.filter(m => m.seat < 0);
   $('#room-members').innerHTML = `👑 Chủ phòng: <b>${esc(ROOM.hostName)}</b>` +
-    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => esc(m.name) + vmic(m.uid) + (m.online ? '' : ' (offline)')).join(', ')}` : '');
+    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => esc(m.name) + guestTag(m) + vmic(m.uid) + (m.online ? '' : ' (offline)') +
+      (host && m.uid !== ME.uid ? ` <button class="ghost kick" data-kick="${esc(m.uid)}" title="Mời ${esc(m.name)} ra khỏi phòng">✕</button>` : '')).join(', ')}` : '');
+  for (const b of $('#room-members').querySelectorAll('[data-kick]')) {
+    const m = ROOM.members.find(x => x.uid === b.dataset.kick);
+    b.onclick = () => kickMember(m.uid, m.name);
+  }
   $('#btn-unsit').classList.toggle('hidden', me < 0);
   $('#btn-start').classList.toggle('hidden', !host);
   $('#btn-bots').classList.toggle('hidden', !host || !ROOM.seats.some(s => s.kind === 'open'));
@@ -397,8 +425,59 @@ async function leaveRoom() {
   resetToHome();
 }
 
+// ================= TÀI KHOẢN =================
+// Đăng nhập (tên + PIN) để ván được tính vào bảng xếp hạng; không đăng nhập thì chơi như khách.
+function renderAccount() {
+  const box = $('#acct'), u = ME.user;
+  box.classList.toggle('hidden', !ME.accounts);
+  box.classList.toggle('on', !!u);
+  $('#lab-name').classList.toggle('hidden', !!u);
+  if (!ME.accounts) return;
+  box.innerHTML = u
+    ? `<span>🔐 Đã đăng nhập: <b>${esc(u.name)}</b> <span class="muted small">· ván của bạn được tính vào 🏆</span></span><button class="ghost" data-out>Đăng xuất</button>`
+    : '<span class="muted">Đang chơi như khách — không được tính vào 🏆</span><button data-in>Đăng nhập / Đăng ký</button>';
+  const b = box.querySelector('button');
+  b.onclick = u ? logout : openLogin;
+}
+
+function openLogin() {
+  const card = openModal(`<div class="login"><h2>🔐 Đăng nhập</h2>
+    <p class="small muted">Lần đầu thì nhập tên + mã PIN rồi bấm <b>Tạo tài khoản</b>; lần sau chỉ cần đăng nhập. Mỗi máy nhớ đăng nhập, không phải gõ lại.</p>
+    <label>Tên <input id="lg-name" maxlength="16" autocomplete="username"></label>
+    <label>Mã PIN (4–8 chữ số) <input id="lg-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password"></label>
+    <div class="err"></div>
+    <div class="btns"><button class="ghost" data-x>Huỷ</button><button class="ghost" data-reg>Tạo tài khoản</button><button class="gold" data-login>Đăng nhập</button></div></div>`);
+  const name = card.querySelector('#lg-name'), pin = card.querySelector('#lg-pin'), err = card.querySelector('.err');
+  name.value = $('#in-name').value.trim();
+  const go = async t => {
+    err.textContent = '';
+    const r = await net.request(t, { name: name.value, pin: pin.value });
+    if (!r.ok) { err.textContent = r.err; sfx.error(); return; }
+    localStorage.setItem('hub_token', r.token);
+    localStorage.setItem('hub_name', r.user.name);
+    ME.user = r.user;
+    closeModal();
+    renderAccount();
+    toast(t === 'register' ? `🎉 Đã tạo tài khoản <b>${esc(r.user.name)}</b>` : `👋 Chào <b>${esc(r.user.name)}</b>!`);
+  };
+  card.querySelector('[data-x]').onclick = closeModal;
+  card.querySelector('[data-reg]').onclick = () => go('register');
+  card.querySelector('[data-login]').onclick = () => go('login');
+  pin.onkeydown = e => { if (e.key === 'Enter') go('login'); };
+  name.onkeydown = e => { if (e.key === 'Enter') pin.focus(); };
+  (name.value ? pin : name).focus();
+}
+
+async function logout() {
+  await net.request('logout', { token: localStorage.getItem('hub_token') });
+  localStorage.removeItem('hub_token');
+  ME.user = null;
+  renderAccount();
+}
+
 // ================= KHỞI ĐỘNG =================
 function getName() {
+  if (ME.user) return ME.user.name;
   const n = $('#in-name').value.trim();
   if (!n) { toast('Nhập tên của bạn trước đã nhé!'); $('#in-name').focus(); return null; }
   localStorage.setItem('hub_name', n);
@@ -449,6 +528,7 @@ $('#btn-copy').onclick = () => {
   else { const t = el('textarea'); t.value = link; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
 };
 $('#btn-leave').onclick = leaveRoom;
+$('#btn-rank').onclick = () => open('/report', '_blank');
 $('#btn-unsit').onclick = () => act('unsit');
 $('#btn-bots').onclick = () => act('fillBots');
 $('#btn-start').onclick = () => { ac(); act('start'); };

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🏆 Bảng xếp hạng — Celestials Game Hub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<link rel="stylesheet" href="/hub.css">
+<link rel="stylesheet" href="/report.css">
+</head>
+<body class="rp">
+<main>
+  <header class="rp-head">
+    <h1>🏆 Bảng xếp hạng</h1>
+    <a class="small" href="/">← Về Game Hub</a>
+  </header>
+  <div class="rp-filters card">
+    <div class="rp-range"></div>
+    <div class="rp-custom hidden">
+      <label>Từ <input type="date" id="f-from"></label>
+      <label>Đến <input type="date" id="f-to"></label>
+    </div>
+    <select id="f-game"></select>
+  </div>
+  <div id="rp-body"><div class="muted center rp-empty">Đang tải...</div></div>
+  <details class="rp-how small muted">
+    <summary>Điểm được tính thế nào?</summary>
+    <ul>
+      <li>Chỉ tính ván có <b>ít nhất 2 người đã đăng nhập</b> chơi đến hết. Khách và bot không có điểm (nhưng vẫn chơi cùng được).</li>
+      <li><b>Điểm một ván</b> từ −1 đến +1 = bạn xếp trên bao nhiêu phần trăm số người cùng bàn (đã đăng nhập): nhất bàn <b>+1</b>, bét bàn <b>−1</b>, bàn đông hay vắng cũng vậy.
+        Vd bàn 6 người: nhất +1, nhì +0.6, ba +0.2, tư −0.2, năm −0.6, bét −1. Bàn 2 người: thắng +1, thua −1. Đồng hạng thì chia đều.</li>
+      <li><b>Ván dài tính nặng hơn</b>, theo thời lượng thật của ván: cứ 10 phút là ×1 (làm tròn 0.5), ít nhất ×1, nhiều nhất ×3. Vd UNO 3 phút ×1, Flip 7 15 phút ×1.5, Cờ Tỷ Phú 30 phút ×3 (nhãn cạnh tên game ở “Ván gần đây”).</li>
+      <li><b>Chỉ số</b> (−100 đến +100) = trung bình có trọng số của điểm các ván, tính như thể ai cũng có sẵn 3 ván hoà để vài ván ăn may không vọt lên đầu:
+        <code>Σ(trọng số × điểm ván) ÷ (Σ trọng số + 3) × 100</code>. Vd chơi 1 ván thắng 1 → 25; chơi 12 ván trung bình +0.4 → 32.</li>
+      <li>Xếp theo <b>trung bình</b> nên vắng vài buổi không thiệt mà cũng không lợi. <b>Dương là đang thắng, âm là đang thua.</b></li>
+      <li>Thứ hạng trong ván theo luật từng game (điểm, tài sản, thứ tự bị loại...). Người rớt mạng giữa ván vẫn được tính — máy đi giúp tới hết.</li>
+      <li>Chủ phòng bấm về phòng chờ khi ván chưa xong = <b>ván bỏ dở</b>: không tính điểm nhưng có ghi lại.</li>
+    </ul>
+  </details>
+</main>
+<div id="toast"></div>
+<script type="module" src="/report.js"></script>
+</body>
+</html>

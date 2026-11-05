@@ -386,6 +386,8 @@ export default {
   create,
   act,
   isOver: st => st.phase === 'over',
+  // Thứ hạng (bảng xếp hạng của hub): như lúc phân thắng thua — tổng giá trị, rồi số cổ vật.
+  result: st => st.results.map(r => ({ p: r.p, s: [r.total, r.n] })),
   turn(st) {
     if (st.phase !== 'decide') return null;
     return { seats: inTunnel(st).filter(p => !st.players[p].choice), key: st.step };

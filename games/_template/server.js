@@ -76,4 +76,7 @@ export default {
   },
 
   isOver: st => st.phase === 'over',
+  // Thứ hạng cho bảng xếp hạng của hub: [{ p: ghế, s: điểm so hạng }] từ tốt nhất; liền nhau cùng `s` = đồng hạng.
+  result: st => st.players.map((pl, p) => ({ p, s: pl.score, pl })).filter(x => x.pl.active)
+    .sort((a, b) => b.s - a.s).map(({ p, s }) => ({ p, s })),
 };

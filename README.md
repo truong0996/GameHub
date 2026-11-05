@@ -32,6 +32,15 @@ Trong phòng có **chat** 💬 ở góc dưới-trái (bấm hoặc nhấn Enter
 
 F5 hoặc rớt mạng thì tự vào lại đúng ghế. Hết giờ lượt hoặc mất kết nối thì máy tự đi giúp. Mỗi tab trình duyệt là một người chơi riêng (tiện để tự test).
 
+Chủ phòng **mời người khác ra** được: chọn 🚪 *Mời ra* ở menu của ghế đó, hoặc bấm ✕ cạnh tên người đang xem. Người bị mời ra phải chờ 2 phút mới vào lại phòng đó được. Người đang chơi giữa ván thì phải về phòng chờ trước mới mời ra được.
+
+### 🏆 Đăng nhập & bảng xếp hạng
+
+- **Đăng nhập** ở trang chủ bằng tên + mã PIN 4–8 số. Lần đầu bấm *Tạo tài khoản*; mỗi máy nhớ đăng nhập. Không đăng nhập vẫn chơi được, nhưng chỉ là **khách** (có nhãn "khách" trên ghế) và không được tính điểm.
+- Ván có **ít nhất 2 người đã đăng nhập** chơi đến hết thì được ghi lại. Mỗi ván cho **điểm từ −1 đến +1** theo việc bạn xếp trên bao nhiêu phần trăm số người cùng bàn (nhất +1, bét −1, bàn đông hay vắng cũng vậy). Ván dài được tính nặng hơn theo thời lượng thật: cứ 10 phút là ×1 (làm tròn 0.5), từ ×1 tới ×3 — ván UNO 3 phút ×1, Cờ Tỷ Phú 30 phút ×3. **Chỉ số** xếp hạng (−100 đến +100) là trung bình có trọng số các ván, cộng thêm 3 ván hoà ảo để vài ván ăn may không vọt lên đầu — xếp theo trung bình nên vắng vài buổi không thiệt cũng không lợi. Dương là đang thắng, âm là đang thua. Bot và khách vẫn chơi cùng được nhưng không có điểm.
+- Trang **`/report`** (nút 🏆 ở trang chủ và trong phòng): bảng xếp hạng theo 7/14/30 ngày hoặc khoảng ngày tuỳ chọn, lọc theo từng game, bảng đối đầu (ai thắng ai), các ván gần đây, và số ván bị chủ phòng bỏ dở giữa chừng. Link giữ nguyên bộ lọc nên gửi cho cả nhóm xem cùng một kỳ được.
+- Dữ liệu nằm trong thư mục **`data/`** cạnh `server.js` (`accounts.json` + `matches.jsonl`, không đưa lên git). Muốn giữ lịch sử thì luôn chạy hub trên cùng một máy và thỉnh thoảng sao lưu thư mục này. Đổi chỗ lưu bằng `HUB_DATA=<thư mục>`.
+
 ## Phát triển
 
 Mỗi game là một thư mục trong `games/`. Cách thêm game mới, interface và giao thức: xem **[CLAUDE.md](CLAUDE.md)**.

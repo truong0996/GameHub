@@ -432,4 +432,7 @@ function viewEvents(events, seat) {
   });
 }
 
-export default { create, act, isOver: st => st.phase === 'over', turn, bot, animDuration, view, viewEvents };
+// Thứ hạng (bảng xếp hạng của hub): theo tổng điểm, bằng điểm thì đồng hạng.
+const result = st => st.results.map(r => ({ p: r.p, s: r.total }));
+
+export default { create, act, isOver: st => st.phase === 'over', result, turn, bot, animDuration, view, viewEvents };

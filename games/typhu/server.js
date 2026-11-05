@@ -710,4 +710,8 @@ function viewEvents(events, seat) {
   return events.map(e => (e.t === 'skill' && e.p !== seat ? { ...e, k: '?' } : e));
 }
 
-export default { create, act, isOver: st => st.phase === 'over', turn, bot, animDuration, view, viewEvents };
+// Thứ hạng (bảng xếp hạng của hub): người thắng (kể cả thắng nhanh bằng độc quyền) trước, còn lại theo tài sản, người phá sản cuối.
+const result = st => [...st.results].sort((a, b) => st.winners.includes(b.p) - st.winners.includes(a.p))
+  .map(r => ({ p: r.p, s: st.winners.includes(r.p) ? 'win' : [r.broke, r.worth] }));
+
+export default { create, act, isOver: st => st.phase === 'over', result, turn, bot, animDuration, view, viewEvents };

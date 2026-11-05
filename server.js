@@ -3,6 +3,7 @@
 //   PORT=8080 node server.js       đổi cổng
 //   HUB_DEV=1 node server.js       hiện cả các game trong thư mục bắt đầu bằng "_" (vd _template)
 //   node server.js --online        mở luôn tunnel Cloudflare để chơi qua Internet (= npm run online)
+//   HUB_DATA=<thư mục>             nơi lưu tài khoản + lịch sử ván (mặc định ./data)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,10 +13,13 @@ import { loadGames } from './hub/registry.js';
 import { createHub } from './hub/rooms.js';
 import { acceptUpgrade } from './hub/ws.js';
 import { startTunnel } from './hub/tunnel.js';
+import { createAccounts } from './hub/accounts.js';
+import { createStats, buildReport } from './hub/stats.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, 'public');
 const GAMES = path.join(ROOT, 'games');
+const DATA = path.resolve(process.env.HUB_DATA || path.join(ROOT, 'data'));
 const PORT = Number(process.env.PORT) || 3000;
 const DEV = process.env.HUB_DEV === '1';
 const ONLINE = process.argv.includes('--online') || process.env.HUB_ONLINE === '1';
@@ -39,7 +43,24 @@ function lanUrls() {
 
 const games = await loadGames(GAMES, { dev: DEV });
 const gameDirs = new Set([...games.values()].map(g => g.dir));
-const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl });
+const accounts = createAccounts(DATA), stats = createStats(DATA);
+const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl, accounts, stats });
+
+// GET /api/report?from=<ms>&to=<ms>&game=<id> → bảng xếp hạng (public/report.html vẽ).
+function report(url, res) {
+  const q = url.searchParams, num = k => (q.get(k) && Number.isFinite(+q.get(k)) ? +q.get(k) : undefined);
+  const gameInfo = id => { const g = games.get(id); return g ? { name: g.manifest.name, icon: g.manifest.icon } : { name: id, icon: '🎲' }; };
+  let body;
+  try {
+    body = JSON.stringify(buildReport(stats.list(), { from: num('from'), to: num('to'), game: q.get('game') || '' },
+      id => (accounts.get(id) || {}).name, gameInfo));
+  } catch (e) {
+    console.error('[report]', e);
+    res.writeHead(500); res.end('Lỗi tạo báo cáo'); return;
+  }
+  res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+  res.end(body);
+}
 
 // Chỉ phục vụ file nằm trong base; chặn ../ và chặn file logic phía server của game.
 function resolveStatic(urlPath) {
@@ -60,7 +81,8 @@ function safeJoin(base, parts) {
 const server = http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
   const url = new URL(req.url, 'http://localhost');
-  const file = resolveStatic(url.pathname);
+  if (url.pathname === '/api/report') return report(url, res);
+  const file = resolveStatic(url.pathname === '/report' ? '/report.html' : url.pathname);
   if (!file) { res.writeHead(404); res.end('Not found'); return; }
   fs.readFile(file, (err, buf) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }

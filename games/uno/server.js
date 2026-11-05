@@ -471,4 +471,7 @@ function viewEvents(events, seat) {
   });
 }
 
-export default { create, act, isOver: st => st.phase === 'over', turn, bot, animDuration, view, viewEvents };
+// Thứ hạng (bảng xếp hạng của hub): chơi tới điểm thì theo điểm; chơi một ván thì người hết bài nhất, còn lại ít điểm trên tay hơn xếp trên.
+const result = st => st.results.map(r => ({ p: r.p, s: r.p === st.winner ? 'win' : st.target ? r.score : r.pts }));
+
+export default { create, act, isOver: st => st.phase === 'over', result, turn, bot, animDuration, view, viewEvents };

@@ -2,6 +2,7 @@
 // Mọi game cắm vào qua interface mô tả trong CLAUDE.md (manifest.js + server.js).
 import crypto from 'node:crypto';
 import { catalogEntry, defaultOpts } from './registry.js';
+import { ranksOf } from './stats.js';
 
 const BOT_NAMES = ['Tí', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
 export const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
@@ -15,12 +16,16 @@ const CHAT_GAP_MS = 400;          // chống spam
 const RTC_MAX = 16000;            // tin bắt tay WebRTC (SDP/ICE) tối đa ~16KB
 const RELAY_MAX = 2048;           // một gói tiếng chuyển qua server (μ-law 16kHz, 40ms = 640 byte)
 const RELAY_BACKLOG = 64 * 1024;  // người nhận mạng chậm, đang ứ quá nhiều thì bỏ gói tiếng
+const KICK_BAN_MS = 2 * 60 * 1000; // bị chủ phòng mời ra thì 2 phút sau mới vào lại được phòng đó
 
 const AFTER = Symbol('after');
 const rid = n => crypto.randomBytes(n).toString('hex');
 const cleanName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 16) || 'Ẩn danh';
+// Người bị mời ra: chặn theo tài khoản, khách thì theo tên (khách đổi tên là vào được — chỉ để khỏi vào lại ngay theo thói quen).
+const banKey = (acct, name) => (acct ? 'a:' + acct : 'n:' + cleanName(name).toLowerCase());
 
-export function createHub({ games, lanUrls = () => [], publicUrl = () => null }) {
+// accounts (hub/accounts.js) + stats (hub/stats.js): có thì người chơi đăng nhập được và kết quả ván được ghi lại.
+export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null }) {
   const rooms = new Map();
   const catalog = [...games.values()].map(catalogEntry).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
@@ -30,7 +35,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
     let code;
     do code = Array.from({ length: 4 }, () => A[crypto.randomInt(A.length)]).join('');
     while (rooms.has(code));
-    const room = { code, host: null, members: new Map(), gameKey: null, optsByGame: {}, seats: [], match: null, matchSeq: 0, chat: [], chatSeq: 0, touched: Date.now() };
+    const room = { code, host: null, members: new Map(), gameKey: null, optsByGame: {}, seats: [], match: null, matchSeq: 0, chat: [], chatSeq: 0, kicked: new Map(), touched: Date.now() };
     setGame(room, gameKey && games.has(gameKey) ? gameKey : catalog[0].id);
     rooms.set(code, room);
     return room;
@@ -68,9 +73,11 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
       seats: room.seats.map((s, i) => ({
         kind: s.kind, uid: s.pid ? (room.members.get(s.pid) || {}).uid : null, name: seatName(room, i),
         online: s.kind === 'bot' || (s.kind === 'human' && online(room, s.pid)),
+        acct: s.kind === 'human' && !!(room.members.get(s.pid) || {}).acct,
       })),
       // voice: đang trong đàm thoại → { m: tắt mic?, v: mã phiên (đổi mỗi lần vào lại → client dựng lại kết nối) }
-      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid),
+      // acct: đã đăng nhập (ván có ≥2 người đăng nhập mới được tính vào bảng xếp hạng)
+      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid), acct: !!m.acct,
         voice: m.voice ? { m: m.voice.muted, v: m.voice.v } : null })),
     };
   }
@@ -108,7 +115,11 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
     if (n < M.minPlayers) throw new Error(`${M.name} cần ít nhất ${M.minPlayers} người chơi (người hoặc bot)`);
     const now = Date.now();
     const { state, events } = g.logic.create({ seats: info, opts: { ...optsOf(room) }, now });
-    room.match = { id: ++room.matchSeq, logic: g.logic, turnMs: M.turnMs || DEFAULT_TURN_MS, state, timer: null, tick: null, busyUntil: now, deadline: 0 };
+    // players: ai ngồi ghế nào lúc bắt đầu (ghi vào lịch sử khi hết ván — rời phòng giữa chừng vẫn tính, máy đi giúp).
+    const players = room.seats.map((s, i) => (info[i] ? { seat: i, acct: s.kind === 'human' ? (room.members.get(s.pid) || {}).acct || null : null,
+      name: info[i].name, ...(s.kind === 'bot' ? { bot: true } : {}) } : null)).filter(Boolean);
+    room.match = { id: ++room.matchSeq, logic: g.logic, turnMs: M.turnMs || DEFAULT_TURN_MS, state, timer: null, tick: null, busyUntil: now, deadline: 0,
+      game: room.gameKey, opts: { ...optsOf(room) }, players, startedAt: now, recorded: false };
     broadcastRoom(room);
     afterAction(room, events || []);
     if (g.logic.tickRate) {
@@ -117,17 +128,32 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
         if (room.match !== mt) return clearInterval(mt.tick);
         const r = mt.logic.tick(mt.state, Date.now());
         if (r && ((r.events && r.events.length) || r.changed)) broadcastGame(room, r.events || []);
-        if (mt.logic.isOver(mt.state)) clearInterval(mt.tick);
+        if (mt.logic.isOver(mt.state)) { clearInterval(mt.tick); record(room); }
       }, 1000 / g.logic.tickRate);
     }
   }
 
-  function stopMatch(room) {
+  // by = tài khoản của người dừng ván (chủ phòng bấm về phòng chờ); ván chưa xong thì ghi là bỏ dở.
+  function stopMatch(room, by = null) {
     const mt = room.match;
     if (!mt) return;
     clearTimeout(mt.timer);
     clearInterval(mt.tick);
+    if (!mt.logic.isOver(mt.state)) record(room, { aborted: true, by });
     room.match = null;
+  }
+
+  // Ghi ván vào lịch sử (một lần mỗi ván). Chỉ ghi khi có ≥2 người đã đăng nhập — ván toàn khách/bot không ảnh hưởng bảng xếp hạng.
+  function record(room, { aborted = false, by = null } = {}) {
+    const mt = room.match;
+    if (!stats || mt.recorded) return;
+    mt.recorded = true;
+    if (mt.players.filter(x => x.acct).length < 2) return;
+    const now = Date.now();
+    const ranks = aborted ? [] : ranksOf(mt.logic, mt.state, mt.players.map(x => x.seat));
+    const rec = { at: now, dur: now - mt.startedAt, room: room.code, game: mt.game, opts: mt.opts,
+      ...(aborted ? { aborted: true, by } : {}), players: mt.players.map((x, i) => ({ ...x, rank: ranks[i] ?? null })) };
+    try { stats.add(rec); } catch (e) { console.error(`[${room.code}] không ghi được lịch sử ván:`, e.message); }
   }
 
   function afterAction(room, events, meta) {
@@ -136,6 +162,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
     mt.busyUntil = Math.max(Date.now(), mt.busyUntil) + dur;
     schedule(room);
     broadcastGame(room, events, meta);
+    if (mt.logic.isOver(mt.state)) record(room);
   }
 
   // Hẹn giờ cho game theo lượt: bot tự đi, tự đi khi chỉ có 1 lựa chọn, hết giờ suy nghĩ.
@@ -213,6 +240,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
   // ---------- xử lý tin nhắn từ client ----------
   function handleConnection(ws) {
     let room = null, member = null;
+    let user = null;   // tài khoản đã đăng nhập trên kết nối này ({ id, name }) — gắn vào thành viên lúc tạo/vào phòng
 
     function attach(r, m) {
       detach();
@@ -245,15 +273,36 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
       };
       return { code: r.code, pid: m.pid, uid: m.uid, lan: lanUrls(), pub: publicUrl(), catalog, [AFTER]: after };
     }
+    // Bị chủ phòng mời ra: rời phòng ngay (client về màn hình chính).
+    ws.kickOut = () => {
+      if (!room) return;
+      const code = room.code;
+      if (member.voice && member.voice.ws === ws) member.voice = null;
+      member.conns.delete(ws);
+      room = member = null;
+      send(ws, { t: 'kicked', code });
+    };
     function addMember(r, name) {
-      const m = { pid: rid(12), uid: rid(4), name: cleanName(name), conns: new Set(), lastEmote: 0, lastChat: 0, voice: null };
+      const m = { pid: rid(12), uid: rid(4), name: user ? user.name : cleanName(name), acct: user ? user.id : null,
+        conns: new Set(), lastEmote: 0, lastChat: 0, voice: null };
       r.members.set(m.pid, m);
       if (!r.host) r.host = m.uid;
       return m;
     }
 
+    const needAccounts = () => { if (!accounts) throw new Error('Server này chưa bật tài khoản'); };
     const handlers = {
-      hello: () => ({ catalog, lan: lanUrls(), pub: publicUrl() }),
+      hello: () => ({ catalog, lan: lanUrls(), pub: publicUrl(), accounts: !!accounts }),
+      // Tài khoản: register/login → { token, user }; auth { token } (lúc kết nối lại) → { user }. Có hiệu lực từ lần tạo/vào phòng sau.
+      register(msg) { needAccounts(); const r = accounts.register(msg.name, msg.pin); user = r.user; return r; },
+      login(msg) { needAccounts(); const r = accounts.login(msg.name, msg.pin); user = r.user; return r; },
+      auth(msg) {
+        needAccounts();
+        user = accounts.byToken(msg.token);
+        if (!user) throw new Error('Phiên đăng nhập đã hết hạn, hãy đăng nhập lại');
+        return { user };
+      },
+      logout(msg) { if (accounts) accounts.logout(msg.token); user = null; return {}; },
       create(msg) {
         const r = makeRoom(msg.game);
         const m = addMember(r, msg.name);
@@ -264,9 +313,14 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
         const r = rooms.get(String(msg.code || '').toUpperCase().trim());
         if (!r) throw new Error('Không tìm thấy phòng (có thể server đã khởi động lại)');
         let m = r.members.get(msg.pid);
-        if (!m && !msg.name) throw new Error('Phiên cũ đã hết hạn, hãy vào lại phòng');
+        if (m && user && m.acct && m.acct !== user.id) m = null;   // tab này đã đổi sang tài khoản khác
+        if (user) m = [...r.members.values()].find(x => x.acct === user.id) || m;   // máy khác của cùng tài khoản → cùng chỗ
+        const ban = !m && r.kicked.get(banKey(user && user.id, msg.name));
+        if (ban > Date.now()) throw new Error(`Bạn vừa bị chủ phòng mời ra — ${Math.ceil((ban - Date.now()) / 1000)} giây nữa mới vào lại được`);
+        if (!m && !msg.name && !user) throw new Error('Phiên cũ đã hết hạn, hãy vào lại phòng');
         if (!m) m = addMember(r, msg.name);
-        else if (msg.name && !r.match) m.name = cleanName(msg.name);
+        else if (user && !m.acct) { m.acct = user.id; if (!r.match) m.name = user.name; }   // khách vừa đăng nhập
+        else if (msg.name && !m.acct && !r.match) m.name = cleanName(msg.name);
         return welcome(r, m);
       },
       leave() {
@@ -327,7 +381,20 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
       },
       lobby(msg, r, m) {
         needHost(r, m);
-        stopMatch(r);
+        stopMatch(r, m.acct);
+      },
+      // Chủ phòng mời một người ra khỏi phòng (người đang ngồi trong ván thì phải về phòng chờ trước).
+      kick(msg, r, m) {
+        needHost(r, m);
+        const x = [...r.members.values()].find(y => y.uid === msg.uid);
+        if (!x) throw new Error('Người này không còn trong phòng');
+        if (x === m) throw new Error('Không thể tự mời mình ra');
+        if (seatOf(r, x.pid) >= 0 && r.match) throw new Error('Người này đang chơi — về phòng chờ rồi mới mời ra được');
+        const s = seatOf(r, x.pid);
+        if (s >= 0) r.seats[s] = { kind: 'open', pid: null };
+        r.members.delete(x.pid);
+        r.kicked.set(banKey(x.acct, x.name), Date.now() + KICK_BAN_MS);
+        for (const w of [...x.conns]) w.kickOut();
       },
       act(msg, r, m) {
         const mt = r.match;

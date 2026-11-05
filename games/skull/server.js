@@ -431,6 +431,10 @@ export default {
   create,
   act,
   isOver: st => st.phase === 'over',
+  // Thứ hạng (bảng xếp hạng của hub): người thắng nhất; còn lại người chưa bị loại, nhiều lần thắng thử thách, mất ít đĩa hơn xếp trên.
+  result: st => [{ p: st.winner, s: 'win' }, ...st.players.map((pl, p) => ({ p, pl })).filter(x => x.pl.active && x.p !== st.winner)
+    .map(({ p, pl }) => ({ p, s: [pl.alive ? 1 : 0, pl.wins, -pl.lost.length] }))
+    .sort((a, b) => b.s[0] - a.s[0] || b.s[1] - a.s[1] || b.s[2] - a.s[2])],
   turn,
   bot: botAction,
   animDuration,

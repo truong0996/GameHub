@@ -452,6 +452,8 @@ export default {
   create,
   act,
   isOver: st => st.phase === 'over',
+  // Thứ hạng (bảng xếp hạng của hub): người sống sót nhất, còn lại ai nổ sau xếp trên.
+  result: st => [st.winner, ...[...st.dead].reverse()].map(p => ({ p })),
   turn(st) {
     switch (st.phase) {
       case 'play': return { seat: st.turn };

@@ -52,6 +52,18 @@ select:disabled, input:disabled { opacity: .75; }
 .or { color: var(--muted); font-size: 13px; }
 .showcase { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .showcase span { padding: 6px 12px; border-radius: 99px; background: var(--chip); border: 1px solid var(--line); font-size: 14px; }
+/* tài khoản (đăng nhập để được tính vào bảng xếp hạng) */
+.acct { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 10px 12px; border-radius: 12px;
+  background: var(--chip); border: 1px solid var(--line); font-size: 14px; }
+.acct.on { background: color-mix(in srgb, var(--primary) 9%, var(--surface)); border-color: color-mix(in srgb, var(--primary) 35%, var(--line)); }
+.acct button { padding: 5px 12px; font-size: 13px; }
+.rank-link { color: var(--primary); font-weight: 600; text-decoration: none; }
+.rank-link:hover { text-decoration: underline; }
+.login label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.login input[type=password] { letter-spacing: .3em; }
+.login .err { color: var(--danger); min-height: 1.3em; margin: -4px 0 8px; font-size: 14px; }
+.guest { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 99px; background: var(--chip); border: 1px solid var(--line); color: var(--muted); vertical-align: 2px; }
+.kick { padding: 0 6px; margin-left: 2px; font-size: 12px; line-height: 1.5; border-radius: 6px; vertical-align: 1px; }
 #net { position: fixed; top: 10px; right: 12px; z-index: 90; font-size: 12px; padding: 4px 10px; border-radius: 99px; background: var(--danger); color: #fff; }
 
 /* ---------- Phòng chờ ---------- */
