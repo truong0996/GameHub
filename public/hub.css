@@ -19,7 +19,8 @@ html, body { margin: 0; height: 100%; color: var(--ink); font-family: 'Segoe UI'
 .center { text-align: center; }
 .grow { flex: 1; }
 .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
-/* Tên người chơi in màu ghế: <b class="pn" style="--c:màu">. Trên nền sáng tự đậm màu lại cho dễ đọc; trên nền tối (.dark) giữ màu gốc. */
+/* Tên người chơi in màu ghế: <b class="pn" style="--c:màu">. Trên nền sáng tự đậm màu lại cho dễ đọc; trên nền tối (.dark) giữ màu gốc.
+   Màu ghế rất sáng (vd Trắng): viền trên nền sáng dùng oklch(from var(--c) min(l, .8) c h), chữ trên nền màu ghế tự chuyển đen. */
 .pn { color: color-mix(in oklab, var(--c) 58%, #000); }
 .dark .pn, .floater .pn { color: var(--c); }
 
@@ -70,13 +71,14 @@ select:disabled, input:disabled { opacity: .75; }
 .gdesc { font-size: 14px; color: var(--muted); margin-top: -4px; }
 .seats { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .seat { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: var(--r); min-height: 84px;
-  background: color-mix(in srgb, var(--c) 9%, var(--surface)); border: 1px solid var(--line); border-left: 6px solid var(--c); transition: transform .15s, background .15s; }
+  background: color-mix(in srgb, var(--c) 9%, var(--surface)); border: 1px solid var(--line); border-left: 6px solid var(--c); border-left-color: oklch(from var(--c) min(l, .8) c h); transition: transform .15s, background .15s; }
 .seat-open { cursor: pointer; border-style: dashed; border-left-style: solid; }
 .seat-open:hover { transform: translateY(-2px); background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
 .seat-closed { opacity: .5; }
 .seat.mine { box-shadow: 0 0 0 2px var(--ink); }
 .seat-dot { width: 46px; height: 46px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 800; color: #fff;
-  background: var(--c); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  background: var(--c); box-shadow: inset 0 0 0 1px rgba(0,0,0,.1), inset 0 -3px 0 rgba(0,0,0,.18); text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  color: oklch(from var(--c) calc((.92 - l) * infinity) 0 h); }
 .seat-color { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .seat-who { font-weight: 700; font-size: 17px; }
 .seat-sel { position: absolute; top: 8px; right: 8px; padding: 3px 6px; font-size: 12px; }
@@ -103,11 +105,11 @@ select:disabled, input:disabled { opacity: .75; }
 .pick { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 14px 0; }
 .pick button { min-width: 64px; font-size: 30px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 2px 0 var(--line); }
 .pick button:hover:not(:disabled) { filter: none; background: var(--chip); }
-.pick button.pl { font-size: 16px; background: var(--c); border: 0; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+.pick button.pl { font-size: 16px; background: var(--c); border: 0; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); color: #fff; color: oklch(from var(--c) calc((.92 - l) * infinity) 0 h); text-shadow: 0 1px 2px rgba(0,0,0,.4); }
 .help h3 { margin: 16px 0 6px; color: var(--primary); }
 .help ul { margin: 0; padding-left: 20px; line-height: 1.55; }
 .rank { list-style: none; padding: 0; margin: 12px 0; }
-.rank li { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; margin-bottom: 6px; background: var(--chip); border-left: 5px solid var(--c); }
+.rank li { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 10px; margin-bottom: 6px; background: var(--chip); border-left: 5px solid var(--c); border-left-color: oklch(from var(--c) min(l, .8) c h); }
 .rank li:first-child { background: color-mix(in srgb, var(--accent) 25%, var(--surface)); font-size: 20px; font-weight: 800; }
 .emotes { display: flex; flex-wrap: wrap; gap: 4px; }
 .emotes button { padding: 4px 6px; font-size: 20px; background: var(--chip); border: 1px solid var(--line); box-shadow: none; border-radius: 10px; }

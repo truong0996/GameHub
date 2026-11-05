@@ -5,13 +5,14 @@ const MAX_CARDS = 3;
 // Hình bàn theo số người chơi: [số cạnh, số ô mỗi cạnh]. Mỗi người giữ 1 cạnh; 2 người ngồi đối diện trên bàn vuông.
 const LAYOUT = { 2: [4, 12], 3: [3, 16], 4: [4, 12], 5: [5, 12], 6: [6, 12] };
 
+// 6 màu cơ bản cách xa nhau (kể cả với người mù màu đỏ-lục); không dùng Cam vì dễ lẫn với Vàng.
 const SEATS = [
-  { color: '#ff4d6d', name: 'Đỏ',   horse: 'Xích Thố' },
-  { color: '#ff9f1c', name: 'Cam',  horse: 'Hỏa Long' },
-  { color: '#ffd23f', name: 'Vàng', horse: 'Kim Phong' },
-  { color: '#2ec76b', name: 'Lục',  horse: 'Thanh Vân' },
-  { color: '#3a9bff', name: 'Lam',  horse: 'Thủy Mã' },
-  { color: '#b06cff', name: 'Tím',  horse: 'Tử Điện' },
+  { color: '#d62828', name: 'Đỏ',    horse: 'Xích Thố' },
+  { color: '#ffcc00', name: 'Vàng',  horse: 'Kim Phong' },
+  { color: '#2ecc40', name: 'Lục',   horse: 'Thanh Vân' },
+  { color: '#2979ff', name: 'Lam',   horse: 'Thủy Mã' },
+  { color: '#ff5cc8', name: 'Hồng',  horse: 'Đào Hoa' },
+  { color: '#f4f1ea', name: 'Trắng', horse: 'Bạch Long' },
 ];
 
 const CARDS = {

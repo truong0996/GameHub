@@ -51,6 +51,9 @@ function shade(hex, f) {
   const n = parseInt(hex.slice(1), 16), ch = s => Math.round(Math.min(255, Math.max(0, ((n >> s) & 255) * (1 + f))));
   return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
 }
+// Màu ghế rất sáng (Trắng) vẽ lên nền sáng của hub thì tối lại cho thấy viền/chữ.
+const isLight = hex => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255 > 0.9; };
+const edge = hex => (isLight(hex) ? shade(hex, -0.3) : hex);
 
 // ---------- âm thanh riêng của game (dùng tone/noise của hub) ----------
 const snd = {
@@ -162,9 +165,9 @@ function buildBoard(st) {
   st.players.forEach((pl, p) => {
     if (!pl.active) return;
     const col = C.SEATS[p].color, c = stableCenter(p);
-    S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': 0.16, stroke: col, 'stroke-width': 3 }, bg);
-    pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(42,39,35,.1)', stroke: col, 'stroke-opacity': 0.6 }, bg); });
-    S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: shade(col, -0.42), class: 'lbl lbl-out' }, bg).textContent = pl.name;
+    S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': 0.16, stroke: edge(col), 'stroke-width': 3 }, bg);
+    pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(42,39,35,.1)', stroke: edge(col), 'stroke-opacity': 0.6 }, bg); });
+    S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: shade(col, isLight(col) ? -0.6 : -0.42), class: 'lbl lbl-out' }, bg).textContent = pl.name;
   });
   L_SPEC = S('g', {}, svg); L_MET = S('g', {}, svg); L_HINT = S('g', {}, svg); L_HORSE = S('g', {}, svg);
   HE = st.players.map((pl, p) => pl.horses.map((_, h) => makeHorse(p, h)));

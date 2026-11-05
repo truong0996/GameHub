@@ -70,8 +70,8 @@
 .ccn .side-left { padding-bottom: 66px; }  /* chừa góc dưới-trái cho nút chat của hub */
 .ccn .side-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
 .ccn .side-head b { color: var(--primary); letter-spacing: .15em; }
-.ccn .pcard { position: relative; border-radius: 14px; padding: 9px 11px 11px; background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--c); transition: transform .2s, box-shadow .2s; }
-.ccn .pcard.active { background: color-mix(in srgb, var(--c) 14%, var(--surface)); box-shadow: 0 0 0 2px var(--c); transform: translateX(4px); }
+.ccn .pcard { position: relative; border-radius: 14px; padding: 9px 11px 11px; background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--c); border-left-color: oklch(from var(--c) min(l, .8) c h); transition: transform .2s, box-shadow .2s; }
+.ccn .pcard.active { background: color-mix(in srgb, var(--c) 14%, var(--surface)); box-shadow: 0 0 0 2px var(--c); box-shadow: 0 0 0 2px oklch(from var(--c) min(l, .8) c h); transform: translateX(4px); }
 .ccn .p-top { display: flex; align-items: center; gap: 6px; font-weight: 700; }
 .ccn .p-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .ccn .tag { font-size: 10px; background: var(--ink); color: var(--surface); padding: 1px 6px; border-radius: 99px; }
