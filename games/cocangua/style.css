@@ -67,6 +67,7 @@
 .ccn #banner .b-small { font-size: 2.2cqw; margin-top: .8cqw; color: #fff; background: rgba(30,28,25,.8); display: inline-block; padding: .5cqw 1.8cqw; border-radius: 99px; }
 
 /* Bảng người chơi & điều khiển */
+.ccn .side-left { padding-bottom: 66px; }  /* chừa góc dưới-trái cho nút chat của hub */
 .ccn .side-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
 .ccn .side-head b { color: var(--primary); letter-spacing: .15em; }
 .ccn .pcard { position: relative; border-radius: 14px; padding: 9px 11px 11px; background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--c); transition: transform .2s, box-shadow .2s; }

@@ -1,4 +1,4 @@
-# Sân Đình — game hub
+# Celestials Game Hub
 
 Hub chơi game nhiều người qua LAN/Internet. Người chơi tạo **phòng** trước, chủ phòng **chọn game** sau; chơi xong đổi game khác mà không ai phải vào lại. Mỗi game là một plugin trong `games/<dir>/`.
 
@@ -25,7 +25,7 @@ hub/tunnel.js        chạy cloudflared (hoặc npx cloudflared) quick tunnel, b
 hub/ws.js            WebSocket server tự viết (RFC 6455), có ping/pong phát hiện kết nối chết
 hub/registry.js      nạp games/*/ (manifest.js + server.js), kiểm tra interface, tạo catalog cho client
 hub/rooms.js         phòng, thành viên, ghế, chủ phòng, bot, hẹn giờ lượt, tick real-time, giao thức tin nhắn
-public/              client hub: index.html, hub.js (kết nối, phòng chờ, nạp game), ui.js, sfx.js, hub.css
+public/              client hub: index.html, hub.js (kết nối, phòng chờ, nạp game), chat.js (khung chat nổi), ui.js, sfx.js, hub.css
 games/cocangua/      Cờ Cá Ngựa (theo lượt) — ví dụ đầy đủ, nhiều animation
 games/meono/         Mèo Nổ (theo lượt + cửa sổ phản ứng "Không!", che bài bằng view/viewEvents)
 games/incagold/      Kho Báu Inca (mọi người chọn bí mật CÙNG LÚC qua turn() → { seats, key })
@@ -71,21 +71,22 @@ Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `
 - `ctx.send(action)` → Promise `{ ok, err }` (lỗi đã tự toast). `ctx.restart()` ván mới (chủ phòng), `ctx.backToLobby()`, `ctx.exit()`.
 - `ctx.loadCss(url)` → Promise; CSS tự gỡ khi unmount. Dùng `new URL('./style.css', import.meta.url)`.
 - `ctx.ui` — `$, el, esc, pick, toast, openModal, closeModal, pickModal, floatAt, burst, confetti, fireworks, spawn, PALETTE, emoteBar(el), toolbar(el, { help })`.
-- `ctx.sfx` — `tone, noise, ac` + âm chung `pop, click, error, tick, myTurn, card, gong, whoosh, tele, boom, win`.
+- `ctx.sfx` — `tone, noise, ac` + âm chung `pop, click, error, tick, chat, myTurn, card, gong, whoosh, tele, boom, win`.
 
-Chỉ một game được mount tại một thời điểm nên dùng biến cấp module là được; nhớ reset trong `mount`. Phần tử `#modal`, `#toast`, `#fx` là của hub (dùng qua `ctx.ui`), đừng tạo id trùng.
+Chỉ một game được mount tại một thời điểm nên dùng biến cấp module là được; nhớ reset trong `mount`. Phần tử `#modal`, `#toast`, `#fx`, `#chat` là của hub (dùng qua `ctx.ui`), đừng tạo id trùng. **Góc dưới-trái (~70×70px) dành cho nút chat 💬 của hub** — đừng đặt nút/thông tin quan trọng ở đó (vd Cờ Cá Ngựa chừa `padding-bottom` cho cột trái). `emoteAnchor` cũng được dùng để hiện bong bóng lời thoại chat tại ghế người gửi.
 
 ## Giao thức WebSocket (`/ws`, JSON)
 Client → server: `{ id?, t, ...}` — có `id` thì server trả `{ t:'res', id, ok, err?, ... }`.
 - Không cần phòng: `hello`, `create {name, game?}`, `join {code, name?, pid?}`, `leave`.
-- Trong phòng: `sit {seat}`, `unsit`, `seatKind {seat, kind:'open'|'bot'|'closed'}`*, `fillBots`*, `selectGame {game}`*, `opts {key, value}`*, `start`*, `lobby`*, `act {action}`, `emote {e}`. (*chỉ chủ phòng)
+- Trong phòng: `sit {seat}`, `unsit`, `seatKind {seat, kind:'open'|'bot'|'closed'}`*, `fillBots`*, `selectGame {game}`*, `opts {key, value}`*, `start`*, `lobby`*, `act {action}`, `emote {e}`, `chat {text}` (≤200 ký tự, cách nhau ≥0.4s). (*chỉ chủ phòng)
 
-Server → client: `room {room}`, `game {matchId, game, state, events, meta, deadlineIn}`, `emote {uid, name, seat, e}`.
+Server → client: `room {room}`, `game {matchId, game, state, events, meta, deadlineIn}`, `emote {uid, name, seat, e}`, `chat {msg: {id, uid, name, seat, color, text, at}}`, `chatLog {log}` (≤50 tin gần nhất, gửi lúc vào/vào lại phòng).
 `pid` là mã bí mật (lưu sessionStorage để F5/rớt mạng vào lại đúng ghế); `uid` là mã công khai hiển thị trong `room`.
 
 ## Ghi chú
 - Phòng chỉ nằm trong RAM: khởi động lại server là mất phòng.
 - Chủ phòng offline >15s thì quyền chủ phòng chuyển cho người khác đang online.
+- Chat: lịch sử nằm trong phòng (RAM, giữ 50 tin) nên F5/vào lại vẫn thấy; màu tên lưu theo ghế lúc gửi. Phím gõ trong ô chat bị chặn `stopPropagation` để không lọt xuống phím tắt của game; Enter (khi không ở ô nhập liệu) mở chat, Esc đóng.
 - Mèo Nổ: `cards.js` dùng chung (tên lá, combo, thời lượng animation); luật + bot nằm trong `server.js` để không lộ chồng bài. `state.ask` = ghế đang phải quyết định (khác `turn` khi bị Xin Bài). `resolve` kiểm tra `now >= react.until` để client không tự đóng cửa sổ sớm.
 - Kho Báu Inca: `data.js` dùng chung (lá, bùa, đền, thời lượng animation); luật + bot trong `server.js`. `view` ẩn chồng bài, ngọc trong lều và lựa chọn của người khác (trừ khi người xem dùng bùa Mắt Kền Kền), bùa "bí ẩn" che tên trong `viewEvents`. Client giữ bản `V` cập nhật dần theo từng sự kiện để vẽ, diễn xong thì thay bằng state thật.
 - Cờ cá ngựa: luật ở `games/cocangua/rules.js` (dùng chung server + client). Mặc định luật về chuồng "nhanh" vì luật truyền thống làm ván 6 người dài gần gấp đôi (đo bằng simulate).

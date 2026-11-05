@@ -3,6 +3,7 @@
 import * as UI from './ui.js';
 import { $, el, esc, toast, closeModal, modalOpen, floatAt, initFx } from './ui.js';
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
+import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
 const ME = { pid: null, uid: null, code: null, lan: [], pub: null };
@@ -84,6 +85,8 @@ function onMessage(m) {
   if (m.t === 'room') onRoom(m.room);
   else if (m.t === 'game') { m.recvAt = Date.now(); GQ.push(m); pump(); }
   else if (m.t === 'emote') onEmote(m);
+  else if (m.t === 'chatLog') chatLog(m.log);
+  else if (m.t === 'chat') chatMsg(m.msg);
 }
 
 function onRoom(room) {
@@ -210,6 +213,7 @@ function toolbar(container, { help } = {}) {
 // ================= MÀN HÌNH =================
 function show(name) {
   for (const s of ['home', 'room', 'game', 'loading']) $('#scr-' + s).classList.toggle('hidden', s !== name);
+  showChat(name !== 'home');
 }
 
 function renderHome() {
@@ -302,6 +306,7 @@ function resetToHome(msg) {
   sessionStorage.removeItem('hub_session');
   history.replaceState(null, '', location.pathname);
   closeModal();
+  resetChat();
   show('home');
   if (msg) toast(msg);
 }
@@ -319,6 +324,12 @@ function getName() {
 }
 
 initFx($('#fx'));
+initChat({
+  send: text => act('chat', { text }),
+  myUid: () => ME.uid,
+  anchorOf: seat => (current && current.inst.emoteAnchor ? current.inst.emoteAnchor(seat) : null),
+  onIncoming: () => sfx.chat(),
+});
 $('#in-name').value = localStorage.getItem('hub_name') || '';
 const qRoom = new URLSearchParams(location.search).get('room');
 if (qRoom) $('#in-code').value = qRoom.toUpperCase();

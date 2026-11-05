@@ -61,6 +61,7 @@ export const sfx = {
   click() { tone(1000, 0.03, { type: 'square', v: 0.04 }); },
   error() { tone(190, 0.16, { type: 'square', v: 0.07 }); },
   tick() { tone(1400, 0.04, { type: 'square', v: 0.03 }); },
+  chat() { tone(988, 0.09, { type: 'sine', v: 0.08 }); tone(1319, 0.14, { type: 'sine', v: 0.07, delay: 0.07 }); },
   myTurn() { tone(784, 0.16, { type: 'triangle', v: 0.16 }); tone(1175, 0.3, { type: 'triangle', v: 0.16, delay: 0.13 }); },
   card() { [880, 1175, 1568, 2093].forEach((f, i) => tone(f, 0.2, { type: 'triangle', v: 0.1, delay: i * 0.06 })); },
   gong() { tone(98, 2.2, { v: 0.35, a: 0.01 }); tone(196.5, 1.8, { v: 0.14 }); tone(294, 1.3, { v: 0.07 }); noise(0.7, { v: 0.12, f: 300 }); },

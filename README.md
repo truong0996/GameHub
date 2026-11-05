@@ -1,4 +1,4 @@
-# 🏮 Sân Đình — game hub chơi cùng bạn bè
+# 🪐 Celestials Game Hub — chơi game cùng bạn bè
 
 Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game rồi cùng chơi qua **LAN hoặc Internet**. Ghế trống có thể cho **Bot** ngồi.
 
@@ -23,6 +23,8 @@ Mở http://localhost:3000 → nhập tên → **Tạo phòng** → gửi link m
 
 - **Cùng wifi/LAN:** server in ra link dạng `http://192.168.x.x:3000` — gửi link đó cho bạn bè. Giữ cửa sổ chạy server mở suốt lúc chơi.
 - **Qua Internet:** trên Windows bấm đúp **`choi-online.cmd`**, hoặc chạy `npm run online` (= `node server.js --online`) — chỉ cần một cửa sổ. Server tự bật tunnel Cloudflare và in ra link `https://....trycloudflare.com`; nút **Copy link mời** trong phòng cũng copy link này. Dùng `cloudflared` nếu máy đã cài, không thì tự tải qua `npx` (lần đầu hơi lâu). Tắt server là tunnel tắt theo; mỗi lần chạy sẽ có link mới.
+
+Trong phòng có **chat** 💬 ở góc dưới-trái (bấm hoặc nhấn Enter): dùng được cả lúc chờ lẫn lúc đang chơi, tin nhắn hiện thành bong bóng trên ghế người gửi.
 
 F5 hoặc rớt mạng thì tự vào lại đúng ghế. Hết giờ lượt hoặc mất kết nối thì máy tự đi giúp. Mỗi tab trình duyệt là một người chơi riêng (tiện để tự test).
 

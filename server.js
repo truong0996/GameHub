@@ -1,4 +1,4 @@
-// Sân Đình — game hub chơi cùng bạn bè qua LAN / Internet. Node thuần, không cần npm install.
+// Celestials Game Hub — chơi game cùng bạn bè qua LAN / Internet. Node thuần, không cần npm install.
 //   node server.js                 chạy ở cổng 3000
 //   PORT=8080 node server.js       đổi cổng
 //   HUB_DEV=1 node server.js       hiện cả các game trong thư mục bắt đầu bằng "_" (vd _template)
@@ -76,7 +76,7 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 server.listen(PORT, () => {
-  console.log('\n🏮  Sân Đình — game hub đã chạy!\n');
+  console.log('\n🪐  Celestials Game Hub đã chạy!\n');
   console.log('   Game: ' + hub.catalog.map(g => `${g.icon} ${g.name}`).join(' · ') + (DEV ? '   (chế độ dev)' : ''));
   console.log(`\n   Máy này:          http://localhost:${PORT}`);
   for (const u of lanUrls()) console.log(`   Bạn bè cùng wifi: ${u}`);

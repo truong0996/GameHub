@@ -9,6 +9,9 @@ const DEFAULT_TURN_MS = 30000;
 const OFFLINE_MS = 3000;          // người chơi mất kết nối → máy tự đi sau 3s
 const HOST_HANDOVER_MS = 15000;   // chủ phòng offline quá lâu → chuyển quyền
 const ROOM_IDLE_MS = 30 * 60 * 1000;
+const CHAT_LEN = 200;             // độ dài tối đa một tin nhắn
+const CHAT_KEEP = 50;             // số tin gần nhất phòng giữ lại (người mới vào / F5 vẫn thấy)
+const CHAT_GAP_MS = 400;          // chống spam
 
 const AFTER = Symbol('after');
 const rid = n => crypto.randomBytes(n).toString('hex');
@@ -24,7 +27,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
     let code;
     do code = Array.from({ length: 4 }, () => A[crypto.randomInt(A.length)]).join('');
     while (rooms.has(code));
-    const room = { code, host: null, members: new Map(), gameKey: null, optsByGame: {}, seats: [], match: null, matchSeq: 0, touched: Date.now() };
+    const room = { code, host: null, members: new Map(), gameKey: null, optsByGame: {}, seats: [], match: null, matchSeq: 0, chat: [], chatSeq: 0, touched: Date.now() };
     setGame(room, gameKey && games.has(gameKey) ? gameKey : catalog[0].id);
     rooms.set(code, room);
     return room;
@@ -231,12 +234,13 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
       attach(r, m);
       const after = () => {
         broadcastRoom(r);
+        if (room === r) send(ws, { t: 'chatLog', log: r.chat });
         if (r.match && room === r) send(ws, gameMsg(r, [], null, seatOf(r, m.pid)));
       };
       return { code: r.code, pid: m.pid, uid: m.uid, lan: lanUrls(), pub: publicUrl(), catalog, [AFTER]: after };
     }
     function addMember(r, name) {
-      const m = { pid: rid(12), uid: rid(4), name: cleanName(name), conns: new Set(), lastEmote: 0 };
+      const m = { pid: rid(12), uid: rid(4), name: cleanName(name), conns: new Set(), lastEmote: 0, lastChat: 0 };
       r.members.set(m.pid, m);
       if (!r.host) r.host = m.uid;
       return m;
@@ -333,6 +337,20 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
         if (!EMOTES.includes(msg.e) || Date.now() - m.lastEmote < 600) return 'nobroadcast';
         m.lastEmote = Date.now();
         const data = JSON.stringify({ t: 'emote', uid: m.uid, name: m.name, seat: seatOf(r, m.pid), e: msg.e });
+        eachConn(r, w => send(w, data));
+        return 'nobroadcast';
+      },
+      chat(msg, r, m) {
+        const text = String(msg.text || '').replace(/\s+/g, ' ').trim().slice(0, CHAT_LEN);
+        if (!text) throw new Error('Tin nhắn trống');
+        if (Date.now() - m.lastChat < CHAT_GAP_MS) throw new Error('Gõ chậm lại chút nào!');
+        m.lastChat = Date.now();
+        // Lưu luôn màu ghế lúc gửi: đổi game/đổi ghế sau đó thì tin cũ vẫn giữ màu cũ.
+        const seat = seatOf(r, m.pid), info = seat >= 0 ? gameOf(r).manifest.seats[seat] : null;
+        const c = { id: ++r.chatSeq, uid: m.uid, name: m.name, seat, color: info ? info.color : null, text, at: m.lastChat };
+        r.chat.push(c);
+        if (r.chat.length > CHAT_KEEP) r.chat.shift();
+        const data = JSON.stringify({ t: 'chat', msg: c });
         eachConn(r, w => send(w, data));
         return 'nobroadcast';
       },
