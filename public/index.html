@@ -51,17 +51,20 @@
 <section id="scr-game" class="hidden"><div id="game-root"></div></section>
 <section id="scr-loading" class="screen hidden"><div id="loading">Đang tải trò chơi...</div></section>
 
-<!-- ============ CHAT (hiện khi đã vào phòng) ============ -->
+<!-- ============ CHAT + ĐÀM THOẠI (hiện khi đã vào phòng) ============ -->
 <div id="chat" class="hidden">
   <div id="chat-peek"></div>
   <div id="chat-panel" class="card hidden">
     <div class="chat-head"><b>💬 Trò chuyện</b><span class="grow"></span><button id="chat-x" class="ghost" title="Đóng (Esc)">✕</button></div>
+    <div id="voice-bar"></div>
     <div id="chat-log"></div>
     <form id="chat-form"><input id="chat-in" maxlength="200" placeholder="Nhập tin nhắn..." autocomplete="off"><button>Gửi</button></form>
   </div>
+  <button id="voice-btn" class="ghost">🎙️</button>
   <button id="chat-btn" class="ghost" title="Trò chuyện (Enter)">💬<span id="chat-badge" class="hidden"></span></button>
 </div>
 
+<div id="voice-talk"></div>
 <canvas id="fx"></canvas>
 <div id="modal" class="hidden"></div>
 <div id="toast"></div>

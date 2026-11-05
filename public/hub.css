@@ -166,6 +166,33 @@ select:disabled, input:disabled { opacity: .75; }
 .peek { max-width: min(300px, calc(100vw - 28px)); padding: 7px 12px; border-radius: 12px 12px 12px 4px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
   font-size: 14px; cursor: pointer; overflow-wrap: anywhere; animation: pop .2s cubic-bezier(.2,1.3,.4,1); transition: opacity .4s, transform .4s; }
 .peek.out { opacity: 0; transform: translateY(6px); }
+/* ---------- Đàm thoại (nút 🎙️ nằm ngay trên nút chat) ---------- */
+#voice-btn { position: relative; width: 40px; height: 40px; margin-left: 4px; padding: 0; border-radius: 50%; font-size: 18px; box-shadow: var(--shadow); transition: box-shadow .15s, opacity .15s; }
+#voice-btn.idle { opacity: .75; }
+#voice-btn.na { opacity: .4; }
+#voice-btn.busy { opacity: .6; cursor: progress; }
+#voice-btn.live { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, var(--surface)); }
+#voice-btn.muted { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
+#voice-btn.talking { box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 45%, transparent), var(--shadow); }
+@media (max-width: 640px) { #voice-btn.quiet { display: none; } }
+.vbadge { position: absolute; top: -4px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px; background: var(--primary); color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; }
+#voice-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; background: var(--chip); }
+.vb-t { font-size: 15px; }
+.vchips { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.vchip { padding: 2px 9px; font-size: 13px; font-weight: 600; border-radius: 99px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: none; transition: box-shadow .15s; }
+.vchip:disabled { opacity: 1; cursor: default; }
+.vchip:hover:not(:disabled) { filter: none; background: var(--chip); }
+.vchip.wait { opacity: .55; }
+.vchip.fail { border-color: var(--danger); color: var(--danger); }
+.vchip.deaf { text-decoration: line-through; opacity: .6; }
+.vchip.talking, .vmic.talking { box-shadow: 0 0 0 2px var(--primary); }
+.vb-btn { padding: 3px 12px; font-size: 13px; }
+.vmic { display: inline-block; font-size: 12px; border-radius: 99px; padding: 0 2px; transition: box-shadow .15s; }
+.vmic.talking { background: color-mix(in srgb, var(--primary) 18%, transparent); }
+.vtalk { position: fixed; z-index: 60; pointer-events: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+  background: var(--surface); border: 1px solid var(--primary); transform: translate(-50%, -150%); animation: vtalk 1s ease-in-out infinite; }
+@keyframes vtalk { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 30%, transparent); } }
 /* Lời thoại bay lên tại ghế người gửi */
 .say { position: fixed; z-index: 61; pointer-events: none; max-width: 180px; padding: 6px 11px; border-radius: 12px; background: var(--surface); color: var(--ink);
   border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.18); font-size: 14px; font-weight: 600; text-align: center; overflow-wrap: anywhere;

@@ -25,7 +25,7 @@ hub/tunnel.js        chạy cloudflared (hoặc npx cloudflared) quick tunnel, b
 hub/ws.js            WebSocket server tự viết (RFC 6455), có ping/pong phát hiện kết nối chết
 hub/registry.js      nạp games/*/ (manifest.js + server.js), kiểm tra interface, tạo catalog cho client
 hub/rooms.js         phòng, thành viên, ghế, chủ phòng, bot, hẹn giờ lượt, tick real-time, giao thức tin nhắn
-public/              client hub: index.html, hub.js (kết nối, phòng chờ, nạp game), chat.js (khung chat nổi), ui.js, sfx.js, hub.css
+public/              client hub: index.html, hub.js (kết nối, phòng chờ, nạp game), chat.js (khung chat nổi), voice.js (đàm thoại WebRTC), ui.js, sfx.js, hub.css
 games/cocangua/      Cờ Cá Ngựa (theo lượt) — ví dụ đầy đủ, nhiều animation
 games/meono/         Mèo Nổ (theo lượt + cửa sổ phản ứng "Không!", che bài bằng view/viewEvents)
 games/incagold/      Kho Báu Inca (mọi người chọn bí mật CÙNG LÚC qua turn() → { seats, key })
@@ -75,20 +75,21 @@ Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `
 - `ctx.ui` — `$, el, esc, pick, toast, openModal, closeModal, pickModal, floatAt, burst, confetti, fireworks, spawn, PALETTE, emoteBar(el), toolbar(el, { help })`.
 - `ctx.sfx` — `tone, noise, ac` + âm chung `pop, click, error, tick, chat, myTurn, card, gong, whoosh, tele, boom, win`.
 
-Chỉ một game được mount tại một thời điểm nên dùng biến cấp module là được; nhớ reset trong `mount`. Phần tử `#modal`, `#toast`, `#fx`, `#chat` là của hub (dùng qua `ctx.ui`), đừng tạo id trùng. **Góc dưới-trái (~70×70px) dành cho nút chat 💬 của hub** — đừng đặt nút/thông tin quan trọng ở đó (vd Cờ Cá Ngựa chừa `padding-bottom` cho cột trái). `emoteAnchor` cũng được dùng để hiện bong bóng lời thoại chat tại ghế người gửi.
+Chỉ một game được mount tại một thời điểm nên dùng biến cấp module là được; nhớ reset trong `mount`. Phần tử `#modal`, `#toast`, `#fx`, `#chat`, `#voice-talk` là của hub (dùng qua `ctx.ui`), đừng tạo id trùng. **Góc dưới-trái (~70×115px) dành cho nút đàm thoại 🎙️ + chat 💬 của hub** — đừng đặt nút/thông tin quan trọng ở đó (vd Cờ Cá Ngựa chừa `padding-bottom` cho cột trái; màn hẹp thì nút 🎙️ ẩn khi chưa ai vào đàm thoại). `emoteAnchor` cũng được dùng để hiện bong bóng lời thoại chat và bong bóng 🔊 (đang nói) tại ghế.
 
 ## Giao thức WebSocket (`/ws`, JSON)
 Client → server: `{ id?, t, ...}` — có `id` thì server trả `{ t:'res', id, ok, err?, ... }`.
 - Không cần phòng: `hello`, `create {name, game?}`, `join {code, name?, pid?}`, `leave`.
-- Trong phòng: `sit {seat}`, `unsit`, `seatKind {seat, kind:'open'|'bot'|'closed'}`*, `fillBots`*, `selectGame {game}`*, `opts {key, value}`*, `start`*, `lobby`*, `act {action}`, `emote {e}`, `chat {text}` (≤200 ký tự, cách nhau ≥0.4s). (*chỉ chủ phòng)
+- Trong phòng: `sit {seat}`, `unsit`, `seatKind {seat, kind:'open'|'bot'|'closed'}`*, `fillBots`*, `selectGame {game}`*, `opts {key, value}`*, `start`*, `lobby`*, `act {action}`, `emote {e}`, `chat {text}` (≤200 ký tự, cách nhau ≥0.4s), `voice {on, muted?}` → `{vid}`, `rtc {to, tv, d}`. (*chỉ chủ phòng)
 
-Server → client: `room {room}`, `game {matchId, game, state, events, meta, deadlineIn}`, `emote {uid, name, seat, e}`, `chat {msg: {id, uid, name, seat, color, text, at}}`, `chatLog {log}` (≤50 tin gần nhất, gửi lúc vào/vào lại phòng).
+Server → client: `room {room}`, `game {matchId, game, state, events, meta, deadlineIn}`, `emote {uid, name, seat, e}`, `chat {msg: {id, uid, name, seat, color, text, at}}`, `chatLog {log}` (≤50 tin gần nhất, gửi lúc vào/vào lại phòng), `rtc {from, fv, d}`.
 `pid` là mã bí mật (lưu sessionStorage để F5/rớt mạng vào lại đúng ghế); `uid` là mã công khai hiển thị trong `room`.
 
 ## Ghi chú
 - Phòng chỉ nằm trong RAM: khởi động lại server là mất phòng.
 - Chủ phòng offline >15s thì quyền chủ phòng chuyển cho người khác đang online.
 - Chat: lịch sử nằm trong phòng (RAM, giữ 50 tin) nên F5/vào lại vẫn thấy; màu tên lưu theo ghế lúc gửi. Phím gõ trong ô chat bị chặn `stopPropagation` để không lọt xuống phím tắt của game; Enter (khi không ở ô nhập liệu) mở chat, Esc đóng.
+- Đàm thoại (`public/voice.js`): WebRTC nối thẳng giữa các trình duyệt (mỗi cặp một kết nối, STUN Cloudflare/Google, chưa có TURN), tiếng không qua server. Server chỉ giữ `member.voice = { ws, muted, v }` (gắn với tab đã bật — tab đóng/rớt mạng là ra) và chuyển tin bắt tay `rtc` (SDP/ICE) tới đúng tab của người nhận; `v` = mã phiên, đổi mỗi lần vào lại nên client dựng lại kết nối, tin lệch phiên bị bỏ. `room.members[].voice = { m: tắt mic?, v }`. Client dùng mẫu "perfect negotiation" (uid nhỏ hơn là bên polite). Mic chỉ chạy trên https (link online) hoặc localhost — link LAN http thì nút 🎙️ mờ và báo lý do. Phím M tắt/bật mic; rớt mạng thì giữ mic và tự xin phiên mới, F5 thì phải bấm vào lại. Kiểm thử nhiều người: Chromium/Edge với cờ `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` (mic giả phát tiếng bíp).
 - Mèo Nổ: `cards.js` dùng chung (tên lá, combo, thời lượng animation); luật + bot nằm trong `server.js` để không lộ chồng bài. `state.ask` = ghế đang phải quyết định (khác `turn` khi bị Xin Bài). `resolve` kiểm tra `now >= react.until` để client không tự đóng cửa sổ sớm.
 - Kho Báu Inca: `data.js` dùng chung (lá, bùa, đền, thời lượng animation); luật + bot trong `server.js`. `view` ẩn chồng bài, ngọc trong lều và lựa chọn của người khác (trừ khi người xem dùng bùa Mắt Kền Kền), bùa "bí ẩn" che tên trong `viewEvents`. Client giữ bản `V` cập nhật dần theo từng sự kiện để vẽ, diễn xong thì thay bằng state thật.
 - Flip 7: `cards.js` dùng chung (bộ bài, sự kiện vòng, `roundScore`, thời lượng animation); luật + bot trong `server.js`. Lá hành động rút được xếp vào `state.pend` — phần tử đầu là quyết định đang chờ (`opts` = ai nhận được, `see` = 3 lá Tiên Tri, chỉ người rút thấy); lá rút trong lúc Lật Ba Lá được xử lý sau 3 lá. `view` thêm `ask` (ghế đang quyết định), `unseen` (đếm lá số chưa lộ với người xem — bot cũng chỉ dùng thông tin này). Sương Mù: lá số của người khác thành `{k:'h'}`, lộ ra ở sự kiện `bust`/`roundEnd`.

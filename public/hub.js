@@ -4,6 +4,7 @@ import * as UI from './ui.js';
 import { $, el, esc, toast, openModal, closeModal, modalOpen, floatAt, initFx } from './ui.js';
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
 import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
+import { initVoice, voiceRoom, voiceSignal, voiceReset, voiceReconnected } from './voice.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
 const ME = { pid: null, uid: null, code: null, lan: [], pub: null };
@@ -56,8 +57,10 @@ const net = (() => {
     });
   }
   const request = (t, data) => (ready ? raw(t, data) : new Promise(res => waiting.push(() => raw(t, data).then(res))));
+  // post: gửi không cần trả lời (tin bắt tay đàm thoại); mất kết nối thì bỏ.
+  const post = (t, data = {}) => { if (ready && ws.readyState === 1) ws.send(JSON.stringify({ t, ...data })); };
   connect();
-  return { raw, request };
+  return { raw, request, post };
 })();
 
 async function act(t, data) {
@@ -72,7 +75,7 @@ async function onConnected() {
   const s = session();
   if (!s) return;
   const j = await net.raw('join', { code: s.code, pid: s.pid });
-  if (j.ok) enterRoom(j);
+  if (j.ok) { enterRoom(j); voiceReconnected(); }
   else { sessionStorage.removeItem('hub_session'); if (ROOM) resetToHome('⚠️ ' + esc(j.err)); }
 }
 
@@ -89,6 +92,7 @@ function onMessage(m) {
   else if (m.t === 'emote') onEmote(m);
   else if (m.t === 'chatLog') chatLog(m.log);
   else if (m.t === 'chat') chatMsg(m.msg);
+  else if (m.t === 'rtc') voiceSignal(m);
 }
 
 function onRoom(room) {
@@ -101,6 +105,7 @@ function onRoom(room) {
   } else if (current && current.matchId === room.matchId) {
     if (current.inst.onRoom) current.inst.onRoom(room);
   } else if (!current) show('loading');
+  voiceRoom(room);
 }
 
 function onEmote(m) {
@@ -231,6 +236,12 @@ function inviteLink() {
   return `${base}/?room=${ROOM.code}`;
 }
 
+// Biểu tượng 🎙️/🔇 cạnh tên người đang trong đàm thoại (sáng lên khi đang nói — voice.js gắn class qua data-vuid).
+function vmic(uid) {
+  const m = ROOM.members.find(x => x.uid === uid);
+  return m && m.voice ? ` <span class="vmic${m.voice.m ? ' off' : ''}" data-vuid="${esc(uid)}" title="${m.voice.m ? 'Đang tắt mic' : 'Trong đàm thoại'}">${m.voice.m ? '🔇' : '🎙️'}</span>` : '';
+}
+
 function renderRoom() {
   const host = isHost(), me = mySeat(), entry = entryOf(ROOM.game);
   $('#room-code').textContent = ROOM.code;
@@ -257,7 +268,7 @@ function renderRoom() {
     const info = entry.seats[i];
     const d = el('div', `seat seat-${s.kind}${s.uid && s.uid === ME.uid ? ' mine' : ''}`);
     d.style.setProperty('--c', info.color);
-    const who = s.kind === 'human' ? `👤 ${esc(s.name)}${s.uid === ME.uid ? ' (bạn)' : ''}${s.online ? '' : ' <span class="muted small">(offline)</span>'}`
+    const who = s.kind === 'human' ? `👤 ${esc(s.name)}${s.uid === ME.uid ? ' (bạn)' : ''}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(offline)</span>'}`
       : s.kind === 'bot' ? `🤖 ${esc(s.name)}`
       : s.kind === 'closed' ? '<span class="muted">🚫 Đã đóng</span>'
       : '<span class="muted">Trống — bấm để ngồi</span>';
@@ -294,7 +305,7 @@ function renderRoom() {
   const filled = ROOM.seats.filter(s => s.kind === 'human' || s.kind === 'bot').length;
   const watchers = ROOM.members.filter(m => m.seat < 0);
   $('#room-members').innerHTML = `👑 Chủ phòng: <b>${esc(ROOM.hostName)}</b>` +
-    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => esc(m.name) + (m.online ? '' : ' (offline)')).join(', ')}` : '');
+    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => esc(m.name) + vmic(m.uid) + (m.online ? '' : ' (offline)')).join(', ')}` : '');
   $('#btn-unsit').classList.toggle('hidden', me < 0);
   $('#btn-start').classList.toggle('hidden', !host);
   $('#btn-bots').classList.toggle('hidden', !host || !ROOM.seats.some(s => s.kind === 'open'));
@@ -363,6 +374,7 @@ function resetToHome(msg) {
   history.replaceState(null, '', location.pathname);
   closeModal();
   resetChat();
+  voiceReset();
   show('home');
   if (msg) toast(msg);
 }
@@ -385,6 +397,12 @@ initChat({
   myUid: () => ME.uid,
   anchorOf: seat => (current && current.inst.emoteAnchor ? current.inst.emoteAnchor(seat) : null),
   onIncoming: () => sfx.chat(),
+});
+initVoice({
+  request: (t, data) => act(t, data),
+  post: net.post,
+  myUid: () => ME.uid,
+  anchorOf: seat => (current && current.inst.emoteAnchor ? current.inst.emoteAnchor(seat) : null),
 });
 $('#in-name').value = localStorage.getItem('hub_name') || '';
 const qRoom = new URLSearchParams(location.search).get('room');

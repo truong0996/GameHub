@@ -12,6 +12,7 @@ const ROOM_IDLE_MS = 30 * 60 * 1000;
 const CHAT_LEN = 200;             // độ dài tối đa một tin nhắn
 const CHAT_KEEP = 50;             // số tin gần nhất phòng giữ lại (người mới vào / F5 vẫn thấy)
 const CHAT_GAP_MS = 400;          // chống spam
+const RTC_MAX = 16000;            // tin bắt tay WebRTC (SDP/ICE) tối đa ~16KB
 
 const AFTER = Symbol('after');
 const rid = n => crypto.randomBytes(n).toString('hex');
@@ -66,7 +67,9 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
         kind: s.kind, uid: s.pid ? (room.members.get(s.pid) || {}).uid : null, name: seatName(room, i),
         online: s.kind === 'bot' || (s.kind === 'human' && online(room, s.pid)),
       })),
-      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid) })),
+      // voice: đang trong đàm thoại → { m: tắt mic?, v: mã phiên (đổi mỗi lần vào lại → client dựng lại kết nối) }
+      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid),
+        voice: m.voice ? { m: m.voice.muted, v: m.voice.v } : null })),
     };
   }
 
@@ -220,6 +223,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
       if (!room) return;
       const r = room, m = member;
       m.conns.delete(ws);
+      if (m.voice && m.voice.ws === ws) m.voice = null;
       room = member = null;
       if (r.match && seatOf(r, m.pid) >= 0) schedule(r);
       broadcastRoom(r);
@@ -240,7 +244,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
       return { code: r.code, pid: m.pid, uid: m.uid, lan: lanUrls(), pub: publicUrl(), catalog, [AFTER]: after };
     }
     function addMember(r, name) {
-      const m = { pid: rid(12), uid: rid(4), name: cleanName(name), conns: new Set(), lastEmote: 0, lastChat: 0 };
+      const m = { pid: rid(12), uid: rid(4), name: cleanName(name), conns: new Set(), lastEmote: 0, lastChat: 0, voice: null };
       r.members.set(m.pid, m);
       if (!r.host) r.host = m.uid;
       return m;
@@ -354,6 +358,23 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
         eachConn(r, w => send(w, data));
         return 'nobroadcast';
       },
+      // Đàm thoại: tiếng đi thẳng giữa các trình duyệt (WebRTC), server chỉ giữ ai đang vào/tắt mic và chuyển tin bắt tay.
+      // Gắn với kết nối (tab) đã bật: tab đó đóng/rớt mạng là tự ra khỏi đàm thoại.
+      voice(msg, r, m) {
+        if (!msg.on) { if (m.voice && m.voice.ws === ws) m.voice = null; return; }
+        if (m.voice && m.voice.ws === ws) { m.voice.muted = !!msg.muted; return { vid: m.voice.v }; }
+        m.voice = { ws, muted: !!msg.muted, v: rid(3) };
+        return { vid: m.voice.v };
+      },
+      // { to: uid, tv: mã phiên của người nhận, d: SDP/ICE } → người nhận được { from, fv, d }. Lệch phiên (tin cũ) thì bỏ.
+      rtc(msg, r, m) {
+        if (!m.voice || m.voice.ws !== ws) return 'nobroadcast';
+        const to = [...r.members.values()].find(x => x.uid === msg.to);
+        if (!to || !to.voice || to.voice.v !== msg.tv) return 'nobroadcast';
+        const data = JSON.stringify({ t: 'rtc', from: m.uid, fv: m.voice.v, d: msg.d });
+        if (data.length <= RTC_MAX) send(to.voice.ws, data);
+        return 'nobroadcast';
+      },
     };
     const needHost = (r, m) => { if (r.host !== m.uid) throw new Error('Chỉ chủ phòng mới làm được'); };
     const needLobby = r => { if (r.match) throw new Error('Ván đang diễn ra'); };
@@ -369,7 +390,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null })
           room.touched = Date.now();
           const out = roomHandlers[msg.t](msg, room, member);
           if (out !== 'nobroadcast') broadcastRoom(room);
-          res = { ok: true };
+          res = { ok: true, ...(out && typeof out === 'object' ? out : {}) };
         } else throw new Error('Lệnh không hợp lệ: ' + msg.t);
       } catch (e) {
         res = { ok: false, err: e.message || String(e) };
