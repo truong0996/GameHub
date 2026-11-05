@@ -7,6 +7,7 @@ export default {
   description: 'Lần lượt rút bài — ai rút phải Mèo Nổ mà không có Gỡ Bom thì NỔ và bị loại. Người cuối cùng còn sống thắng. Đánh bài để né, xem trước, tấn công, xin bài... và hô "Không!" để phá nhau bất cứ lúc nào.',
   minPlayers: 2,
   maxPlayers: 6,
+  tags: ['Bài', 'Vui nhộn'],
   order: 2,
   turnMs: 30000,
   seats: [

@@ -1,7 +1,7 @@
 // Client của hub: kết nối WebSocket, màn hình chính, phòng chờ, nạp/gỡ game, hàng đợi tin nhắn game.
 // Game cắm vào qua games/<dir>/client.js — xem "Game client interface" trong CLAUDE.md.
 import * as UI from './ui.js';
-import { $, el, esc, toast, closeModal, modalOpen, floatAt, initFx } from './ui.js';
+import { $, el, esc, toast, openModal, closeModal, modalOpen, floatAt, initFx } from './ui.js';
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
 import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
 
@@ -15,6 +15,8 @@ let pumping = false;
 const mySeat = () => (ROOM ? ROOM.seats.findIndex(s => s.kind === 'human' && s.uid === ME.uid) : -1);
 const isHost = () => !!ROOM && ROOM.host === ME.uid;
 const entryOf = id => CATALOG.find(g => g.id === id);
+const withTags = cat => cat.map(g => ({ ...g, tags: g.tags || [] }));   // server cũ (chưa khởi động lại) gửi catalog không có tags
+const range = g => g.minPlayers === g.maxPlayers ? g.minPlayers : `${g.minPlayers}–${g.maxPlayers}`;   // số người chơi: "2–6" hoặc "2"
 const session = () => JSON.parse(sessionStorage.getItem('hub_session') || 'null');
 
 // ================= KẾT NỐI =================
@@ -66,7 +68,7 @@ async function act(t, data) {
 
 async function onConnected() {
   const h = await net.raw('hello');
-  if (h.ok) { CATALOG = h.catalog; ME.lan = h.lan; ME.pub = h.pub; renderHome(); }
+  if (h.ok) { CATALOG = withTags(h.catalog); ME.lan = h.lan; ME.pub = h.pub; renderHome(); }
   const s = session();
   if (!s) return;
   const j = await net.raw('join', { code: s.code, pid: s.pid });
@@ -76,7 +78,7 @@ async function onConnected() {
 
 function enterRoom(j) {
   Object.assign(ME, { code: j.code, pid: j.pid, uid: j.uid, lan: j.lan || ME.lan, pub: j.pub || ME.pub });
-  CATALOG = j.catalog || CATALOG;
+  CATALOG = j.catalog ? withTags(j.catalog) : CATALOG;
   sessionStorage.setItem('hub_session', JSON.stringify({ code: j.code, pid: j.pid }));
   history.replaceState(null, '', '?room=' + j.code);
 }
@@ -217,7 +219,10 @@ function show(name) {
 }
 
 function renderHome() {
-  $('#showcase').innerHTML = CATALOG.map(g => `<span>${g.icon} ${esc(g.name)}</span>`).join('');
+  const MAX = 5;   // nhiều game thì chỉ khoe vài trò đầu, còn lại gộp thành "+N trò khác"
+  const more = CATALOG.length > MAX + 1 ? CATALOG.length - MAX : 0;
+  $('#showcase').innerHTML = CATALOG.slice(0, more ? MAX : undefined).map(g => `<span>${g.icon} ${esc(g.name)}</span>`).join('') +
+    (more ? `<span class="muted" title="${esc(CATALOG.slice(MAX).map(g => g.name).join(', '))}">+${more} trò khác</span>` : '');
 }
 
 function inviteLink() {
@@ -234,17 +239,16 @@ function renderRoom() {
     (ME.pub ? (ME.lan.length ? `<br>Cùng wifi thì vào nhanh hơn: <code>${esc(ME.lan[0])}/?room=${ROOM.code}</code>` : '')
       : local && ME.lan.length ? '<br>Bạn đang mở bằng localhost — bạn bè cùng wifi dùng link trên. Chơi qua Internet: chạy <code>npm run online</code>.' : '');
 
-  // chọn game
-  const box = $('#games');
-  box.innerHTML = '';
-  for (const g of CATALOG) {
-    const b = el('button', 'gcard' + (g.id === ROOM.game ? ' sel' : ''),
-      `<span class="gi">${g.icon}</span><span><b>${esc(g.name)}</b><span class="small muted">${esc(g.tagline)} · ${g.minPlayers}–${g.maxPlayers} người</span></span>`);
-    b.disabled = !host && g.id !== ROOM.game;
-    if (host) b.onclick = () => { if (g.id !== ROOM.game) { sfx.pop(); act('selectGame', { game: g.id }); } };
-    box.appendChild(b);
+  // game đang chọn (chủ phòng bấm "Đổi game" để mở bảng chọn — đủ chỗ cho vài chục game)
+  const cur = $('#game-cur');
+  cur.innerHTML = `<span class="gi">${entry.icon}</span><div class="grow"><div class="gcur-head"><b>${esc(entry.name)}</b>` +
+    `<span class="small muted">${esc(entry.tagline)} · ${range(entry)} người</span></div>` +
+    `<div class="gdesc">${esc(entry.description)}</div></div>`;
+  if (host && CATALOG.length > 1) {
+    const b = el('button', 'ghost gcur-btn', `🎮 Đổi game <span class="muted small">(${CATALOG.length})</span>`);
+    b.onclick = () => { sfx.pop(); openGamePicker(); };
+    cur.appendChild(b);
   }
-  $('#game-desc').textContent = entry ? entry.description : '';
 
   // ghế
   const seats = $('#seats');
@@ -296,6 +300,58 @@ function renderRoom() {
   $('#btn-bots').classList.toggle('hidden', !host || !ROOM.seats.some(s => s.kind === 'open'));
   $('#btn-start').disabled = filled < entry.minPlayers;
   $('#room-wait').textContent = host ? (filled < entry.minPlayers ? `Cần ít nhất ${entry.minPlayers} người/bot` : '') : 'Chờ chủ phòng chọn game và bắt đầu...';
+}
+
+// Bảng chọn game: tìm kiếm (không dấu) + lọc theo thể loại. Game không đủ chỗ cho cả phòng xếp cuối, làm mờ.
+const fold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
+let pickTag = '';   // thể loại đang lọc, giữ giữa các lần mở
+function openGamePicker() {
+  const people = ROOM.members.length;
+  const tags = [...new Set(CATALOG.flatMap(g => g.tags))];
+  const count = t => CATALOG.filter(g => g.tags.includes(t)).length;
+  tags.sort((a, b) => count(b) - count(a) || a.localeCompare(b, 'vi'));
+  if (!tags.includes(pickTag)) pickTag = '';
+  const card = openModal(`<div class="gp-head"><h2>Chọn trò chơi <span class="muted small">${CATALOG.length} trò</span></h2>` +
+    `<button class="ghost" data-x title="Đóng (Esc)">✕</button></div>` +
+    `<input class="gp-q" type="search" placeholder="🔍 Tìm theo tên, thể loại..." autocomplete="off">` +
+    (tags.length ? '<div class="gp-tags"></div>' : '') + '<div class="gp-list"></div>');
+  card.classList.add('gpick');
+  const q = card.querySelector('.gp-q'), list = card.querySelector('.gp-list'), tagBox = card.querySelector('.gp-tags');
+  card.querySelector('[data-x]').onclick = closeModal;
+  const choose = g => {
+    closeModal();
+    if (g.id !== ROOM.game) { sfx.pop(); act('selectGame', { game: g.id }); }
+  };
+  const fits = g => g.maxPlayers >= people;
+  const sorted = [...CATALOG].sort((a, b) => fits(b) - fits(a));   // sort ổn định: giữ thứ tự `order` trong từng nhóm
+  let shown = [];
+  const paint = () => {
+    if (tagBox) {
+      tagBox.innerHTML = '';
+      for (const t of ['', ...tags]) {
+        const c = el('button', 'gp-tag' + (t === pickTag ? ' on' : ''), t ? `${esc(t)} <span>${count(t)}</span>` : 'Tất cả');
+        c.onclick = () => { pickTag = t; paint(); };
+        tagBox.appendChild(c);
+      }
+    }
+    const words = fold(q.value).split(/\s+/).filter(Boolean);
+    shown = sorted.filter(g => (!pickTag || g.tags.includes(pickTag)) &&
+      words.every(w => fold([g.name, g.tagline, g.description, ...g.tags].join(' ')).includes(w)));
+    list.innerHTML = shown.length ? '' : `<div class="muted center gp-none">Không có trò nào khớp${q.value.trim() ? ` “${esc(q.value.trim())}”` : ''}.</div>`;
+    for (const g of shown) {
+      const b = el('button', 'gcard' + (g.id === ROOM.game ? ' sel' : '') + (fits(g) ? '' : ' nofit'),
+        `<span class="gi">${g.icon}</span><span><b>${esc(g.name)}</b><span class="small muted">${esc(g.tagline)}</span>` +
+        `<span class="small gmeta">${g.id === ROOM.game ? '✔ Đang chọn · ' : ''}👥 ${range(g)}` +
+        `${fits(g) ? '' : ' · ⚠️ thiếu chỗ'}${g.tags.length ? ' · ' + g.tags.map(esc).join(', ') : ''}</span></span>`);
+      b.title = g.description + (fits(g) ? '' : `\n\n⚠️ Tối đa ${g.maxPlayers} người — phòng đang có ${people}, những người còn lại chỉ xem được.`);
+      b.onclick = () => choose(g);
+      list.appendChild(b);
+    }
+  };
+  q.oninput = paint;
+  q.onkeydown = e => { if (e.key === 'Enter' && shown.length) choose(shown[0]); };
+  paint();
+  if (matchMedia('(pointer: fine)').matches) q.focus();   // điện thoại: không tự bật bàn phím
 }
 
 function resetToHome(msg) {

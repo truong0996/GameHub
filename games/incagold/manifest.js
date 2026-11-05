@@ -7,6 +7,7 @@ export default {
   description: 'Cả đoàn cùng vào đền Inca. Mỗi lượt lật 1 lá: kho báu chia đều cho người trong hang, hiểm hoạ thứ hai cùng loại là chết sạch. Mọi người BÍ MẬT chọn cùng lúc: ở lại đào tiếp hay về lều cất ngọc. 5 ngôi đền, ai nhiều ngọc nhất thắng.',
   minPlayers: 2,
   maxPlayers: 8,
+  tags: ['Bài', 'Mạo hiểm', 'Đông người'],
   order: 3,
   turnMs: 20000,
   seats: [

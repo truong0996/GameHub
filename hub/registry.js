@@ -39,6 +39,6 @@ export function catalogEntry(g) {
   return {
     id: m.id, dir: g.dir, name: m.name, icon: m.icon, tagline: m.tagline || '', description: m.description || '',
     minPlayers: m.minPlayers, maxPlayers: m.maxPlayers, seats: m.seats.slice(0, m.maxPlayers),
-    options: m.options || [], realtime: !!g.logic.tickRate, order: m.order ?? 99,
+    options: m.options || [], tags: m.tags || [], realtime: !!g.logic.tickRate, order: m.order ?? 99,
   };
 }

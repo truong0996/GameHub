@@ -8,6 +8,7 @@ export default {
   description: 'Màn hình chuyển xanh thì bấm thật nhanh! Bấm sớm khi còn đỏ là bị loại ở vòng đó. Ai đủ điểm trước thắng.',
   minPlayers: 2,
   maxPlayers: 6,
+  tags: ['Phản xạ'],   // thể loại: chip lọc + tìm kiếm trong bảng "Đổi game" (dùng lại tên tag đã có: Bài, Cờ, Phản xạ...)
   order: 50,
   seats: [
     { name: 'Đỏ', color: '#ff4d6d' }, { name: 'Cam', color: '#ff9f1c' }, { name: 'Vàng', color: '#ffd23f' },
