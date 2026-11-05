@@ -1,5 +1,6 @@
 /* Trang bảng xếp hạng (/report). Dùng biến màu của hub.css; thanh điểm: xanh = dương, cam = âm, vạch xám ở giữa = 0. */
-.rp { --pos: #1f8a70; --neg: #d27a2c; overflow: auto; height: auto; min-height: 100%; }
+/* hub.css khoá cuộn ở html/body (height 100% + overflow hidden) → cho chính body cuộn trong khung màn hình */
+.rp { --pos: #1f8a70; --neg: #d27a2c; height: 100%; overflow-y: auto; }
 .rp main { width: min(980px, 96vw); margin: 0 auto; padding: 18px 0 40px; display: flex; flex-direction: column; gap: 14px; }
 .rp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .rp-head h1 { margin: 0; font-size: 28px; }

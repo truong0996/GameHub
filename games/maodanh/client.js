@@ -528,7 +528,7 @@ function hudTick() {
   if (!V) return;
   const s = S(), tg = targets(), nowS = srvNow();
   const play = V.phase === 'play' && s;
-  $('.mdn-mapbtn').classList.toggle('hidden', V.phase !== 'play');
+  $('.mdn-mapbtn').classList.toggle('hidden', V.phase !== 'play' && V.phase !== 'meet');
   // nút hành động
   const useNames = { task: ['Làm', '🛠️'], fix: ['Sửa', '🔧'], button: ['Họp khẩn', '🚨'], vent: [s && s.vent != null ? 'Chui ra' : 'Chui cống', '🕳️'], ladder: ['Leo thang', '🪜'], coaster: ['Tàu lượn', '🎢'], sonar: ['Sonar', '📡'], doll: [V.dolls.some(d => d.by) ? 'Thả' : 'Kéo', '🧍'] };
   const un = tg.use ? useNames[tg.use.k] : ['Dùng', '✋'];
@@ -671,7 +671,7 @@ function paintMeet() {
         ${m.by === i ? '<span class="mg">📢</span>' : ''}</button>`;
     }).join('')}</div>
     <div class="mt-foot"><button class="ghost" data-skip ${canVote ? '' : 'disabled'}>⏭️ Bỏ qua (không vote ai)</button>
-    <span class="small">${s && !s.alive ? '👻 Hồn ma không bỏ phiếu — chat 💬 chỉ hồn ma đọc được' : '💬 Bấm <b>Enter</b> hoặc nút 💬 để bàn luận'}${m.voted.includes(mySeat()) ? ' · bạn đã bỏ phiếu ✔' : ''}</span></div>`;
+    <span class="small">${s && !s.alive ? '👻 Hồn ma không bỏ phiếu — chat 💬 chỉ hồn ma đọc được' : '💬 Bấm <b>Enter</b> hoặc nút 💬 để bàn luận · 🗺️ <b>Tab</b> xem bản đồ'}${m.voted.includes(mySeat()) ? ' · bạn đã bỏ phiếu ✔' : ''}</span></div>`;
   if (box.dataset.h !== html) {
     box.dataset.h = html;
     box.innerHTML = `<div class="mt">${html}</div>`;
@@ -759,7 +759,7 @@ function showHelp() {
   UI.openModal(`<div class="help"><h2>🛸 Kẻ Mạo Danh — luật chơi</h2>
     <h3>Mục tiêu</h3><ul><li><b>Phi Hành Đoàn</b>: làm xong mọi nhiệm vụ, hoặc bỏ phiếu đẩy hết Kẻ Mạo Danh ra ngoài.</li>
     <li><b>Kẻ Mạo Danh</b>: giết tới khi số Kẻ Mạo Danh bằng số người còn lại, hoặc để một sự cố nguy cấp (đồng hồ đỏ) hết giờ.</li></ul>
-    <h3>Điều khiển</h3><ul><li>Đi: <b>WASD</b>/phím mũi tên, hoặc kéo trên màn hình (điện thoại).</li><li><b>E</b> dùng/làm nhiệm vụ · <b>R</b> báo cáo xác · <b>Q</b> giết · <b>F</b> kỹ năng · <b>G</b> vật phẩm · <b>X</b> phá hoại · <b>Tab</b> bản đồ · <b>M</b> tắt mic.</li>
+    <h3>Điều khiển</h3><ul><li>Đi: <b>WASD</b>/phím mũi tên, hoặc kéo trên màn hình (điện thoại).</li><li><b>E</b> dùng/làm nhiệm vụ · <b>R</b> báo cáo xác · <b>Q</b> giết · <b>F</b> kỹ năng · <b>G</b> vật phẩm · <b>X</b> phá hoại · <b>Tab</b> bản đồ (cả lúc họp) · <b>M</b> tắt mic.</li>
     <li>Chỉ chat/nói chuyện được trong cuộc họp (đàm thoại theo khoảng cách thì nghe người đứng gần). Hồn ma có kênh 👻 riêng.</li></ul>
     <h3>Vai trò</h3><ul>${Object.values(ROLES).map(r => `<li>${r.icon} <b>${esc(r.name)}</b>: ${esc(r.desc)}</li>`).join('')}<li>💞 <b>Cặp Đôi</b>: hai người gắn kết sống chết; cùng sống tới cuối thì cùng thắng.</li></ul>
     <h3>Bản đồ</h3><ul>${info.map(m => `<li>${m.icon} <b>${esc(m.name)}</b>: ${esc(m.blurb)}</li>`).join('')}</ul>
@@ -787,7 +787,7 @@ function update(msg, { backlog, hidden } = {}) {
     if (V.phase === 'intro') { showIntro(); SFX.gong(); }
     if (V.phase === 'play' && lastPhase && lastPhase !== 'play') { $('.mdn-full').classList.add('hidden'); UI.closeModal(); }
     if (V.phase === 'meet') { closeTask(); toggleMap(false); $('.mdn-full').classList.add('hidden'); }
-    if (V.phase === 'eject' && V.eject) { $('.mdn-meet').classList.add('hidden'); UI.closeModal(); showEject(); }
+    if (V.phase === 'eject' && V.eject) { toggleMap(false); $('.mdn-meet').classList.add('hidden'); UI.closeModal(); showEject(); }
     if (V.phase === 'over' && V.win) { closeTask(); toggleMap(false); $('.mdn-meet').classList.add('hidden'); UI.closeModal(); showOver(); }
     if (V.phase === 'play' && !lastPhase) $('.mdn-full').classList.add('hidden');
     lastPhase = V.phase;
@@ -860,7 +860,9 @@ function bindInput() {
     const k = e.key.toLowerCase();
     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { keys.add(k); if (k.startsWith('arrow')) e.preventDefault(); }
     if (e.repeat) return;
-    if (k === 'tab') { e.preventDefault(); if (V && V.phase === 'play') toggleMap(); }
+    // bản đồ mở được cả lúc họp (để xem tên phòng khi bàn luận)
+    if (k === 'tab') { e.preventDefault(); if (V && (V.phase === 'play' || V.phase === 'meet')) toggleMap(); }
+    if (k === 'escape' && mapOpen && V && V.phase === 'meet') return toggleMap(false);
     if (!V || V.phase !== 'play') return;
     if (k === 'e' || k === ' ') { e.preventDefault(); doUse(); }
     if (k === 'q') doKill();

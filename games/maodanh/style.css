@@ -115,7 +115,7 @@
 .mdn .mg-sw button.up i { bottom: 66px; background: #3fb36b; }
 
 /* ---------- bản đồ nhỏ ---------- */
-.mdn .mdn-map { position: absolute; inset: 0; z-index: 18; background: rgba(0,0,0,.55); display: grid; place-items: center; }
+.mdn .mdn-map { position: absolute; inset: 0; z-index: 35; background: rgba(0,0,0,.55); display: grid; place-items: center; }
 .mdn .mm { background: #1d2433; border-radius: 16px; padding: 10px; border: 2px solid #56627a; max-width: 96vw; display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .mdn .mm-head { width: 100%; display: flex; justify-content: space-between; align-items: center; }
 .mdn .mm-head button { padding: 4px 10px; }

@@ -329,13 +329,14 @@ export function makeBots(A) {
     st.sayQ = [];
     const deadNow = A.seatsOf(st).filter(x => !st.players[x].alive);
     const bodyAt = m.bodyAt;
+    // lời tố cáo nói ra trong họp: { by, ts: [nghi ai], w: sức nặng } — bot khác nghe rồi cân nhắc
+    const claims = [];
     let order = 0;
     for (const s of A.seatsOf(st)) {
       const p = st.players[s], b = p.bot;
       if (!b) continue;
       b.goal = null; b.path = null; b.taskEnd = 0; b.waitUntil = 0; b.bodySeen = []; b.hunt = null;
       if (!p.alive) continue;
-      b.voteAt = m.talkEnd + 800 + rnd(Math.min(9000, st.o.vote - 3000));
       b.voted = false;
       // ai được thấy gần chỗ xác trong 25 giây trước → nghi ngờ
       if (bodyAt && p.team !== 'imp') for (const [l, x] of Object.entries(b.seen)) {
@@ -354,17 +355,17 @@ export function makeBots(A) {
       else if (m.by === s) lines.push(pick(['Mình gọi họp để điểm danh!', 'Họp nhanh nào, có gì đó không ổn.']));
       if (p.team === 'imp') {
         const crew = A.alive(st).filter(x => st.players[x].team !== 'imp' && x !== s);
-        if (Math.random() < 0.2 && crew.length) { const x = pick(crew); lines.push(pick([`Mình thấy ${name(x)} đi ra từ chỗ đó, đáng ngờ lắm!`, `${name(x)} nãy giờ cứ lảng vảng một mình...`])); b.lie = x; }
+        if (Math.random() < 0.2 && crew.length) { const x = pick(crew); lines.push(pick([`Mình thấy ${name(x)} đi ra từ chỗ đó, đáng ngờ lắm!`, `${name(x)} nãy giờ cứ lảng vảng một mình...`])); b.lie = x; claims.push({ by: s, ts: [x], w: 15 }); }
         else if (Math.random() < 0.6) lines.push(`Mình ở ${pick(M.rooms.filter(r => !r.noTask)).name} làm nhiệm vụ.`);
       } else if (p.role === 'jester') {
         if (Math.random() < 0.5) lines.push(pick(['Vote mình đi, mình là kẻ mạo danh đây 😈', 'Mình không nói gì đâu 🤐', 'Hehe, đoán xem ai giết? 🤡']));
       } else {
         const w = b.witness;
         const top = Object.entries(b.sus).filter(([l]) => +l !== s && st.players[+l]?.alive).sort((x, y) => y[1] - x[1])[0];
-        if (w && w.k >= 0 && st.players[w.k]?.alive) lines.push(`Mình TẬN MẮT thấy ${name(w.k)} giết ${name(w.v)}!`);
-        else if (b.vent != null && st.players[b.vent]?.alive) lines.push(`${name(b.vent)} chui cống! Mình thấy rõ ràng!`);
-        else if (b.detect && b.detect.length) lines.push(`Mình là Thám Tử: hung thủ là ${b.detect.map(name).join(' hoặc ')}.`);
-        else if (top && top[1] >= 20) lines.push(pick([`Mình thấy ${name(+top[0])} ở gần đó lúc nãy...`, `${name(+top[0])} hơi đáng ngờ đấy.`]));
+        if (w && w.k >= 0 && st.players[w.k]?.alive) { lines.push(`Mình TẬN MẮT thấy ${name(w.k)} giết ${name(w.v)}!`); claims.push({ by: s, ts: [w.k], w: 60 }); }
+        else if (b.vent != null && st.players[b.vent]?.alive) { lines.push(`${name(b.vent)} chui cống! Mình thấy rõ ràng!`); claims.push({ by: s, ts: [b.vent], w: 50 }); }
+        else if (b.detect && b.detect.length) { lines.push(`Mình là Thám Tử: hung thủ là ${b.detect.map(name).join(' hoặc ')}.`); claims.push({ by: s, ts: b.detect, w: 40 }); }
+        else if (top && top[1] >= 20) { lines.push(pick([`Mình thấy ${name(+top[0])} ở gần đó lúc nãy...`, `${name(+top[0])} hơi đáng ngờ đấy.`])); claims.push({ by: s, ts: [+top[0]], w: 15 }); }
         else if (Math.random() < 0.6) lines.push(pick([`Mình ở ${room}, không thấy gì cả.`, 'Chưa đủ bằng chứng, bỏ qua đi.', `Mình đang làm nhiệm vụ ở ${room}.`]));
         const cleared = Object.keys(b.clear).map(Number).filter(x => st.players[x].alive && x !== s);
         if (cleared.length && Math.random() < 0.5) lines.push(`${name(cleared[0])} quét y tế rồi, trong sạch nhé.`);
@@ -377,6 +378,21 @@ export function makeBots(A) {
       b.witness = null; b.vent = null; b.detect = null;
     }
     st.sayQ.sort((a, b) => a.at - b.at);
+    for (const s of A.alive(st)) {
+      const p = st.players[s], b = p.bot;
+      if (!b) continue;
+      // nghe tố cáo: càng tin người nói (quét y tế rồi / ít nghi) càng nghi người bị tố; bị tố oan thì nghi ngược lại người tố
+      if (p.team !== 'imp') for (const c of claims) {
+        if (c.by === s) continue;
+        const trust = b.clear[c.by] ? 1 : Math.max(0.2, 1 - (b.sus[c.by] || 0) / 60);
+        if (c.ts.includes(s)) { if (!b.clear[c.by]) sus(b, c.by, 30); continue; }
+        for (const t of c.ts) if (!b.clear[t] && st.players[t]?.alive) sus(b, t, c.w * trust / c.ts.length);
+      }
+      // chắc chắn thì bỏ phiếu sớm, còn phân vân thì đợi xem người khác chọn ai rồi mới quyết
+      const sure = p.team !== 'imp' && A.alive(st).some(x => x !== s && !b.clear[x] && (b.sus[x] || 0) >= 40);
+      b.voteAt = sure ? m.talkEnd + 800 + rnd(Math.min(5000, st.o.vote / 4))
+        : m.talkEnd + st.o.vote * 0.3 + rnd(st.o.vote * 0.55);
+    }
   }
 
   function meetTick(st, now) {
@@ -400,15 +416,16 @@ export function makeBots(A) {
     if (p.team === 'imp') {
       if (lead && st.players[+lead[0]].team !== 'imp' && Math.random() < 0.75) return +lead[0];
       if (b.lie != null && st.players[b.lie].alive && Math.random() < 0.6) return b.lie;
-      return Math.random() < 0.2 ? pick(live.filter(x => st.players[x].team !== 'imp')) ?? -1 : -1;
+      return Math.random() < 0.5 ? pick(live.filter(x => st.players[x].team !== 'imp')) ?? -1 : -1;
     }
     if (p.role === 'jester') return Math.random() < 0.5 && live.length ? pick(live) : -1;
     const cand = live.filter(x => !b.clear[x]).map(x => [x, b.sus[x] || 0]).sort((x, y) => y[1] - x[1]);
-    if (cand.length && cand[0][1] >= 40) return cand[0][0];
-    // theo số đông khi chính mình cũng hơi nghi, hoặc khi gần nửa phòng đã chọn người đó
-    if (lead && +lead[0] !== s && !b.clear[+lead[0]] && lead[1] >= Math.max(2, Math.ceil(live.length / 3)) &&
-      ((b.sus[+lead[0]] || 0) >= 10 || lead[1] >= live.length / 2) && Math.random() < 0.7) return +lead[0];
-    return -1;
+    if (cand.length && cand[0][1] >= 30) return cand[0][0];
+    // theo số đông: càng nhiều người chọn (và chính mình càng nghi) thì càng dễ theo
+    if (lead && +lead[0] !== s && !b.clear[+lead[0]] && Math.random() < Math.min(0.9, 0.25 + 0.2 * lead[1] + (b.sus[+lead[0]] || 0) / 50)) return +lead[0];
+    if (cand.length && cand[0][1] >= 10 && Math.random() < 0.7) return cand[0][0];
+    // không có manh mối: thỉnh thoảng vẫn đoán bừa trong nửa đáng ngờ hơn
+    return cand.length && Math.random() < 0.3 ? pick(cand.slice(0, Math.ceil(cand.length / 2)))[0] : -1;
   }
 
   return { init, tick, meeting, meetTick, sawKill, sawVent, inspected };
