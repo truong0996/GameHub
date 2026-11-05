@@ -105,6 +105,7 @@ function onRoom(room) {
   } else if (current && current.matchId === room.matchId) {
     if (current.inst.onRoom) current.inst.onRoom(room);
   } else if (!current) show('loading');
+  if (room.playing && $('#modal .gpick')) closeModal();
   voiceRoom(room);
 }
 
@@ -250,13 +251,14 @@ function renderRoom() {
     (ME.pub ? (ME.lan.length ? `<br>Cùng wifi thì vào nhanh hơn: <code>${esc(ME.lan[0])}/?room=${ROOM.code}</code>` : '')
       : local && ME.lan.length ? '<br>Bạn đang mở bằng localhost — bạn bè cùng wifi dùng link trên. Chơi qua Internet: chạy <code>npm run online</code>.' : '');
 
-  // game đang chọn (chủ phòng bấm "Đổi game" để mở bảng chọn — đủ chỗ cho vài chục game)
+  // game đang chọn (chủ phòng bấm "Đổi game" để mở bảng chọn — đủ chỗ cho vài chục game; người khác mở xem được, chỉ đọc)
   const cur = $('#game-cur');
   cur.innerHTML = `<span class="gi">${entry.icon}</span><div class="grow"><div class="gcur-head"><b>${esc(entry.name)}</b>` +
     `<span class="small muted">${esc(entry.tagline)} · ${range(entry)} người</span></div>` +
     `<div class="gdesc">${esc(entry.description)}</div></div>`;
-  if (host && CATALOG.length > 1) {
-    const b = el('button', 'ghost gcur-btn', `🎮 Đổi game <span class="muted small">(${CATALOG.length})</span>`);
+  if (CATALOG.length > 1) {
+    const b = el('button', 'ghost gcur-btn', `🎮 ${host ? 'Đổi game' : 'Xem các game'} <span class="muted small">(${CATALOG.length})</span>`);
+    if (!host) b.title = `Hub có ${CATALOG.length} trò — chỉ chủ phòng mới đổi được game`;
     b.onclick = () => { sfx.pop(); openGamePicker(); };
     cur.appendChild(b);
   }
@@ -311,32 +313,39 @@ function renderRoom() {
   $('#btn-bots').classList.toggle('hidden', !host || !ROOM.seats.some(s => s.kind === 'open'));
   $('#btn-start').disabled = filled < entry.minPlayers;
   $('#room-wait').textContent = host ? (filled < entry.minPlayers ? `Cần ít nhất ${entry.minPlayers} người/bot` : '') : 'Chờ chủ phòng chọn game và bắt đầu...';
+  if (pickerPaint && $('#modal .gpick')) pickerPaint(); else pickerPaint = null;
 }
 
 // Bảng chọn game: tìm kiếm (không dấu) + lọc theo thể loại. Game không đủ chỗ cho cả phòng xếp cuối, làm mờ.
+// Người không phải chủ phòng mở ở chế độ chỉ đọc (xem hub có những trò gì). Phòng đổi (đổi game, đổi chủ phòng) thì vẽ lại.
 const fold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
 let pickTag = '';   // thể loại đang lọc, giữ giữa các lần mở
+let pickerPaint = null;   // vẽ lại bảng chọn đang mở khi phòng đổi
 function openGamePicker() {
-  const people = ROOM.members.length;
   const tags = [...new Set(CATALOG.flatMap(g => g.tags))];
   const count = t => CATALOG.filter(g => g.tags.includes(t)).length;
   tags.sort((a, b) => count(b) - count(a) || a.localeCompare(b, 'vi'));
   if (!tags.includes(pickTag)) pickTag = '';
-  const card = openModal(`<div class="gp-head"><h2>Chọn trò chơi <span class="muted small">${CATALOG.length} trò</span></h2>` +
-    `<button class="ghost" data-x title="Đóng (Esc)">✕</button></div>` +
+  const card = openModal(`<div class="gp-head"><h2><span class="gp-title"></span> <span class="muted small">${CATALOG.length} trò</span></h2>` +
+    `<button class="ghost" data-x title="Đóng (Esc)">✕</button></div><div class="gp-ro small hidden"></div>` +
     `<input class="gp-q" type="search" placeholder="🔍 Tìm theo tên, thể loại..." autocomplete="off">` +
     (tags.length ? '<div class="gp-tags"></div>' : '') + '<div class="gp-list"></div>');
   card.classList.add('gpick');
-  const q = card.querySelector('.gp-q'), list = card.querySelector('.gp-list'), tagBox = card.querySelector('.gp-tags');
+  const q = card.querySelector('.gp-q'), list = card.querySelector('.gp-list'), tagBox = card.querySelector('.gp-tags'), ro = card.querySelector('.gp-ro');
   card.querySelector('[data-x]').onclick = closeModal;
   const choose = g => {
+    if (!isHost()) return;
     closeModal();
     if (g.id !== ROOM.game) { sfx.pop(); act('selectGame', { game: g.id }); }
   };
-  const fits = g => g.maxPlayers >= people;
-  const sorted = [...CATALOG].sort((a, b) => fits(b) - fits(a));   // sort ổn định: giữ thứ tự `order` trong từng nhóm
   let shown = [];
   const paint = () => {
+    const host = isHost(), people = ROOM.members.length;
+    const fits = g => g.maxPlayers >= people;
+    const sorted = [...CATALOG].sort((a, b) => fits(b) - fits(a));   // sort ổn định: giữ thứ tự `order` trong từng nhóm
+    card.querySelector('.gp-title').textContent = host ? 'Chọn trò chơi' : 'Các trò trong hub';
+    ro.classList.toggle('hidden', host);
+    ro.innerHTML = `👀 Chỉ chủ phòng <b>${esc(ROOM.hostName)}</b> mới đổi được game — muốn chơi trò nào thì nhắn chủ phòng nhé 💬`;
     if (tagBox) {
       tagBox.innerHTML = '';
       for (const t of ['', ...tags]) {
@@ -350,15 +359,16 @@ function openGamePicker() {
       words.every(w => fold([g.name, g.tagline, g.description, ...g.tags].join(' ')).includes(w)));
     list.innerHTML = shown.length ? '' : `<div class="muted center gp-none">Không có trò nào khớp${q.value.trim() ? ` “${esc(q.value.trim())}”` : ''}.</div>`;
     for (const g of shown) {
-      const b = el('button', 'gcard' + (g.id === ROOM.game ? ' sel' : '') + (fits(g) ? '' : ' nofit'),
+      const b = el(host ? 'button' : 'div', 'gcard' + (g.id === ROOM.game ? ' sel' : '') + (fits(g) ? '' : ' nofit') + (host ? '' : ' ro'),
         `<span class="gi">${g.icon}</span><span><b>${esc(g.name)}</b><span class="small muted">${esc(g.tagline)}</span>` +
         `<span class="small gmeta">${g.id === ROOM.game ? '✔ Đang chọn · ' : ''}👥 ${range(g)}` +
         `${fits(g) ? '' : ' · ⚠️ thiếu chỗ'}${g.tags.length ? ' · ' + g.tags.map(esc).join(', ') : ''}</span></span>`);
       b.title = g.description + (fits(g) ? '' : `\n\n⚠️ Tối đa ${g.maxPlayers} người — phòng đang có ${people}, những người còn lại chỉ xem được.`);
-      b.onclick = () => choose(g);
+      if (host) b.onclick = () => choose(g);
       list.appendChild(b);
     }
   };
+  pickerPaint = paint;
   q.oninput = paint;
   q.onkeydown = e => { if (e.key === 'Enter' && shown.length) choose(shown[0]); };
   paint();

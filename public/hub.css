@@ -91,6 +91,10 @@ select:disabled, input:disabled { opacity: .75; }
 .gcard.sel { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--surface)); box-shadow: 0 0 0 1px var(--primary); }
 .gcard.sel .gmeta { color: var(--primary); opacity: 1; }
 .gcard.nofit { opacity: .55; }
+.gcard.ro { cursor: default; }
+.gcard.ro:hover { background: var(--surface); }
+.gcard.ro.sel:hover { background: color-mix(in srgb, var(--primary) 8%, var(--surface)); }
+.gp-ro { flex-shrink: 0; padding: 8px 12px; border-radius: 10px; background: var(--chip); border: 1px solid var(--line); color: var(--muted); }
 @media (max-width: 600px) {
   .gcur { flex-wrap: wrap; } .gcur-btn { width: 100%; }
   #modal .card.gpick { padding: 14px; height: 94vh; }
