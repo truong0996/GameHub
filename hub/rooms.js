@@ -226,12 +226,13 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
   }
 
   // Quyết định cùng lúc: turn() trả { seats, key } — mọi ghế trong `seats` chọn song song, chung một hạn chót.
-  // `key` đổi = pha mới (hạn chót mới). Bot chọn rải rác 0.3–1.7s, người mất kết nối sau 3s, hết giờ thì máy chọn giúp tất cả.
+  // `key` đổi = pha mới (hạn chót mới), `ms` = thời gian của pha (mặc định turnMs, vd cửa sổ phản ứng ngắn hơn lượt thường).
+  // Bot chọn rải rác 0.3–1.7s, người mất kết nối sau 3s, hết giờ thì máy chọn giúp tất cả.
   function scheduleMulti(room, t) {
     const mt = room.match, L = mt.logic, now = Date.now();
     if (!mt.multi || mt.multi.key !== t.key) {
       const start = Math.max(now, mt.busyUntil);
-      mt.multi = { key: t.key, start, deadline: start + mt.turnMs, botAt: {}, off: {} };
+      mt.multi = { key: t.key, start, deadline: start + (t.ms || mt.turnMs), botAt: {}, off: {} };
       for (const s of t.seats) if (room.seats[s].kind === 'bot') mt.multi.botAt[s] = start + 300 + Math.random() * 1400;
     }
     const M = mt.multi;

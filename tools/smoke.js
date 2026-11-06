@@ -48,6 +48,11 @@ function guessAction(g, seat) {
     if (s.phase === 'meet') return { type: 'vote', to: -1 };
     return { type: 'mv', x: s.self.x + (Math.random() - 0.5) * 0.6, y: s.self.y + (Math.random() - 0.5) * 0.6, w: s.self.warp };
   }
+  if (s.roles && s.reactMs) {                                            // Coup: Thu Nhập, cho qua, bỏ/giữ lá đầu tiên
+    const mine = s.players[seat].cards.filter(c => !c.dead);
+    return { act: { type: 'income' }, react: { type: 'pass' }, lose: { type: 'lose', id: mine[0].id }, poison: { type: 'poison', pay: false },
+      exchange: { type: 'keep', ids: mine.map(c => c.id) }, show: { type: 'show', id: mine[0].id }, force: { type: 'force', yes: false } }[s.phase];
+  }
   if (s.phase === 'move' && s.legal) return { type: 'move', h: s.legal[0].h };
   if (s.phase === 'go' || s.phase === 'wait') return { type: 'press' };
   if (s.dealQ) { const d = s.pend[0]; return !d ? { type: Math.random() < 0.6 ? 'hit' : 'stay' } : d.see ? { type: 'peek', bury: false } : { type: 'target', to: d.opts[0] }; } // Flip 7
@@ -77,7 +82,9 @@ while (Date.now() < end) {
       || (g.state.phase === 'decide' && me.status === 'in' && !me.choice)
       || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat)
       || (g.state.phase === 'auction' && g.state.auc && !(seat in g.state.auc.bids))
-      || (g.state.self && g.state.self.alive && (g.state.phase === 'play' || g.state.phase === 'meet'));
+      || (g.state.self && g.state.self.alive && (g.state.phase === 'play' || g.state.phase === 'meet'))
+      || (g.state.reactMs && me.alive && ((g.state.phase === 'act' && g.state.cur === seat) || (g.state.phase === 'react' && g.state.win.seats.includes(seat))
+        || (g.state.phase !== 'act' && g.state.phase !== 'react' && g.state.step && g.state.step.p === seat)));
     if (myTurn) { const r = await c.req('act', { action: guessAction(g, seat) }); if (r.ok) acted++; }
   }
 }

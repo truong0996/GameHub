@@ -11,6 +11,7 @@ Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game r
 | 🃏 **Flip 7** — rút hay dừng, trùng số là cháy; chế độ Bất Ngờ (Đổi Chác, Nam Châm, Tiên Tri, Cầu Vồng, sự kiện mỗi vòng, Sương Mù) | theo lượt | 2–8 |
 | 🎴 **UNO** — hô UNO! kẻo bị bắt; luật nhà cộng dồn, 7-0, chặn ngang, rút tới khi đánh được; chế độ Bất Ngờ (Gương, Bom Màu, Quà, Tăng Tốc, Đổi Tay, Lốc Xoáy, sự kiện mỗi vòng bàn) | theo lượt + chặn ngang/bắt lỗi chen ngang | 2–8 |
 | 🎩 **Cờ Tỷ Phú** — Monopoly rút gọn ~30 phút: chia đất đầu ván, đấu giá kín, mua lại cưỡng chế, thắng ngay khi đủ 3 bộ màu; chế độ Bất Ngờ (thẻ kỹ năng, biến cố toàn bàn, Sòng Bạc, Tàu Cao Tốc, Cổng Dịch Chuyển, Hũ Vàng) | theo lượt + đấu giá cùng lúc | 2–6 |
+| 🎭 **Coup** — bịp vai để lấy xu, ám sát, đảo chính; ai nghi thì thách thức hoặc chặn (cả bàn phản ứng cùng lúc). Phe phái tuỳ chọn (Đổi Phe, Biển Thủ); chế độ Bất Ngờ (vai mới Nhà Cái, Kẻ Đầu Độc, Gián Điệp, Thầy Bói, Vệ Sĩ; biến cố mỗi vòng bàn; chợ đen Áo Giáp/Mặt Nạ/Kính Lúp/Thợ Rèn Lá; hồn ma) | theo lượt + thách thức/chặn cùng lúc | 2–8 |
 | 🛸 **Kẻ Mạo Danh** — kiểu Among Us 2D: làm nhiệm vụ mini-game, Kẻ Mạo Danh giết/phá hoại/chui cống, báo xác → họp & bỏ phiếu. 5 bản đồ có cơ chế riêng (Trạm Vũ Trụ, Tàu Tốc Hành Đêm, Trạm Bắc Cực, Công Viên Ma, Tàu Ngầm), vai trò ẩn (Cảnh Sát, Hộ Vệ, Thám Tử, Kỹ Sư, Thầy Đồng, Kẻ Ngốc, Kẻ Biến Hình, Bóng Ma, Cặp Đôi), biến cố ngẫu nhiên, thùng vật phẩm, đàm thoại theo khoảng cách | real-time | 4–10 |
 | ⚡ Phản Xạ *(game mẫu, chỉ hiện khi `HUB_DEV=1`)* | real-time | 2–6 |
 
