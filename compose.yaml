@@ -1,0 +1,38 @@
+name: gamehub
+
+services:
+  gamehub:
+    build: .
+    image: gamehub:local
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HUB_DATA: /app/data
+    expose:
+      - "3000"
+    volumes:
+      - gamehub-data:/app/data
+    networks:
+      proxy:
+        aliases:
+          - gamehub-app
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  gamehub-data:
+
+networks:
+  proxy:
+    external: true
+    name: gamehub-proxy

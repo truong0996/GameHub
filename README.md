@@ -49,6 +49,65 @@ Chủ phòng **mời người khác ra** được: chọn 🚪 *Mời ra* ở me
 - Trang **`/report`** (nút 🏆 ở trang chủ và trong phòng): bảng xếp hạng theo 7/14/30 ngày hoặc khoảng ngày tuỳ chọn, lọc theo từng game, bảng đối đầu (ai thắng ai), các ván gần đây, và số ván bị chủ phòng bỏ dở giữa chừng. Link giữ nguyên bộ lọc nên gửi cho cả nhóm xem cùng một kỳ được.
 - Dữ liệu nằm trong thư mục **`data/`** cạnh `server.js` (`accounts.json` + `matches.jsonl`, không đưa lên git). Muốn giữ lịch sử thì luôn chạy hub trên cùng một máy và thỉnh thoảng sao lưu thư mục này. Đổi chỗ lưu bằng `HUB_DATA=<thư mục>`.
 
+## Triển khai Docker Compose
+
+Production: **https://games.duydang.dev**, mã nguồn trên server tại `/opt/gamehub`.
+Container chạy bằng user `node`, tự khởi động lại, kiểm tra sức khoẻ và lưu tài khoản/lịch sử
+trong volume `gamehub_gamehub-data`. Dữ liệu `data/` trên máy phát triển không được đưa vào image.
+
+```bash
+# Chuẩn bị lần đầu: tạo network, cho Traefik tham gia và khai báo network đó
+# trong Compose của Traefik để giữ cấu hình sau khi tạo lại container proxy.
+docker network create gamehub-proxy
+docker network connect gamehub-proxy traefik
+
+# Tại /opt/gamehub, sau khi cập nhật mã nguồn:
+docker compose up -d --build --wait
+docker compose ps
+docker compose logs --tail=100
+```
+
+Ghép router/service trong [`deploy/traefik.yml`](deploy/traefik.yml) vào file provider của
+Traefik (`/opt/traefik/dynamic.yml`). Traefik dùng chứng chỉ wildcard hiện có và chuyển
+HTTP sang HTTPS; WebSocket `/ws` đi qua cùng router. DNS: bản ghi A `games` trỏ tới
+`161.118.240.112`. App không mở cổng trực tiếp ra Internet.
+
+Sao lưu trước khi cập nhật hoặc bảo trì (tạm dừng app để dữ liệu nhất quán):
+
+```bash
+cd /opt/gamehub
+docker compose stop gamehub
+docker run --rm -v gamehub_gamehub-data:/data:ro -v "$PWD:/backup" alpine \
+  tar czf /backup/gamehub-data-backup.tar.gz -C /data .
+docker compose start gamehub
+```
+
+Không chạy `docker compose down -v` nếu muốn giữ dữ liệu. Phòng/ván đang chơi nằm trong
+RAM và sẽ mất khi khởi động lại; tài khoản và lịch sử ván được giữ trong volume.
+
+### Tự động triển khai qua GitHub Actions
+
+Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) chạy khi push
+lên `main`: build Docker image, chạy smoke test multiplayer, gửi mã nguồn qua SSH,
+build trên server rồi chạy Compose và kiểm tra HTTPS. Pull request vào `main` chỉ
+build/test. Có thể chạy lại bằng **Actions → Test and deploy → Run workflow** trên `main`.
+Các lượt triển khai chạy lần lượt, không huỷ lượt đang cập nhật server.
+
+Repository cần hai Actions secrets: `GAMEHUB_SSH_KEY` (private key riêng cho CI) và
+`GAMEHUB_KNOWN_HOSTS` (host key đã xác minh của `161.118.240.112`). Không commit private key.
+Server dùng public key tương ứng trong `~ubuntu/.ssh/authorized_keys` với tuỳ chọn
+`restrict,command="/usr/local/bin/gamehub-deploy"`; key này gọi script nhận archive.
+
+Script [`deploy/receive.sh`](deploy/receive.sh) được cài trên server bằng:
+
+```bash
+sudo install -o root -g root -m 755 deploy/receive.sh /usr/local/bin/gamehub-deploy
+```
+
+Khi sửa script này, cài lại bản trên server bằng lệnh trên. CI không sửa network,
+Traefik, DNS hoặc volume dữ liệu. Triển khai sẽ khởi động lại app, nên phòng đang chơi
+sẽ mất; tài khoản và lịch sử vẫn còn.
+
 ## Phát triển
 
 Mỗi game là một thư mục trong `games/`. Cách thêm game mới, interface và giao thức: xem **[CLAUDE.md](CLAUDE.md)**.

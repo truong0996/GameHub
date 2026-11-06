@@ -1,0 +1,15 @@
+# Merge these entries into the existing Traefik file provider configuration.
+# Traefik and GameHub must both join the external gamehub-proxy Docker network.
+http:
+  routers:
+    gamehub:
+      rule: "Host(`games.duydang.dev`)"
+      entryPoints:
+        - websecure
+      service: gamehub-service
+      tls: {}
+  services:
+    gamehub-service:
+      loadBalancer:
+        servers:
+          - url: "http://gamehub-app:3000"
