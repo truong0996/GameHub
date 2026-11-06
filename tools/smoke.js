@@ -53,6 +53,10 @@ function guessAction(g, seat) {
     return { act: { type: 'income' }, react: { type: 'pass' }, lose: { type: 'lose', id: mine[0].id }, poison: { type: 'poison', pay: false },
       exchange: { type: 'keep', ids: mine.map(c => c.id) }, show: { type: 'show', id: mine[0].id }, force: { type: 'force', yes: false } }[s.phase];
   }
+  if (s.cards && s.hist) {                                               // Mật Danh: gợi ý linh tinh, bỏ phiếu lá chưa lật đầu tiên
+    if (s.phase === 'clue') return { type: 'clue', w: 'xyz', n: 1 };
+    return s.split ? { type: 'settle' } : { type: 'vote', c: s.cards.findIndex(c => !c.rev) };
+  }
   if (s.phase === 'move' && s.legal) return { type: 'move', h: s.legal[0].h };
   if (s.phase === 'go' || s.phase === 'wait') return { type: 'press' };
   if (s.dealQ) { const d = s.pend[0]; return !d ? { type: Math.random() < 0.6 ? 'hit' : 'stay' } : d.see ? { type: 'peek', bury: false } : { type: 'target', to: d.opts[0] }; } // Flip 7
@@ -82,6 +86,7 @@ while (Date.now() < end) {
       || (g.state.phase === 'decide' && me.status === 'in' && !me.choice)
       || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat)
       || (g.state.phase === 'auction' && g.state.auc && !(seat in g.state.auc.bids))
+      || (g.state.voters && g.state.voters.includes(seat))
       || (g.state.self && g.state.self.alive && (g.state.phase === 'play' || g.state.phase === 'meet'))
       || (g.state.reactMs && me.alive && ((g.state.phase === 'act' && g.state.cur === seat) || (g.state.phase === 'react' && g.state.win.seats.includes(seat))
         || (g.state.phase !== 'act' && g.state.phase !== 'react' && g.state.step && g.state.step.p === seat)));

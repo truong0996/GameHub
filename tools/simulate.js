@@ -17,22 +17,28 @@ if (!id || !games.has(id)) {
 }
 const { manifest: M, logic: L } = games.get(id);
 const opts = defaultOpts(M);
-let players = M.maxPlayers;
+let players = 0;
 for (const pair of kv) {
   const [k, v] = pair.split('=');
-  if (k === 'players') { players = Math.max(M.minPlayers, Math.min(M.maxPlayers, +v)); continue; }
+  if (k === 'players') { players = +v; continue; }
   opts[k] = v === 'true' ? true : v === 'false' ? false : isNaN(+v) ? v : +v;
 }
+// Ghế dùng được với tuỳ chọn này (manifest.seatOn), mặc định ngồi kín.
+const usable = [...Array(M.maxPlayers).keys()].filter(i => !M.seatOn || M.seatOn(i, opts));
+players = Math.max(M.minPlayers, Math.min(usable.length, players || usable.length));
 const N = +nArg || 20, MAX_STEPS = 200000;
 let steps = 0, simMs = 0, stuck = 0;
 const rankTally = { one: 0, tie: 0 };
 const t0 = Date.now();
 
 for (let g = 0; g < N; g++) {
-  const sat = new Set([...Array(M.maxPlayers).keys()].sort(() => Math.random() - 0.5).slice(0, players));
-  const seats = Array.from({ length: M.maxPlayers }, (_, i) => (sat.has(i) ? { kind: 'bot', name: 'Bot ' + i } : null));
-  let now = 1e12;
-  const { state } = L.create({ seats, opts: { ...opts }, now });
+  // create() được quyền từ chối cách ngồi (vd một đội thiếu người) → bốc ghế lại.
+  let sat, state, now = 1e12;
+  for (let tries = 0; ; tries++) {
+    sat = new Set(usable.slice().sort(() => Math.random() - 0.5).slice(0, players));
+    const seats = Array.from({ length: M.maxPlayers }, (_, i) => (sat.has(i) ? { kind: 'bot', name: 'Bot ' + i } : null));
+    try { ({ state } = L.create({ seats, opts: { ...opts }, now })); break; } catch (e) { if (tries > 200) throw e; }
+  }
   let s = 0, lastKey;
   for (; s < MAX_STEPS && !L.isOver(state); s++) {
     const t = L.turn ? L.turn(state) : null;

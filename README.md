@@ -13,6 +13,7 @@ Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game r
 | 🎩 **Cờ Tỷ Phú** — Monopoly rút gọn ~30 phút: chia đất đầu ván, đấu giá kín, mua lại cưỡng chế, thắng ngay khi đủ 3 bộ màu; chế độ Bất Ngờ (thẻ kỹ năng, biến cố toàn bàn, Sòng Bạc, Tàu Cao Tốc, Cổng Dịch Chuyển, Hũ Vàng) | theo lượt + đấu giá cùng lúc | 2–6 |
 | 🎭 **Coup** — bịp vai để lấy xu, ám sát, đảo chính; ai nghi thì thách thức hoặc chặn (cả bàn phản ứng cùng lúc). Phe phái tuỳ chọn (Đổi Phe, Biển Thủ); chế độ Bất Ngờ (vai mới Nhà Cái, Kẻ Đầu Độc, Gián Điệp, Thầy Bói, Vệ Sĩ; biến cố mỗi vòng bàn; chợ đen Áo Giáp/Mặt Nạ/Kính Lúp/Thợ Rèn Lá; hồn ma) | theo lượt + thách thức/chặn cùng lúc | 2–8 |
 | 🛸 **Kẻ Mạo Danh** — kiểu Among Us 2D: làm nhiệm vụ mini-game, Kẻ Mạo Danh giết/phá hoại/chui cống, báo xác → họp & bỏ phiếu. 5 bản đồ có cơ chế riêng (Trạm Vũ Trụ, Tàu Tốc Hành Đêm, Trạm Bắc Cực, Công Viên Ma, Tàu Ngầm), vai trò ẩn (Cảnh Sát, Hộ Vệ, Thám Tử, Kỹ Sư, Thầy Đồng, Kẻ Ngốc, Kẻ Biến Hình, Bóng Ma, Cặp Đôi), biến cố ngẫu nhiên, thùng vật phẩm, đàm thoại theo khoảng cách | real-time | 4–10 |
+| 🕵️ **Mật Danh** — Codenames tiếng Việt: Trưởng nhóm ra 1 từ + 1 số, cả đội bỏ phiếu chỉ lá; 2 đội (5×5) hoặc 3 đội (6×6), 4 bộ từ (Tổng hợp, Đời sống, Thiên nhiên, Phiêu lưu & tưởng tượng) hoặc bộ hình emoji; bật/tắt riêng Sự kiện bất ngờ (Động Đất, Sương Mù, Gương Thần...), Kỹ năng đội (Gợi Ý Kép, Lá Chắn, Nhiễu Sóng...), Lá đặc biệt (Kho Báu, Bom, Kẻ Phản Bội...). Bot làm được cả Trưởng nhóm lẫn người đoán | theo lượt + bỏ phiếu cùng lúc trong đội | 4–15 |
 | ⚡ Phản Xạ *(game mẫu, chỉ hiện khi `HUB_DEV=1`)* | real-time | 2–6 |
 
 ## Chạy
@@ -33,6 +34,8 @@ Mở http://localhost:3000 → nhập tên → **Tạo phòng** → gửi link m
 Trong phòng có **chat** 💬 ở góc dưới-trái (bấm hoặc nhấn Enter): dùng được cả lúc chờ lẫn lúc đang chơi, tin nhắn hiện thành bong bóng trên ghế người gửi. Nút **đàm thoại** 🎙️ ngay trên đó để nói chuyện bằng mic (bấm lần nữa hoặc phím M để tắt/bật mic; rời hoặc tắt tiếng từng người trong khung chat). Đàm thoại cần mở bằng link online (https) hoặc localhost — trình duyệt chặn mic trên link wifi/LAN (http).
 
 Riêng 🛸 Kẻ Mạo Danh làm giống bản gốc: người còn sống chỉ chat được trong cuộc họp, hồn ma (và người xem, Thầy Đồng) có kênh 👻 riêng; đàm thoại mặc định *theo khoảng cách* — chỉ nghe rõ người đứng gần, người chết thì im (đổi được trong tuỳ chọn ván).
+
+Trong 🕵️ Mật Danh, Trưởng nhóm chỉ chat được với các Trưởng nhóm khác suốt ván (để khỏi mách đồng đội) — đàm thoại thì không chặn được, cả bàn tự giữ luật nhé.
 
 F5 hoặc rớt mạng thì tự vào lại đúng ghế. Hết giờ lượt hoặc mất kết nối thì máy tự đi giúp. Mỗi tab trình duyệt là một người chơi riêng (tiện để tự test).
 

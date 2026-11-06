@@ -49,6 +49,17 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     room.optsByGame[key] = room.optsByGame[key] || defaultOpts(g.manifest);
     const n = g.manifest.maxPlayers, old = room.seats;
     room.seats = Array.from({ length: n }, (_, i) => old[i] || { kind: 'open', pid: null });
+    applySeatRules(room);
+  }
+  // manifest.seatOn(i, opts) = false → ghế không dùng với tuỳ chọn hiện tại (vd chế độ 2 đội đóng khối ghế đội thứ ba):
+  // hub tự đóng ghế đó (auto) và mở lại khi tuỳ chọn đổi; người đang ngồi thì thành người xem.
+  function applySeatRules(room) {
+    const M = gameOf(room).manifest, opts = optsOf(room);
+    room.seats.forEach((s, i) => {
+      const on = !M.seatOn || M.seatOn(i, opts);
+      if (!on && !s.auto) room.seats[i] = { kind: 'closed', pid: null, auto: true };
+      else if (on && s.auto) room.seats[i] = { kind: 'open', pid: null };
+    });
   }
 
   const online = (room, pid) => { const m = room.members.get(pid); return !!(m && m.conns.size); };
@@ -56,7 +67,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
   function seatName(room, i) {
     const s = room.seats[i];
     if (s.kind === 'human') return (room.members.get(s.pid) || {}).name || '?';
-    if (s.kind === 'bot') return 'Bot ' + BOT_NAMES[i % BOT_NAMES.length];
+    if (s.kind === 'bot') return 'Bot ' + BOT_NAMES[i % BOT_NAMES.length] + (i >= BOT_NAMES.length ? ' ' + (1 + Math.floor(i / BOT_NAMES.length)) : '');
     return '';
   }
 
@@ -210,7 +221,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     if (t.auto) { delay = wait + (t.autoDelay ?? 300); mode = 'auto'; }
     else if (seat.kind === 'bot') { delay = wait + 450 + Math.random() * 600; mode = 'bot'; }
     else {
-      delay = wait + (online(room, seat.pid) ? mt.turnMs : OFFLINE_MS);
+      delay = wait + (online(room, seat.pid) ? t.ms || mt.turnMs : OFFLINE_MS);
       mode = 'timeout';
       mt.deadline = Date.now() + delay;
     }
@@ -379,6 +390,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         needHost(r, m); needLobby(r);
         const i = msg.seat | 0;
         if (!r.seats[i] || !['open', 'bot', 'closed'].includes(msg.kind)) throw new Error('Ghế không hợp lệ');
+        if (r.seats[i].auto) throw new Error('Ghế này không dùng với tuỳ chọn hiện tại');
         r.seats[i] = { kind: msg.kind, pid: null };
       },
       fillBots(msg, r, m) {
@@ -397,6 +409,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         const ch = def.choices.find(c => c.value === msg.value);
         if (!ch) throw new Error('Giá trị không hợp lệ');
         optsOf(r)[def.key] = ch.value;
+        applySeatRules(r);
       },
       start(msg, r, m) {
         needHost(r, m);
