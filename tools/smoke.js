@@ -60,6 +60,16 @@ function guessAction(g, seat) {
   if (s.phase === 'move' && s.legal) return { type: 'move', h: s.legal[0].h };
   if (s.phase === 'go' || s.phase === 'wait') return { type: 'press' };
   if (s.dealQ) { const d = s.pend[0]; return !d ? { type: Math.random() < 0.6 ? 'hit' : 'stay' } : d.see ? { type: 'peek', bury: false } : { type: 'target', to: d.opts[0] }; } // Flip 7
+  if (s.bank && s.board) {                                               // Splendor: lấy ngọc khác màu, trả lời quyết định bằng lựa chọn đầu
+    const a = s.ask, cs = ['w', 'u', 'g', 'r', 'k'];
+    if (a && a.k === 'discard') { const g = {}, my = s.players[seat].gems; let n = a.n; for (const c of [...cs, 'o']) { const k = Math.min(n, my[c]); if (k) { g[c] = k; n -= k; } } return { type: 'discard', gems: g }; }
+    if (a && a.k === 'noble') return { type: 'noble', id: a.opts[0] };
+    if (a && a.k === 'steal') return { type: 'steal', to: a.opts[0], color: cs.find(c => s.players[a.opts[0]].gems[c]) };
+    if (a && a.k === 'snatch') return { type: 'snatch', to: a.opts[0] };
+    if (a && a.k === 'gift') return { type: 'gift', id: a.opts[0] };
+    const take = cs.filter(c => s.bank[c] > 0).slice(0, 3);
+    return take.length ? { type: 'take', gems: Object.fromEntries(take.map(c => [c, 1])) } : { type: 'reserve', lv: 1 };
+  }
   if (s.phase === 'play') return { type: 'draw' };                      // Mèo Nổ
   if (s.phase === 'bury') return { type: 'bury', pos: 0 };
   if (s.phase === 'favor') return { type: 'give', card: hand[0] };
@@ -82,7 +92,7 @@ while (Date.now() < end) {
     const g = c.game;
     if (!g) continue;
     const me = g.state.players && g.state.players[seat];
-    const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go'
+    const myTurn = (g.state.ask ?? g.state.turn) === seat || g.state.phase === 'go' || (g.state.ask && g.state.ask.seat === seat)
       || (g.state.phase === 'decide' && me.status === 'in' && !me.choice)
       || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat)
       || (g.state.phase === 'auction' && g.state.auc && !(seat in g.state.auc.bids))
