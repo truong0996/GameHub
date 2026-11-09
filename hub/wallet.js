@@ -22,6 +22,12 @@ export function createWallet(dir, stats) {
   let db = { users: {} };
   try { db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   db.users ||= {};
+  // Làm sạch lúc nạp: bỏ id món không còn trong cửa hàng, spent hỏng (NaN/null) thì tính lại theo giá các món đang có.
+  for (const u of Object.values(db.users)) {
+    u.owned = (Array.isArray(u.owned) ? u.owned : []).filter(id => ITEM[id]);
+    u.eq = Object.fromEntries(Object.entries(u.eq || {}).filter(([s, id]) => WEAR.includes(s) && u.owned.includes(id)));
+    if (!Number.isFinite(u.spent)) u.spent = u.owned.reduce((n, id) => n + ITEM[id].price, 0);
+  }
   function save() {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(file + '.tmp', JSON.stringify(db, null, 1));
@@ -59,11 +65,11 @@ export function createWallet(dir, stats) {
     info,
     buy(acct, id) {
       const it = ITEM[id];
-      if (!it) throw new Error('Món này không có trong cửa hàng');
+      if (!it || !Number.isFinite(it.price) || it.price < 0) throw new Error('Món này không có trong cửa hàng');
       const u = userOf(acct);
       if (u.owned.includes(id)) throw new Error('Bạn đã có món này rồi');
       const bal = info(acct).credits;
-      if (bal < it.price) throw new Error(`Chưa đủ credit — còn thiếu ${it.price - bal} 💰`);
+      if (!(bal >= it.price)) throw new Error(`Chưa đủ credit — còn thiếu ${it.price - bal} 💰`);
       u.owned.push(id);
       u.spent += it.price;
       if (WEAR.includes(it.slot)) u.eq[it.slot] = id;   // mua xong mặc luôn

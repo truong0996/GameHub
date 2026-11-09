@@ -103,6 +103,7 @@ export const ITEMS = [
   { id: 'em-royal', slot: 'emote', name: 'Hoàng Gia', emojis: ['👑', '💎', '🏆', '💰'], rar: 'e', price: 300 },
 ];
 
-export const ITEM = Object.fromEntries(ITEMS.map(x => [x.id, x]));
+// Không có prototype: tra ITEM["constructor"], ITEM["__proto__"]... phải ra undefined (nếu không thì "mua" được món ma không giá → số dư NaN → mua gì cũng qua).
+export const ITEM = Object.freeze(Object.assign(Object.create(null), Object.fromEntries(ITEMS.map(x => [x.id, x]))));
 // Ô trang bị được (gói biểu cảm mua là dùng, không trang bị).
 export const WEAR = SLOTS.map(s => s.id).filter(s => s !== 'emote');
