@@ -25,7 +25,8 @@ const cleanName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 16) 
 const banKey = (acct, name) => (acct ? 'a:' + acct : 'n:' + cleanName(name).toLowerCase());
 
 // accounts (hub/accounts.js) + stats (hub/stats.js): có thì người chơi đăng nhập được và kết quả ván được ghi lại.
-export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null }) {
+// wallet (hub/wallet.js): credit sau mỗi ván + đồ trang trí (look) hiện cho cả phòng.
+export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null, wallet = null }) {
   const rooms = new Map();
   const catalog = [...games.values()].map(catalogEntry).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
@@ -62,6 +63,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     });
   }
 
+  // Đồ trang trí đang mặc của một thành viên (chỉ tài khoản đã đăng nhập) — { frame?, name?, title?, bubble?, fx? } hoặc null.
+  const lookOf = m => (wallet && m && m.acct ? wallet.look(m.acct) : null);
   const online = (room, pid) => { const m = room.members.get(pid); return !!(m && m.conns.size); };
   const seatOf = (room, pid) => room.seats.findIndex(s => s.kind === 'human' && s.pid === pid);
   function seatName(room, i) {
@@ -85,10 +88,12 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         kind: s.kind, uid: s.pid ? (room.members.get(s.pid) || {}).uid : null, name: seatName(room, i),
         online: s.kind === 'bot' || (s.kind === 'human' && online(room, s.pid)),
         acct: s.kind === 'human' && !!(room.members.get(s.pid) || {}).acct,
+        look: s.kind === 'human' ? lookOf(room.members.get(s.pid)) : null,
       })),
       // voice: đang trong đàm thoại → { m: tắt mic?, v: mã phiên (đổi mỗi lần vào lại → client dựng lại kết nối) }
       // acct: đã đăng nhập (ván có ≥2 người đăng nhập mới được tính vào bảng xếp hạng)
-      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid), acct: !!m.acct,
+      // look: đồ trang trí đang mặc (xem public/shop-data.js)
+      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid), acct: !!m.acct, look: lookOf(m),
         voice: m.voice ? { m: m.voice.muted, v: m.voice.v } : null })),
     };
   }
@@ -180,16 +185,40 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
   }
 
   // Ghi ván vào lịch sử (một lần mỗi ván). Chỉ ghi khi có ≥2 người đã đăng nhập — ván toàn khách/bot không ảnh hưởng bảng xếp hạng.
+  // Ghi xong thì báo credit vừa nhận cho từng tài khoản (tin 'credit'); người thắng có hiệu ứng thắng thì cả phòng thấy (tin 'fx').
   function record(room, { aborted = false, by = null } = {}) {
     const mt = room.match;
-    if (!stats || mt.recorded) return;
+    if (mt.recorded) return;
     mt.recorded = true;
-    if (mt.players.filter(x => x.acct).length < 2) return;
     const now = Date.now();
     const ranks = aborted ? [] : ranksOf(mt.logic, mt.state, mt.players.map(x => x.seat));
+    const delay = Math.max(0, mt.busyUntil - now) + 500;   // chờ animation cuối ván diễn xong
+    if (!aborted) celebrate(room, ranks, delay);
+    if (!stats) return;
+    const accts = [...new Set(mt.players.map(x => x.acct).filter(Boolean))];
+    if (accts.length < 2) return;
     const rec = { at: now, dur: now - mt.startedAt, room: room.code, game: mt.game, opts: mt.opts,
       ...(aborted ? { aborted: true, by } : {}), players: mt.players.map((x, i) => ({ ...x, rank: ranks[i] ?? null })) };
-    try { stats.add(rec); } catch (e) { console.error(`[${room.code}] không ghi được lịch sử ván:`, e.message); }
+    const before = wallet && !aborted ? new Map(accts.map(a => [a, wallet.info(a, now).earned])) : null;
+    try { stats.add(rec); } catch (e) { console.error(`[${room.code}] không ghi được lịch sử ván:`, e.message); return; }
+    if (!before) return;
+    for (const a of accts) {
+      const w = wallet.info(a, now), x = rec.players.find(p => p.acct === a);
+      const data = JSON.stringify({ t: 'credit', gain: w.earned - before.get(a), win: x.rank === 1, wallet: w, delay });
+      for (const m of room.members.values()) if (m.acct === a) for (const ws of m.conns) send(ws, data);
+    }
+  }
+  // Hiệu ứng thắng của người hạng 1 (đồ đã mua) — phát cho cả phòng, kể cả ván không được ghi.
+  function celebrate(room, ranks, delay) {
+    if (!wallet) return;
+    let k = 0;
+    room.match.players.forEach((x, i) => {
+      if (ranks[i] !== 1 || !x.acct) return;
+      const look = wallet.look(x.acct);
+      if (!look || !look.fx) return;
+      const data = JSON.stringify({ t: 'fx', fx: look.fx, seat: x.seat, name: x.name, why: 'win', delay: delay + 700 * k++ });
+      eachConn(room, ws => send(ws, data));
+    });
   }
 
   function afterAction(room, events, meta) {
@@ -328,6 +357,12 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     }
 
     const needAccounts = () => { if (!accounts) throw new Error('Server này chưa bật tài khoản'); };
+    const needWallet = () => {
+      if (!wallet) throw new Error('Server này chưa bật cửa hàng');
+      if (!user) throw new Error('Đăng nhập để nhận credit và mua đồ');
+    };
+    // Đồ đang mặc đổi → vẽ lại phòng cho mọi người (nếu thành viên trong phòng là tài khoản này).
+    const lookChanged = () => { if (room && member && member.acct === user.id) broadcastRoom(room); };
     const handlers = {
       hello: () => ({ catalog, lan: lanUrls(), pub: publicUrl(), accounts: !!accounts }),
       // Tài khoản: register/login → { token, user }; auth { token } (lúc kết nối lại) → { user }. Có hiệu lực từ lần tạo/vào phòng sau.
@@ -340,6 +375,15 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         return { user };
       },
       logout(msg) { if (accounts) accounts.logout(msg.token); user = null; return {}; },
+      // Cửa hàng: shop → { wallet }; buy { item } / equip { slot, item | null } → { wallet } (đang ở phòng thì cả phòng thấy đồ mới).
+      shop() { needWallet(); return { wallet: wallet.info(user.id) }; },
+      buy(msg) { needWallet(); const w = wallet.buy(user.id, String(msg.item || '')); lookChanged(); return { wallet: w }; },
+      equip(msg) {
+        needWallet();
+        const w = wallet.equip(user.id, String(msg.slot || ''), msg.item == null ? null : String(msg.item));
+        lookChanged();
+        return { wallet: w };
+      },
       create(msg) {
         const r = makeRoom(msg.game);
         const m = addMember(r, msg.name);
@@ -380,6 +424,13 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         const cur = seatOf(r, m.pid);
         if (cur >= 0) r.seats[cur] = { kind: 'open', pid: null };
         r.seats[i] = { kind: 'human', pid: m.pid };
+        // Ngồi vào ghế = "ra mắt" hiệu ứng thắng (bản nhỏ) cho cả phòng, tối đa mỗi 5 giây.
+        const look = lookOf(m);
+        if (look && look.fx && Date.now() - (m.lastFx || 0) > 5000) {
+          m.lastFx = Date.now();
+          const data = JSON.stringify({ t: 'fx', fx: look.fx, seat: i, name: m.name, why: 'sit', delay: 250 });
+          eachConn(r, w => send(w, data));
+        }
       },
       unsit(msg, r, m) {
         needLobby(r);
@@ -448,7 +499,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         return 'nobroadcast';
       },
       emote(msg, r, m) {
-        if (!EMOTES.includes(msg.e) || Date.now() - m.lastEmote < 600) return 'nobroadcast';
+        const ok = EMOTES.includes(msg.e) || (wallet && m.acct && wallet.emotes(m.acct).includes(msg.e));   // gói biểu cảm đã mua
+        if (!ok || Date.now() - m.lastEmote < 600) return 'nobroadcast';
         m.lastEmote = Date.now();
         const data = JSON.stringify({ t: 'emote', uid: m.uid, name: m.name, seat: seatOf(r, m.pid), e: msg.e });
         eachConn(r, w => send(w, data));
@@ -462,6 +514,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         // Lưu luôn màu ghế lúc gửi: đổi game/đổi ghế sau đó thì tin cũ vẫn giữ màu cũ.
         const seat = seatOf(r, m.pid), info = seat >= 0 ? gameOf(r).manifest.seats[seat] : null;
         const c = { id: ++r.chatSeq, uid: m.uid, name: m.name, seat, color: info ? info.color : null, text, at: m.lastChat };
+        const look = lookOf(m);   // hiệu ứng tên, danh hiệu, khung chat lúc gửi
+        if (look) { const { name, title, bubble } = look; c.look = { name, title, bubble }; }
         // Game được giới hạn chat trong ván (vd chỉ chat lúc họp, hồn ma chat riêng): chatTo → undefined/true = cả phòng,
         // chuỗi = báo lỗi không cho gửi, { to: [ghế...], tag? } = chỉ những ghế đó (và chính người gửi) thấy.
         const mt = r.match, L = mt && mt.logic;

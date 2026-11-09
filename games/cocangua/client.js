@@ -298,8 +298,8 @@ const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6,
 function buildDice() {
   const cube = $('#dice .cube');
   for (let v = 1; v <= 6; v++) {
-    const f = UI.el('div', `face f${v}${v === 1 || v === 4 ? ' red' : ''}`);
-    for (let i = 0; i < 9; i++) f.appendChild(UI.el('i', PIPS[v].includes(i) ? '' : 'off'));
+    const f = UI.el('div', `face lk-df f${v}${v === 1 || v === 4 ? ' red' : ''}`);
+    for (let i = 0; i < 9; i++) f.appendChild(UI.el('i', PIPS[v].includes(i) ? 'pip' : 'off'));
     cube.appendChild(f);
   }
 }
@@ -307,6 +307,7 @@ async function animRoll(e) {
   const d = $('#dice'), cube = d.querySelector('.cube');
   d.classList.toggle('golden', !!e.golden);
   d.style.setProperty('--glow', C.SEATS[e.p].color);
+  CTX.skin.set(d, e.p, 'dice');   // xúc xắc người gieo mua ở cửa hàng (Xúc Xắc Vàng .golden vẫn đè lên)
   spinN += 2;
   const [rx, ry] = FACE[e.v];
   cube.style.transitionDuration = (C.DUR.roll * 0.9 / SPEED / 1000) + 's';
@@ -503,6 +504,7 @@ function renderGame() {
   renderMeteors(GAME.meteors);
   syncHorses(GAME);
   markTurn(GAME.phase === 'over' ? null : GAME.turn);
+  if (GAME.turn != null && GAME.phase !== 'over') CTX.skin.set($('#dice'), GAME.turn, 'dice');
   renderPanels();
   renderInfo();
   renderControls();
@@ -512,6 +514,7 @@ function setTurnUI(p) {
   ROOT.querySelectorAll('.pcard').forEach(d => d.classList.toggle('active', +d.dataset.p === p));
   markTurn(p);
   $('#dice').style.setProperty('--glow', C.SEATS[p].color);
+  CTX.skin.set($('#dice'), p, 'dice');
 }
 function renderPanels() {
   const box = $('#players'), me = mySeat(), room = CTX.room();

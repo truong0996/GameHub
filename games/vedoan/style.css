@@ -135,6 +135,7 @@
 #modal .card:has(.vd-m.gal) { width: min(980px, 96vw); }   /* phòng tranh cần modal rộng hơn mặc định */
 .vd-m.gal .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; max-height: 62vh; overflow-y: auto; padding: 2px; }
 .vd-m.gal figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.vd-m.gal figure.lk-ez { --ez-bg: var(--surface); }
 .vd-m.gal canvas { display: block; width: 100%; aspect-ratio: 4 / 3; height: auto; background: #fff; border-bottom: 1px solid var(--line); }
 .vd-m.gal figcaption { display: flex; gap: 6px; align-items: center; padding: 6px 8px; font-size: 13px; flex-wrap: wrap; }
 .vd-m.gal .grow { flex: 1; }

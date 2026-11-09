@@ -76,10 +76,11 @@ const S = {
 
 // ================= VẼ =================
 // Lá: c = { id, r, dead } (mình / đã lật) | { k } (úp — k = vai mình đã xem lén được, nếu có).
-function cardMini(c) {
+// p = chủ lá (lá úp vẽ theo lưng bài người đó mua ở cửa hàng).
+function cardMini(c, p) {
   if (c.dead) return `<div class="cd face dead" title="${UI.esc(ROLES[c.r].name)} (đã mất)"><i>${ROLES[c.r].icon}</i></div>`;
   if (c.r) return `<div class="cd face mine" title="${UI.esc(ROLES[c.r].name)}"><i>${ROLES[c.r].icon}</i></div>`;
-  return `<div class="cd back${c.k ? ' known' : ''}" title="${c.k ? 'Bạn đã xem lén: ' + UI.esc(ROLES[c.k].name) : 'Lá úp'}">${c.k ? `<i>${ROLES[c.k].icon}</i>` : ''}</div>`;
+  return `<div class="cd back${c.k ? ' known' : ''}${CTX.skin.cls(p, 'back')}" title="${c.k ? 'Bạn đã xem lén: ' + UI.esc(ROLES[c.k].name) : 'Lá úp'}">${c.k ? `<i>${ROLES[c.k].icon}</i>` : ''}</div>`;
 }
 function cardBig(c, cls = '', extra = '') {
   const R = ROLES[c.r];
@@ -144,7 +145,7 @@ function renderMats() {
       <div class="mat-head"><span class="av">${pl.alive ? SEATS[p].label || '🙂' : pl.ghost ? '👻' : '💀'}</span>
         <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${nm(p)}${off ? ' 📴' : ''}</span>
         ${F ? `<span class="fac" style="--f:${F.color}" title="Phe ${F.name}">${F.icon}</span>` : ''}</div>
-      <div class="mat-row"><span class="coins" title="Xu">🪙 <b>${pl.coins}</b></span><span class="cards">${pl.cards.map(cardMini).join('')}</span></div>
+      <div class="mat-row"><span class="coins" title="Xu">🪙 <b>${pl.coins}</b></span><span class="cards">${pl.cards.map(c => cardMini(c, p)).join('')}</span></div>
       <div class="mat-sub">${claims && pl.alive ? `<span class="claims">${claims}</span>` : ''}${pl.nItems ? `<span class="items" title="Món chợ đen đang giữ">🎒${pl.nItems}</span>` : ''}${passed ? '<span class="ok">✓</span>' : ''}${!pl.alive ? (pl.ghost ? `<span>👻 Hồn ma${pl.gUsed ? '' : ' ✨'}</span>` : '<span>☠️ Bị loại</span>') : ''}</div>
       <div class="bubble"></div>
       <div class="mat-timer"><i></i></div>

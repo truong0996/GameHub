@@ -14,6 +14,8 @@ const esc = s => UI.esc(s);
 const srvNow = () => Date.now() - srvOff;
 const colOf = l => (l >= 0 ? COLORS[l].color : '#8b9099');
 const nameOfLook = l => (l >= 0 ? (V.names[l] || COLORS[l].name) : '???');
+// Mũ (đồ mua ở cửa hàng) của hình dạng l = mũ của người ghế l — nên Biến Hình/Hoá Trang mang theo mũ, Ngụy Trang (-1) thì không có.
+const hatOf = l => (l >= 0 && CTX ? CTX.skin.hat(l) : null);
 const pn = (l, txt) => `<b class="pn" style="--c:${colOf(l)}">${esc(txt ?? nameOfLook(l))}</b>`;
 const secs = t => Math.max(0, Math.ceil((t - srvNow()) / 1000));
 const mySeat = () => (V ? V.me : -1);
@@ -61,6 +63,7 @@ function bean(c, x, y, u, col, o = {}) {
   c.beginPath(); c.ellipse(w * 0.14, -h * 0.2 + bob, w * 0.33, h * 0.14, 0, 0, 7); c.fill(); c.stroke();
   c.fillStyle = 'rgba(255,255,255,.75)';
   c.beginPath(); c.ellipse(w * 0.24, -h * 0.25 + bob, w * 0.12, h * 0.045, 0, 0, 7); c.fill();
+  if (o.hat) CTX.skin.drawHat(c, o.hat, w, -h * 0.5 + bob, t);
   if (o.frozen) { c.fillStyle = 'rgba(180,225,255,.45)'; rr(c, -w * 0.6, -h * 0.55 + bob, w * 1.2, h, w * 0.3); c.fill(); }
   c.restore();
 }
@@ -81,16 +84,17 @@ function corpse(c, x, y, u, col) {
 }
 // Ảnh nhỏ (dataURL) của một người — dùng trong thẻ bỏ phiếu, màn hình vai trò.
 const imgCache = new Map();
-function beanImg(col, ghost = false) {
-  const k = col + ghost;
+function beanImg(col, ghost = false, hat = null) {
+  const k = col + ghost + hat;
   if (!imgCache.has(k)) {
     const c = document.createElement('canvas'); c.width = c.height = 96;
-    bean(c.getContext('2d'), 48, 46, 100, col, { ghost, alpha: ghost ? 0.7 : 1 });
+    // có mũ thì thu nhỏ + hạ xuống chút cho mũ không bị cắt
+    bean(c.getContext('2d'), 48, hat ? 54 : 46, hat ? 86 : 100, col, { ghost, alpha: ghost ? 0.7 : 1, hat });
     imgCache.set(k, c.toDataURL());
   }
   return imgCache.get(k);
 }
-const beanTag = (l, cls = '', ghost = false) => `<img class="bean ${cls}" src="${beanImg(colOf(l), ghost)}" alt="">`;
+const beanTag = (l, cls = '', ghost = false) => `<img class="bean ${cls}" src="${beanImg(colOf(l), ghost, hatOf(l))}" alt="">`;
 
 // ---------- vẽ sẵn bản đồ ----------
 function buildMap() {
@@ -286,7 +290,7 @@ function draw(t, dt) {
   for (const b of V.bodies) corpse(g, X(b.x), Y(b.y), u, colOf(b.p));
   // người + ma-nơ-canh (xếp theo y)
   const list = [];
-  for (const d of V.dolls) list.push({ y: d.y, f: () => { bean(g, X(d.x), Y(d.y), u, colOf(d.l), { dir: 1 }); if (d.l >= 0) nameTag(X(d.x), Y(d.y), u, d.l); } });
+  for (const d of V.dolls) list.push({ y: d.y, f: () => { bean(g, X(d.x), Y(d.y), u, colOf(d.l), { dir: 1, hat: hatOf(d.l), t }); if (d.l >= 0) nameTag(X(d.x), Y(d.y), u, d.l); } });
   anchors = {};
   for (const p of V.ps) {
     const self = p.p === mySeat() && me;
@@ -296,7 +300,7 @@ function draw(t, dt) {
     const alpha = p.inv ? 0.35 : ghostP ? 0.55 : self && S().vent != null ? 0.35 : 1;
     list.push({ y: pos.y, f: () => {
       if (p.sc) scanFx(X(pos.x), Y(pos.y), u, t);
-      bean(g, X(pos.x), Y(pos.y), u, colOf(p.l), { dir: self ? me.dir : p.d, moving: self ? me.moving : p.m, t: t + p.p, ghost: ghostP, alpha, frozen: p.fr });
+      bean(g, X(pos.x), Y(pos.y), u, colOf(p.l), { dir: self ? me.dir : p.d, moving: self ? me.moving : p.m, t: t + p.p, ghost: ghostP, alpha, frozen: p.fr, hat: hatOf(p.l) });
       if (p.l >= 0 || self) nameTag(X(pos.x), Y(pos.y), u, p.l >= 0 ? p.l : p.p, self && p.l < 0, mates().includes(p.p) && p.l === p.p);
       if (V.lovers?.[p.p] != null || (S() && S().lover === p.p)) heart(X(pos.x) + u * 0.32, Y(pos.y) - u * 0.55, u);
     } });
@@ -309,7 +313,7 @@ function draw(t, dt) {
     const pr = roomAt(M, pos.x, pos.y);
     if (!pr || pr.i !== mr.i || p.g) continue;
     const fx = mr.x * 2 + mr.w - pos.x;
-    list.push({ y: pos.y, f: () => { bean(g, X(fx), Y(pos.y), u, colOf(p.l), { dir: -(p.p === mySeat() ? me.dir : p.d), moving: p.m, t, alpha: 0.75 }); if (p.l >= 0) nameTag(X(fx), Y(pos.y), u, p.l); } });
+    list.push({ y: pos.y, f: () => { bean(g, X(fx), Y(pos.y), u, colOf(p.l), { dir: -(p.p === mySeat() ? me.dir : p.d), moving: p.m, t, alpha: 0.75, hat: hatOf(p.l) }); if (p.l >= 0) nameTag(X(fx), Y(pos.y), u, p.l); } });
   }
   list.sort((a, b) => a.y - b.y).forEach(x => x.f());
   // sương mù tầm nhìn
@@ -338,11 +342,11 @@ function fixableObj(o) {
 function label(c, txt, x, y, size, col) { c.font = `800 ${size}px "Segoe UI", system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,.6)'; c.strokeText(txt, x, y); c.fillStyle = col; c.fillText(txt, x, y); }
 function nameTag(x, y, u, l, hidden, mate) {
   if (hidden) return;
-  const n = V.names[l] || COLORS[l].name;
+  const n = V.names[l] || COLORS[l].name, ty = y - u * (hatOf(l) ? 0.72 : 0.48);
   g.font = `700 ${Math.max(11, u * 0.3)}px "Segoe UI", system-ui, sans-serif`;
   g.textAlign = 'center'; g.textBaseline = 'bottom';
-  g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(n, x, y - u * 0.48);
-  g.fillStyle = mate ? '#ff5a4f' : '#fff'; g.fillText(n, x, y - u * 0.48);
+  g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(n, x, ty);
+  g.fillStyle = mate ? '#ff5a4f' : '#fff'; g.fillText(n, x, ty);
 }
 function heart(x, y, u) { g.font = `${u * 0.3}px serif`; g.textAlign = 'center'; g.fillText('💞', x, y); }
 function scanFx(x, y, u, t) {
@@ -723,7 +727,7 @@ function showEject() {
   const votes = e.votes || {};
   const by = {};
   for (const [v, t] of Object.entries(votes)) (by[t] ||= []).push(+v);
-  const tally = Object.entries(by).map(([t, vs]) => `<div class="vt">${+t < 0 ? '⏭️ Bỏ qua' : pn(+t)}: ${vs.map(v => `<img class="mini" src="${beanImg(colOf(v))}">`).join('')}</div>`).join('');
+  const tally = Object.entries(by).map(([t, vs]) => `<div class="vt">${+t < 0 ? '⏭️ Bỏ qua' : pn(+t)}: ${vs.map(v => `<img class="mini" src="${beanImg(colOf(v), false, hatOf(v))}">`).join('')}</div>`).join('');
   let text;
   if (e.p == null) text = e.tie ? 'Hoà phiếu — không ai bị đẩy ra.' : 'Không ai bị đẩy ra.';
   else {
@@ -732,7 +736,7 @@ function showEject() {
       : e.team === 'imp' ? ` ${esc(V.names[e.p])} LÀ Kẻ Mạo Danh ${R.icon}.` : ` ${esc(V.names[e.p])} KHÔNG phải Kẻ Mạo Danh (${R.icon} ${esc(R.name)}).`) : '');
   }
   const lov = (e.lovers || []).map(x => `<p>💔 ${pn(x)} không chịu nổi mất mát và ra đi theo...</p>`).join('');
-  full(`<div class="fe">${e.p != null ? `<img class="flyer" src="${beanImg(colOf(e.p))}">` : ''}<div class="tally">${tally}</div><div class="typed">${text}</div>${lov}</div>`, 'eject ' + V.map, 0);
+  full(`<div class="fe">${e.p != null ? `<img class="flyer" src="${beanImg(colOf(e.p), false, hatOf(e.p))}">` : ''}<div class="tally">${tally}</div><div class="typed">${text}</div>${lov}</div>`, 'eject ' + V.map, 0);
   SFX.whoosh();
 }
 function showDeath(l) {

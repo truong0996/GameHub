@@ -1,6 +1,7 @@
 // Chat của phòng: nút 💬 nổi ở góc + khung tin nhắn, dùng được cả ở phòng chờ lẫn lúc đang chơi.
 // Đóng khung thì tin mới hiện "bong bóng xem trước" cạnh nút + số chưa đọc; đang chơi thì lời thoại còn bay lên tại ghế người gửi.
 import { $, el, esc } from './ui.js';
+import { nameHtml, titleHtml, bubbleCls } from './shop.js';
 
 const MAX_SHOWN = 50;
 let opts = null, open = false, unread = 0;
@@ -81,12 +82,13 @@ function setOpen(v) {
 }
 
 // tag: nhãn kênh do game đặt (vd 👻 = chỉ hồn ma thấy).
-const who = m => `${m.tag ? `<span class="ctag">${esc(m.tag)}</span>` : ''}<b class="pn" style="--c:${esc(m.color || 'var(--muted)')}">${esc(m.name)}</b>`;
+// m.look = đồ trang trí của người gửi lúc gửi (hiệu ứng tên, danh hiệu, khung chat — xem shop.js).
+const who = m => `${m.tag ? `<span class="ctag">${esc(m.tag)}</span>` : ''}${nameHtml(m.name, m.look, m.color || 'var(--muted)')}${titleHtml(m.look)}`;
 const hhmm = t => new Date(t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 function addLine(m) {
   const log = $('#chat-log');
-  const d = el('div', 'cm' + (m.uid === opts.myUid() ? ' me' : ''), `${who(m)} <span>${esc(m.text)}</span>`);
+  const d = el('div', 'cm' + (m.uid === opts.myUid() ? ' me' : '') + bubbleCls(m.look), `${who(m)} <span>${esc(m.text)}</span>`);
   d.title = hhmm(m.at);
   log.appendChild(d);
   while (log.children.length > MAX_SHOWN) log.firstElementChild.remove();
@@ -101,7 +103,7 @@ function paintBadge() {
 // Xem trước tin mới cạnh nút (tối đa 3 tin, tự tắt sau vài giây); bấm vào thì mở chat.
 function peek(m) {
   const box = $('#chat-peek');
-  const d = el('div', 'peek', `${who(m)} ${esc(m.text)}`);
+  const d = el('div', 'peek' + bubbleCls(m.look), `${who(m)} ${esc(m.text)}`);
   d.onclick = () => setOpen(true);
   box.appendChild(d);
   while (box.children.length > 3) box.firstElementChild.remove();
@@ -110,7 +112,7 @@ function peek(m) {
 
 // Bong bóng lời thoại tại ghế người gửi (khi game có emoteAnchor).
 function say(pt, m) {
-  const d = el('div', 'say', esc(m.text.length > 70 ? m.text.slice(0, 68) + '…' : m.text));
+  const d = el('div', 'say' + bubbleCls(m.look), esc(m.text.length > 70 ? m.text.slice(0, 68) + '…' : m.text));
   d.style.left = Math.max(90, Math.min(innerWidth - 90, pt.x)) + 'px';
   d.style.top = Math.max(40, pt.y) + 'px';
   document.body.appendChild(d);

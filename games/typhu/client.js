@@ -81,7 +81,7 @@ const TEMPLATE = `<div class="tp">
         <div class="tp-head"><span id="tp-round"></span><span id="tp-clock"></span><span id="tp-pot"></span></div>
         <div id="tp-event"></div>
         <div class="tp-mid">
-          <div class="tp-dice"><div class="die" id="die0"></div><div class="die" id="die1"></div></div>
+          <div class="tp-dice"><div class="die lk-df" id="die0"></div><div class="die lk-df" id="die1"></div></div>
           <div id="tp-status"></div>
         </div>
         <div class="tp-timer"><i id="tp-timer"></i></div>
@@ -155,7 +155,7 @@ function placeTokens() {
 const tokenEl = p => ROOT.querySelector(`.tk[data-p="${p}"]`);
 
 const FACES = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-function setDie(k, v) { $('#die' + k).innerHTML = Array.from({ length: 9 }, (_, j) => `<i class="${FACES[v].includes(j) ? 'on' : ''}"></i>`).join(''); }
+function setDie(k, v) { $('#die' + k).innerHTML = Array.from({ length: 9 }, (_, j) => `<i class="${FACES[v].includes(j) ? 'on pip' : ''}"></i>`).join(''); }
 
 function renderPlayers() {
   const box = $('#tp-players'), m = mySeat(), room = CTX.room(), dec = decider();
@@ -352,7 +352,8 @@ function log(html) {
 function addCash(p, amt) { if (p != null && p >= 0 && P(p)) P(p).cash += amt; }
 const quick = () => { renderBoard(); renderPlayers(); renderHead(); };
 
-async function rollDice(d) {
+async function rollDice(d, p) {
+  if (p != null) CTX.skin.set($('.tp-dice'), p, 'dice');   // xúc xắc người đổ mua ở cửa hàng
   S.dice();
   if (!QUICK) {
     $('.tp-dice').classList.add('rolling');
@@ -401,7 +402,7 @@ async function playEvent(e) {
       await sleep(300);
       break;
     case 'dice':
-      await rollDice(e.d);
+      await rollDice(e.d, e.p);
       log(`🎲 ${who(e.p)} ${e.fixed ? 'dùng 🎯 chọn' : 'đổ'} <b>${e.d[0]} + ${e.d[1]} = ${e.d[0] + e.d[1]}</b>${e.dbl ? ' (đôi!)' : ''}${e.jail && !e.dbl ? ' — không ra được' : ''}`);
       break;
     case 'speed':
@@ -737,6 +738,7 @@ async function update(msg, { backlog = 0, hidden = false } = {}) {
   clockOff = msg.recvAt - V.now;
   deadline = msg.deadlineIn ? msg.recvAt + msg.deadlineIn : 0;
   setDie(0, V.dice[0]); setDie(1, V.dice[1]);
+  if (V.cur != null && V.phase !== 'over') CTX.skin.set($('.tp-dice'), V.cur, 'dice');
   renderAll();
   const me = canAct() ? mySeat() : null;
   if (me != null && lastDecider !== me && !hidden) SFX.myTurn();

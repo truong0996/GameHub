@@ -110,8 +110,8 @@ function online(p) {
 function fanHTML(p) {
   const pl = P(p);
   if (pl.hand) return `<div class="fan open">${sortHand(pl.hand).map(c => cardHTML(c, 'mini')).join('')}</div>`;
-  const k = Math.min(pl.n, 14);
-  return `<div class="fan">${Array.from({ length: k }, () => '<i></i>').join('')}${pl.n > 14 ? '<span>…</span>' : ''}</div>`;
+  const k = Math.min(pl.n, 14), bk = CTX.skin.cls(p, 'back');   // lưng bài người đó mua ở cửa hàng
+  return `<div class="fan">${Array.from({ length: k }, () => `<i class="${bk}"></i>`).join('')}${pl.n > 14 ? '<span>…</span>' : ''}</div>`;
 }
 
 function renderOpps() {

@@ -416,6 +416,8 @@ function render() {
   inp.disabled = me() < 0;
   inp.placeholder = me() < 0 ? 'Đang xem — không đoán được' : V.phase === 'draw' ? (inside ? '🤫 Nói chuyện với người đã đoán ra...' : 'Gõ đáp án (không dấu cũng được)...') : 'Trò chuyện...';
   ROOT.querySelector('.vd').classList.toggle('drawer', canDraw());
+  // khung tranh (đồ mua ở cửa hàng) của hoạ sĩ đang vẽ — Song Hoạ thì lấy của người đầu tiên có khung
+  CTX.skin.set($('#vd-stage'), V.phase === 'over' ? -1 : easelOf(V.drawers), 'easel');
   if (V.phase === 'over' && !overShown) { overShown = true; setTimeout(showGameOver, 900); }
 }
 
@@ -550,11 +552,13 @@ function showGameOver() {
   on('again', CTX.restart);
 }
 
+const easelOf = ds => (ds || []).find(p => CTX.skin.look(p) && CTX.skin.look(p).easel) ?? -1;
+
 function showGallery() {
   const gal = V.gal || [];
   UI.openModal(`<div class="vd-m gal"><h2 class="center">🖼️ Phòng tranh</h2><div class="grid">${gal.map((g, i) => {
     const r = Object.entries(g.r).map(([k, n]) => `${REACTS[k]}${n}`).join(' ');
-    return `<figure><canvas width="${W}" height="${H}" data-i="${i}"></canvas><figcaption><b>${esc(g.w)}</b> · ${g.d.map(who).join(' & ')}
+    return `<figure class="${CTX.skin.cls(easelOf(g.d), 'easel')}"><canvas width="${W}" height="${H}" data-i="${i}"></canvas><figcaption><b>${esc(g.w)}</b> · ${g.d.map(who).join(' & ')}
       ${g.ev ? `<span title="${esc(EVENTS[g.ev].name)}">${EVENTS[g.ev].icon}</span>` : ''}<span class="grow"></span>${r}
       <button class="dl" data-i="${i}" title="Tải ảnh về">⬇️</button></figcaption></figure>`;
   }).join('')}</div><div class="btns"><button class="ghost" data-a="back">⬅️ Bảng điểm</button><button class="gold" data-x>Đóng</button></div></div>`);

@@ -5,6 +5,7 @@ import { $, el, esc, toast, openModal, closeModal, modalOpen, floatAt, initFx } 
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
 import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
 import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected, voiceVolumes } from './voice.js';
+import { initShop, openShop, setWallet, myWallet, fmt, extraEmotes, nameHtml, titleHtml, frameCls, playFx, creditNotice, skinCls, setSkin, drawHat } from './shop.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
 const ME = { pid: null, uid: null, code: null, lan: [], pub: null, user: null, accounts: false };   // user: tài khoản đã đăng nhập { id, name }
@@ -80,7 +81,7 @@ async function onConnected() {
   const token = localStorage.getItem('hub_token');
   if (token && ME.accounts) {
     const a = await net.raw('auth', { token });
-    if (a.ok) ME.user = a.user;
+    if (a.ok) { ME.user = a.user; loadWallet(net.raw); }
     else if (/hết hạn/.test(a.err || '')) { localStorage.removeItem('hub_token'); ME.user = null; toast('⚠️ ' + esc(a.err)); }
   }
   renderAccount();
@@ -106,6 +107,17 @@ function onMessage(m) {
   else if (m.t === 'chat') chatMsg(m.msg);
   else if (m.t === 'rtc') voiceSignal(m);
   else if (m.t === 'kicked' && m.code === ME.code) resetToHome('🚪 Chủ phòng đã mời bạn ra khỏi phòng');
+  else if (m.t === 'credit') creditNotice(m);
+  else if (m.t === 'fx') setTimeout(() => playFx(m.fx, fxAnchor(m.seat), m.why !== 'win'), m.delay || 0);
+}
+
+// Chỗ phát hiệu ứng của một ghế: trong game thì hỏi game (emoteAnchor), ở phòng chờ thì ảnh đại diện của ghế.
+function fxAnchor(seat) {
+  if (current && current.inst.emoteAnchor) return current.inst.emoteAnchor(seat) || null;
+  const dot = !$('#scr-room').classList.contains('hidden') && $(`#seats .seat:nth-child(${seat + 1}) .seat-dot`);
+  if (!dot) return null;
+  const r = dot.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
 function onRoom(room) {
@@ -200,8 +212,19 @@ function makeCtx(cur) {
     sfx: { ...sfx, tone, noise, ac },
     // volumes({ uid: 0..1 } | null): âm lượng nghe từng người trong đàm thoại (vd theo khoảng cách); gỡ game thì tự trả lại.
     voice: { volumes: map => { if (current === cur) voiceVolumes(map); } },
+    // Đồ trang trí trong game của người ngồi ghế seat (bot/khách = không có): look(seat) → {back?, dice?, hat?, ...} | null,
+    // cls(seat, 'back'|'dice') → ' lk-.. lk-<id>' | '' (gắn vào class), set(el, seat, slot) đổi skin phần tử có sẵn,
+    // hat(seat) → id mũ | null, drawHat(canvas2d, id, bề ngang người, y đỉnh đầu, giây).
+    skin: {
+      look: seatLook,
+      cls: (seat, slot) => skinCls(seatLook(seat), slot),
+      set: (node, seat, slot) => setSkin(node, seatLook(seat), slot),
+      hat: seat => { const l = seatLook(seat); return (l && l.hat) || null; },
+      drawHat,
+    },
   };
 }
+const seatLook = seat => { const s = ROOM && ROOM.seats && ROOM.seats[seat]; return (s && s.look) || null; };
 
 function exitGame() {
   if (isHost()) { if (confirm('Kết thúc ván này và đưa mọi người về phòng chờ?')) act('lobby'); }
@@ -211,8 +234,8 @@ function exitGame() {
 // Thanh emoji dùng chung.
 function emoteBar(container) {
   container.classList.add('emotes');
-  for (const e of EMOTES) {
-    const b = el('button', '', e);
+  for (const e of [...EMOTES, ...extraEmotes()]) {   // + gói biểu cảm đã mua ở cửa hàng (nút viền vàng)
+    const b = el('button', EMOTES.includes(e) ? '' : 'lk-em', e);
     b.onclick = () => net.request('emote', { e });
     container.appendChild(b);
   }
@@ -294,12 +317,12 @@ function renderRoom() {
     const info = entry.seats[i];
     const d = el('div', `seat seat-${s.kind}${s.uid && s.uid === ME.uid ? ' mine' : ''}`);
     d.style.setProperty('--c', info.color);
-    const who = s.kind === 'human' ? `👤 ${esc(s.name)}${s.uid === ME.uid ? ' (bạn)' : ''}${guestTag(s)}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(offline)</span>'}`
+    const who = s.kind === 'human' ? `${s.look ? '' : '👤 '}${nameHtml(s.name, s.look)}${s.uid === ME.uid ? ' (bạn)' : ''}${guestTag(s)}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(offline)</span>'}${titleHtml(s.look)}`
       : s.kind === 'bot' ? `🤖 ${esc(s.name)}`
       : s.kind === 'closed' ? '<span class="muted">🚫 Đã đóng</span>'
       : '<span class="muted">Trống — bấm để ngồi</span>';
     const dot = s.kind === 'human' ? esc([...s.name][0] || '?').toUpperCase() : s.kind === 'bot' ? '🤖' : '';
-    d.innerHTML = `<div class="seat-dot">${dot}</div><div><div class="seat-color">${esc(info.name)}${info.label ? ' · ' + esc(info.label) : ''}</div><div class="seat-who">${who}</div></div>`;
+    d.innerHTML = `<div class="seat-dot${s.kind === 'human' ? frameCls(s.look) : ''}">${dot}</div><div><div class="seat-color">${esc(info.name)}${info.label ? ' · ' + esc(info.label) : ''}</div><div class="seat-who">${who}</div></div>`;
     if (s.kind === 'open') d.onclick = () => { sfx.pop(); act('sit', { seat: i }); };
     if (host) {
       const sel = el('select', 'seat-sel');
@@ -336,8 +359,9 @@ function renderRoom() {
 
   const filled = ROOM.seats.filter(s => s.kind === 'human' || s.kind === 'bot').length;
   const watchers = ROOM.members.filter(m => m.seat < 0);
-  $('#room-members').innerHTML = `👑 Chủ phòng: <b>${esc(ROOM.hostName)}</b>` +
-    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => esc(m.name) + guestTag(m) + vmic(m.uid) + (m.online ? '' : ' (offline)') +
+  const hostM = ROOM.members.find(m => m.uid === ROOM.host);
+  $('#room-members').innerHTML = `👑 Chủ phòng: ${nameHtml(ROOM.hostName, hostM && hostM.look)}` +
+    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => nameHtml(m.name, m.look) + guestTag(m) + vmic(m.uid) + (m.online ? '' : ' (offline)') +
       (host && m.uid !== ME.uid ? ` <button class="ghost kick" data-kick="${esc(m.uid)}" title="Mời ${esc(m.name)} ra khỏi phòng">✕</button>` : '')).join(', ')}` : '');
   for (const b of $('#room-members').querySelectorAll('[data-kick]')) {
     const m = ROOM.members.find(x => x.uid === b.dataset.kick);
@@ -436,11 +460,29 @@ function renderAccount() {
   box.classList.toggle('on', !!u);
   $('#lab-name').classList.toggle('hidden', !!u);
   if (!ME.accounts) return;
+  const w = myWallet(), look = w && w.eq;
   box.innerHTML = u
-    ? `<span>🔐 Đã đăng nhập: <b>${esc(u.name)}</b> <span class="muted small">· ván của bạn được tính vào 🏆</span></span><button class="ghost" data-out>Đăng xuất</button>`
-    : '<span class="muted">Đang chơi như khách — không được tính vào 🏆</span><button data-in>Đăng nhập / Đăng ký</button>';
-  const b = box.querySelector('button');
-  b.onclick = u ? logout : openLogin;
+    ? `<span>🔐 ${nameHtml(u.name, look)}${titleHtml(look)} <span class="muted small">· ván của bạn được tính vào 🏆</span></span>` +
+      `<span class="acct-btns"><button class="gold lk-shopbtn" data-shop title="Cửa hàng đồ trang trí — credit kiếm được sau mỗi ván">🛍️ Cửa hàng · <b>${w ? fmt(w.credits) : '…'}</b> 💰</button>` +
+      `<button class="ghost" data-out>Đăng xuất</button></span>`
+    : '<span class="muted">Đang chơi như khách — không được tính vào 🏆, không nhận credit</span><button data-in>Đăng nhập / Đăng ký</button>';
+  if (u) {
+    box.querySelector('[data-out]').onclick = logout;
+    box.querySelector('[data-shop]').onclick = () => { sfx.pop(); openShop(); };
+  } else box.querySelector('[data-in]').onclick = openLogin;
+  paintShopBtn();
+}
+// Nút 🛍️ ở phòng chờ: số dư của mình (khách thì chỉ xem cửa hàng).
+function paintShopBtn() {
+  const b = $('#btn-shop'), w = myWallet();
+  b.classList.toggle('hidden', !ME.accounts);
+  b.innerHTML = w ? `🛍️ <b>${fmt(w.credits)}</b> 💰` : '🛍️';
+  b.title = w ? 'Cửa hàng đồ trang trí — credit kiếm được sau mỗi ván' : 'Cửa hàng (đăng nhập ở trang chủ để nhận credit)';
+}
+// Ví credit: tải lại sau khi đăng nhập (raw = gửi ngay lúc đang kết nối lại).
+async function loadWallet(send = net.request) {
+  const r = await send('shop');
+  setWallet(r.ok ? r.wallet : null);
 }
 
 function openLogin() {
@@ -461,6 +503,7 @@ function openLogin() {
     ME.user = r.user;
     closeModal();
     renderAccount();
+    loadWallet();
     toast(t === 'register' ? `🎉 Đã tạo tài khoản <b>${esc(r.user.name)}</b>` : `👋 Chào <b>${esc(r.user.name)}</b>!`);
   };
   card.querySelector('[data-x]').onclick = closeModal;
@@ -475,7 +518,7 @@ async function logout() {
   await net.request('logout', { token: localStorage.getItem('hub_token') });
   localStorage.removeItem('hub_token');
   ME.user = null;
-  renderAccount();
+  setWallet(null);
 }
 
 // ================= KHỞI ĐỘNG =================
@@ -488,6 +531,12 @@ function getName() {
 }
 
 initFx($('#fx'));
+initShop({
+  request: (t, data) => act(t, data),
+  name: () => (ME.user ? ME.user.name : $('#in-name').value.trim()),
+  // ví đổi (mua, trang bị, vừa nhận credit) → vẽ lại chỗ hiện số dư/đồ đang mặc
+  onChange: () => { renderAccount(); if (ROOM && !ROOM.playing) renderRoom(); },
+});
 initChat({
   send: text => act('chat', { text }),
   myUid: () => ME.uid,
@@ -532,6 +581,7 @@ $('#btn-copy').onclick = () => {
 };
 $('#btn-leave').onclick = leaveRoom;
 $('#btn-rank').onclick = () => open('/report', '_blank');
+$('#btn-shop').onclick = () => { sfx.pop(); openShop(); };
 $('#btn-unsit').onclick = () => act('unsit');
 $('#btn-bots').onclick = () => act('fillBots');
 $('#btn-start').onclick = () => { ac(); act('start'); };

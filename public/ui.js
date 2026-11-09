@@ -53,7 +53,7 @@ export function floatAt(pt, html, cls = '') {
 }
 
 // ---------- hiệu ứng hạt trên canvas toàn màn hình ----------
-const FX = { cv: null, ctx: null, parts: [], raf: 0, dpr: 1 };
+const FX = { cv: null, ctx: null, parts: [], raf: 0, dpr: 1, last: 0 };
 export const PALETTE = ['#ff4d6d', '#ff9f1c', '#ffd23f', '#2ec76b', '#3a9bff', '#b06cff', '#ffffff'];
 function fxResize() {
   FX.dpr = Math.min(2, devicePixelRatio || 1);
@@ -66,21 +66,46 @@ export function initFx(canvas) {
   fxResize();
   addEventListener('resize', fxResize);
 }
+const MAX_PARTS = 900;   // quá số này thì bỏ hạt mới (nhiều hiệu ứng chồng nhau không làm đứng máy)
 export function spawn(p) {
+  if (FX.parts.length >= MAX_PARTS) return;
   FX.parts.push(p);
-  if (!FX.raf) FX.raf = requestAnimationFrame(fxLoop);
+  if (!FX.raf) { FX.last = 0; FX.raf = requestAnimationFrame(fxLoop); }
 }
-function fxLoop() {
+// Emoji vẽ sẵn một lần vào ảnh đệm rồi dán (fillText emoji màu mỗi khung hình, mỗi hạt một cỡ chữ, rất chậm).
+const SPRITE = 96, sprites = new Map();
+function spriteOf(text) {
+  let c = sprites.get(text);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = c.height = SPRITE;
+    const g = c.getContext('2d');
+    g.font = `${SPRITE * 0.75}px serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, SPRITE / 2, SPRITE / 2 + SPRITE * 0.04);
+    sprites.set(text, c);
+  }
+  return c;
+}
+function fxLoop(now) {
   const { ctx, dpr } = FX;
+  // các thông số hạt tính theo khung hình 60fps — máy chậm thì bước dài hơn để hiệu ứng vẫn tan đúng giờ
+  const k = FX.last ? Math.min(4, Math.max(0.25, (now - FX.last) / 16.67)) : 1;
+  FX.last = now;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, innerWidth, innerHeight);
   FX.parts = FX.parts.filter(p => p.life > 0);
   for (const p of FX.parts) {
-    const dr = p.drag ?? 0.985;
-    p.vx *= dr; p.vy = p.vy * dr + (p.g ?? 0.15); p.x += p.vx; p.y += p.vy; p.life -= p.decay; p.rot = (p.rot || 0) + (p.vr || 0);
+    const dr = (p.drag ?? 0.985) ** k;
+    p.vx *= dr; p.vy = p.vy * dr + (p.g ?? 0.15) * k; p.x += p.vx * k; p.y += p.vy * k; p.life -= p.decay * k; p.rot = (p.rot || 0) + (p.vr || 0) * k;
     ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
     ctx.fillStyle = p.color;
-    if (p.shape === 'r') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size, -p.size / 2, p.size * 2, p.size); ctx.restore(); }
+    if (p.text) {
+      const w = p.size / 0.75;
+      ctx.setTransform(dpr, 0, 0, dpr, p.x * dpr, p.y * dpr);
+      if (p.rot) ctx.rotate(p.rot);
+      ctx.drawImage(spriteOf(p.text), -w / 2, -w / 2, w, w);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    } else if (p.shape === 'r') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size, -p.size / 2, p.size * 2, p.size); ctx.restore(); }
     else { ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 6.283); ctx.fill(); }
   }
   ctx.globalAlpha = 1;

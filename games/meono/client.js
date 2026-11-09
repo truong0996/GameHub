@@ -101,7 +101,7 @@ function renderPlayers() {
       <div class="pp-body">
         <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
         <div class="pp-sub">${sub}</div>
-        <div class="minis">${dead ? '' : '<i></i>'.repeat(backs)}</div>
+        <div class="minis">${dead ? '' : `<i class="${CTX.skin.cls(p, 'back')}"></i>`.repeat(backs)}</div>
       </div>
       <div class="bubble"></div>
       <div class="pp-timer"><i></i></div>

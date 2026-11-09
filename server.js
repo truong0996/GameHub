@@ -3,7 +3,7 @@
 //   PORT=8080 node server.js       đổi cổng
 //   HUB_DEV=1 node server.js       hiện cả các game trong thư mục bắt đầu bằng "_" (vd _template)
 //   node server.js --online        mở luôn tunnel Cloudflare để chơi qua Internet (= npm run online)
-//   HUB_DATA=<thư mục>             nơi lưu tài khoản + lịch sử ván (mặc định ./data)
+//   HUB_DATA=<thư mục>             nơi lưu tài khoản + lịch sử ván + ví credit (mặc định ./data)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,6 +15,7 @@ import { acceptUpgrade } from './hub/ws.js';
 import { startTunnel } from './hub/tunnel.js';
 import { createAccounts } from './hub/accounts.js';
 import { createStats, buildReport } from './hub/stats.js';
+import { createWallet } from './hub/wallet.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, 'public');
@@ -43,8 +44,8 @@ function lanUrls() {
 
 const games = await loadGames(GAMES, { dev: DEV });
 const gameDirs = new Set([...games.values()].map(g => g.dir));
-const accounts = createAccounts(DATA), stats = createStats(DATA);
-const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl, accounts, stats });
+const accounts = createAccounts(DATA), stats = createStats(DATA), wallet = createWallet(DATA, stats);
+const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl, accounts, stats, wallet });
 
 // GET /api/report?from=<ms>&to=<ms>&game=<id> → bảng xếp hạng (public/report.html vẽ).
 function report(url, res) {
@@ -52,8 +53,11 @@ function report(url, res) {
   const gameInfo = id => { const g = games.get(id); return g ? { name: g.manifest.name, icon: g.manifest.icon } : { name: id, icon: '🎲' }; };
   let body;
   try {
-    body = JSON.stringify(buildReport(stats.list(), { from: num('from'), to: num('to'), game: q.get('game') || '' },
-      id => (accounts.get(id) || {}).name, gameInfo));
+    const R = buildReport(stats.list(), { from: num('from'), to: num('to'), game: q.get('game') || '' },
+      id => (accounts.get(id) || {}).name, gameInfo);
+    // Đồ trang trí đang mặc (hiệu ứng tên, danh hiệu) + credit hiện có (không theo kỳ đang lọc).
+    for (const p of R.players) { p.look = wallet.look(p.id); p.credits = wallet.info(p.id).credits; }
+    body = JSON.stringify(R);
   } catch (e) {
     console.error('[report]', e);
     res.writeHead(500); res.end('Lỗi tạo báo cáo'); return;
