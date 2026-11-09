@@ -68,7 +68,7 @@ function resolveStatic(urlPath) {
   if (parts[0] === 'games') {
     const [, dir, ...rest] = parts;
     if (!gameDirs.has(dir) || !rest.length) return null;
-    if (/^server(\.|\/|$)/.test(rest.join('/'))) return null;
+    if (/^server/i.test(rest[0])) return null;   // mọi file/thư mục tên server* (server.js, server-bot.js, server-words.js, server/...) chỉ dành cho server
     return safeJoin(path.join(GAMES, dir), rest);
   }
   return safeJoin(PUBLIC, parts.length ? parts : ['index.html']);

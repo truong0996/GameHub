@@ -57,6 +57,14 @@ function guessAction(g, seat) {
     if (s.phase === 'clue') return { type: 'clue', w: 'xyz', n: 1 };
     return s.split ? { type: 'settle' } : { type: 'vote', c: s.cards.findIndex(c => !c.rev) };
   }
+  if (s.mask !== undefined && s.drawers) {                               // Vẽ Đoán: chọn từ đầu, vẽ vài nét, người đoán gõ bừa
+    if (s.choices) return { type: 'pick', i: 0 };
+    if (s.drawers.includes(seat)) {
+      const x = 100 + Math.floor(Math.random() * 600), y = 100 + Math.floor(Math.random() * 400);
+      return s.phase === 'draw' ? { type: 'ink', ops: [['s', 0, 1, x, y], ['l', x + 20, y + 10, x + 40, y + 30]] } : { type: 'guess', text: 'chào cả nhà' };
+    }
+    return { type: 'guess', text: ['mèo', 'con chó', 'xe đạp', 'mặt trời'][Math.floor(Math.random() * 4)] };
+  }
   if (s.phase === 'move' && s.legal) return { type: 'move', h: s.legal[0].h };
   if (s.phase === 'go' || s.phase === 'wait') return { type: 'press' };
   if (s.dealQ) { const d = s.pend[0]; return !d ? { type: Math.random() < 0.6 ? 'hit' : 'stay' } : d.see ? { type: 'peek', bury: false } : { type: 'target', to: d.opts[0] }; } // Flip 7
@@ -97,6 +105,7 @@ while (Date.now() < end) {
       || (g.state.phase === 'place0' && me.alive && !me.placed0) || (g.state.phase === 'discard' && g.state.discard.p === seat)
       || (g.state.phase === 'auction' && g.state.auc && !(seat in g.state.auc.bids))
       || (g.state.voters && g.state.voters.includes(seat))
+      || (g.state.mask !== undefined && g.state.drawers && (g.state.phase === 'draw' || g.state.choices))
       || (g.state.self && g.state.self.alive && (g.state.phase === 'play' || g.state.phase === 'meet'))
       || (g.state.reactMs && me.alive && ((g.state.phase === 'act' && g.state.cur === seat) || (g.state.phase === 'react' && g.state.win.seats.includes(seat))
         || (g.state.phase !== 'act' && g.state.phase !== 'react' && g.state.step && g.state.step.p === seat)));
