@@ -91,7 +91,8 @@
 .ccn .p-cards { margin-top: 4px; font-size: 18px; min-height: 22px; letter-spacing: 2px; }
 .ccn .p-cards .muted { letter-spacing: normal; }
 .ccn .p-bar { height: 5px; border-radius: 9px; background: var(--chip); margin-top: 6px; overflow: hidden; }
-.ccn .p-bar i { display: block; height: 100%; background: var(--c); border-radius: 9px; transition: width .5s; }
+/* màu sáng (Trắng, Vàng) gần như trùng nền thanh → hạ độ sáng như viền trái thẻ */
+.ccn .p-bar i { display: block; height: 100%; background: var(--c); background: oklch(from var(--c) min(l, .72) c h); border-radius: 9px; transition: width .5s; }
 .ccn .timer { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; border-radius: 0 0 14px 14px; }
 .ccn .timer i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .25s linear; }
 .ccn .timer i.low { background: var(--danger); }

@@ -102,7 +102,8 @@ function scoreOf(st, pl) {
   for (const hs of pl.horses) s += hs.loc === 'track' ? hs.prog + 1 : hs.loc === 'home' ? st.L + hs.step : 0;
   return s;
 }
-const maxScore = (st, pl) => pl.horses.length * (st.L + HOME);
+// Điểm tối đa = đúng thế thắng: n ngựa xếp kín n bậc chuồng trên cùng (HOME, HOME-1, ...) — không chung bậc được
+const maxScore = (st, pl) => { const n = pl.horses.length; return n * st.L + n * HOME - n * (n - 1) / 2; };
 
 // ---------- ô đặc biệt ----------
 // Số ô quà/bí ẩn theo tỉ lệ độ dài đường đua (72 ô: 6 ô quà, 5 ô bí ẩn); luôn có 2 cặp cổng.
