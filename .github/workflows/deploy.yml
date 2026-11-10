@@ -1,0 +1,128 @@
+name: Test and deploy
+
+# Mọi push/PR vào main: chạy mô phỏng tất cả game + smoke test trong container.
+# Push vào main (hoặc chạy tay): đẩy ảnh lên ghcr.io rồi cập nhật Azure Container Apps.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/gamehub
+  AZ_RG: rg-celestials-hub
+  AZ_APP: celestials-hub
+  AZ_ENV: cae-celestials-hub
+  AZ_LOCATION: australiaeast
+
+jobs:
+  test:
+    name: Simulate + smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Simulate every game (bots only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in games/*/; do
+            case "$(basename "$dir")" in _*) continue;; esac
+            id=$(node -e "import('./${dir}manifest.js').then(m => console.log(m.default.id))")
+            node tools/simulate.js "$id" 3
+          done
+      - name: Build image
+        run: docker build --pull -t gamehub:test .
+      - name: Start container and run smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name gamehub-test --read-only --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /app/data:rw,uid=1000,gid=1000,mode=0700 gamehub:test
+          for attempt in {1..30}; do
+            if docker exec gamehub-test node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
+              break
+            fi
+            echo "Waiting for app ($attempt/30)"
+            sleep 1
+          done
+          # Kho Báu Inca chọn cùng lúc nên 2 client đi được ngay, không phụ thuộc thứ tự lượt ngẫu nhiên.
+          docker exec gamehub-test node tools/smoke.js incagold 3000 15
+      - name: Container logs
+        if: failure()
+        run: docker logs gamehub-test
+      - name: Clean up
+        if: always()
+        run: docker rm -f gamehub-test || true
+
+  deploy:
+    name: Deploy to Azure Container Apps
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: gamehub-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write   # đẩy ảnh lên ghcr.io
+      id-token: write   # đăng nhập Azure bằng OIDC, không cần mật khẩu
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          pull: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Create or update the Container App
+        shell: bash
+        env:
+          IMAGE_REF: ${{ env.IMAGE }}:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          az extension add --name containerapp --upgrade --only-show-errors -y
+          export IMAGE_REF AZ_LOCATION
+          export AZ_ENV_ID=$(az containerapp env show -g "$AZ_RG" -n "$AZ_ENV" --query id -o tsv)
+          envsubst < deploy/containerapp.yaml > "$RUNNER_TEMP/app.yaml"
+          if az containerapp show -g "$AZ_RG" -n "$AZ_APP" -o none 2>/dev/null; then
+            az containerapp update -g "$AZ_RG" -n "$AZ_APP" --yaml "$RUNNER_TEMP/app.yaml" --only-show-errors -o none
+          else
+            az containerapp create -g "$AZ_RG" -n "$AZ_APP" --yaml "$RUNNER_TEMP/app.yaml" --only-show-errors -o none
+          fi
+          fqdn=$(az containerapp show -g "$AZ_RG" -n "$AZ_APP" --query properties.configuration.ingress.fqdn -o tsv)
+          echo "FQDN=$fqdn" >> "$GITHUB_ENV"
+          echo "### Deployed to https://$fqdn" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify public HTTPS
+        run: |
+          # App có thể đang ngủ (scale về 0) nên lần đầu chậm ~10–20s.
+          curl --fail --silent --show-error --retry 10 --retry-all-errors \
+            --retry-delay 6 --connect-timeout 15 --max-time 60 \
+            "https://$FQDN/" --output /dev/null
+          curl --fail --silent --show-error --retry 3 --retry-all-errors \
+            --connect-timeout 15 --max-time 60 "https://$FQDN/api/report" --output /dev/null

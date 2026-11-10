@@ -1,0 +1,35 @@
+# Cấu hình Azure Container App của hub. CI (.github/workflows/deploy.yml) thay ${...} bằng envsubst
+# rồi tạo/cập nhật app theo file này mỗi lần deploy — sửa cấu hình ở đây, đừng sửa tay trên portal.
+location: ${AZ_LOCATION}
+properties:
+  managedEnvironmentId: ${AZ_ENV_ID}
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 3000
+      transport: auto          # HTTP/1.1 + WebSocket
+      allowInsecure: false     # http → https
+  template:
+    containers:
+      - name: gamehub
+        image: ${IMAGE_REF}
+        resources:
+          cpu: 0.25
+          memory: 0.5Gi
+        env:
+          - name: HUB_DATA
+            value: /app/data
+        volumeMounts:
+          - volumeName: hubdata
+            mountPath: /app/data
+    # Phòng chỉ nằm trong RAM của một tiến trình → tối đa 1 bản.
+    # 0 = không ai kết nối thì ngủ (gần như miễn phí), người đầu tiên vào phải chờ ~10–20s.
+    scale:
+      minReplicas: 0
+      maxReplicas: 1
+    volumes:
+      - name: hubdata
+        storageType: AzureFile
+        storageName: hubdata
+        mountOptions: uid=1000,gid=1000,dir_mode=0700,file_mode=0600

@@ -51,6 +51,18 @@ Chủ phòng **mời người khác ra** được: chọn 🚪 *Mời ra* ở me
 - **Credit & 🛍️ Cửa hàng**: mỗi ván được ghi lại, ai đã đăng nhập cũng nhận credit — thắng hay thua đều có: **10 × trọng số thời lượng** (×1…×3 như trên), **nhất bàn ×1.5**, tối đa **300 credit mỗi ngày**. Ván bỏ dở thì không ai được, không ai bị trừ. Credit dùng mua **đồ trang trí** (khung ảnh, hiệu ứng tên, danh hiệu, khung chat, hiệu ứng thắng, gói biểu cảm; trong game: lưng bài cho UNO/Mèo Nổ/Coup, xúc xắc cho Cờ Cá Ngựa/Cờ Tỷ Phú, mũ cho Kẻ Mạo Danh, khung tranh cho Vẽ Đoán) — chỉ để khoe, **không ảnh hưởng thắng thua**, màu ghế trong game giữ nguyên. Đồ hiện ở phòng chờ, khung chat, bảng xếp hạng; hiệu ứng thắng cả phòng thấy khi bạn nhất bàn. Credit tính lại từ lịch sử ván nên người chơi cũ có sẵn credit.
 - Dữ liệu nằm trong thư mục **`data/`** cạnh `server.js` (`accounts.json` + `matches.jsonl` + `wallet.json` = đồ đã mua; chỉ `matches.jsonl` được đưa lên git). Muốn giữ lịch sử thì luôn chạy hub trên cùng một máy và thỉnh thoảng sao lưu thư mục này. Đổi chỗ lưu bằng `HUB_DATA=<thư mục>`.
 
+## Triển khai lên Azure (CI/CD)
+
+Bản online chạy trên **Azure Container Apps** (gói consumption, vùng Australia East — policy của subscription chỉ cho phép vùng này): không ai chơi thì app ngủ (gần như miễn phí), người đầu tiên vào phải chờ ~10–20s. Tối đa 1 bản chạy vì phòng nằm trong RAM. Thư mục `data/` của server là một **Azure Files share** (`hubdata`) gắn vào `/app/data`, nên tài khoản, lịch sử ván và ví giữ nguyên qua các lần deploy.
+
+Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+- **Mọi push/PR vào `main`**: mô phỏng mọi game bằng bot (`simulate`, 3 ván mỗi game), build Docker image, chạy container rồi `smoke` qua WebSocket.
+- **Push vào `main`** (hoặc chạy tay *Run workflow*): đẩy image lên `ghcr.io/truong0996/gamehub`, đăng nhập Azure bằng OIDC (managed identity, không lưu mật khẩu), tạo/cập nhật app theo [`deploy/containerapp.yaml`](deploy/containerapp.yaml), rồi kiểm tra `https://…/` và `/api/report`. Deploy khởi động lại app nên phòng đang chơi sẽ mất (tài khoản + lịch sử vẫn còn).
+
+Dựng lại hạ tầng từ đầu (một lần): `az login` đúng subscription → `bash deploy/azure-setup.sh` (tạo resource group, storage + share, environment, managed identity; lần đầu chép `data/` ở máy đang chạy lên share) → đặt 3 biến Actions `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` mà script in ra → push. Package `gamehub` trên ghcr.io phải để **Public** để Azure kéo image không cần mật khẩu.
+
+Xem log: `az containerapp logs show -g rg-celestials-hub -n celestials-hub --follow`. Tải dữ liệu về máy: `az storage file download-batch -s hubdata -d <thư mục> --account-name <storage>`.
+
 ## Phát triển
 
 Mỗi game là một thư mục trong `games/`. Cách thêm game mới, interface và giao thức: xem **[CLAUDE.md](CLAUDE.md)**.

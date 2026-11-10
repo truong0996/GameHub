@@ -1,0 +1,11 @@
+.git
+.github
+.claude
+.playwright-cli
+node_modules
+data
+deploy
+*.log
+*.cmd
+.env
+.env.*

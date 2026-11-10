@@ -45,6 +45,8 @@ games/splendor/      Splendor (theo lượt; quyết định phát sinh sau hàn
 games/vedoan/        Vẽ Đoán (real-time kiểu skribbl: nét vẽ gửi dạng sự kiện có số thứ tự + khung chốt định kỳ, view che từ, chatTo cho nhóm đã đoán ra)
 games/_template/     ⚡ Phản Xạ (real-time) — GAME MẪU tối giản, copy thư mục này khi làm game mới
 tools/               simulate.js, smoke.js
+Dockerfile, deploy/  triển khai Azure Container Apps: azure-setup.sh (dựng hạ tầng 1 lần), containerapp.yaml (cấu hình app, CI áp mỗi lần deploy)
+.github/workflows/   deploy.yml: push/PR → simulate + smoke; push main → image ghcr.io → Azure (push main = deploy prod, mất phòng đang chơi)
 ```
 Server chỉ phục vụ file trong `public/` và `games/<dir>/` — **trừ** `server.js` (và mọi file/thư mục tên `server*`) của game, để đáp án/logic ẩn không lộ ra. Code dùng chung server+client (như `rules.js`) thì đặt tên khác `server*`.
 
