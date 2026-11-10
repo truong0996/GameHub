@@ -158,3 +158,6 @@
   .cn-side { max-height: 340px; }
   .cn .cd .vt b { width: 14px; height: 14px; font-size: 8px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face) trước tên thành viên */
+.cn .mem .hub-av { width: 1.35em; height: 1.35em; margin-right: 3px; box-shadow: 0 0 0 2px var(--tc); }

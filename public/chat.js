@@ -2,6 +2,7 @@
 // Đóng khung thì tin mới hiện "bong bóng xem trước" cạnh nút + số chưa đọc; đang chơi thì lời thoại còn bay lên tại ghế người gửi.
 import { $, el, esc } from './ui.js';
 import { nameHtml, titleHtml, bubbleCls } from './shop.js';
+import { avImg } from './avatar.js';
 
 const MAX_SHOWN = 50;
 let opts = null, open = false, unread = 0;
@@ -83,7 +84,8 @@ function setOpen(v) {
 
 // tag: nhãn kênh do game đặt (vd 👻 = chỉ hồn ma thấy).
 // m.look = đồ trang trí của người gửi lúc gửi (hiệu ứng tên, danh hiệu, khung chat — xem shop.js).
-const who = m => `${m.tag ? `<span class="ctag">${esc(m.tag)}</span>` : ''}${nameHtml(m.name, m.look, m.color || 'var(--muted)')}${titleHtml(m.look)}`;
+// m.av = ảnh đại diện của người gửi.
+const who = m => `${m.tag ? `<span class="ctag">${esc(m.tag)}</span>` : ''}${avImg(m.av)}${nameHtml(m.name, m.look, m.color || 'var(--muted)')}${titleHtml(m.look)}`;
 const hhmm = t => new Date(t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 function addLine(m) {

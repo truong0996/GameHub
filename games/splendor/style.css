@@ -229,3 +229,6 @@
   #sp-actions .big { min-width: 0; flex: 1; }
   .sp-m .cardm { flex-direction: column; align-items: center; }
 }
+
+/* Ảnh đại diện (ctx.skin.face(p, "fill")) phủ lên chấm ghế */
+.spl .av { position: relative; }

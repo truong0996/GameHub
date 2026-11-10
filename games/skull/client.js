@@ -123,7 +123,7 @@ function renderMats() {
     const hit = V.flip && V.flip.hit && V.flip.hit.includes(p);
     return `<div class="mat${asked.includes(p) ? ' turn' : ''}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${flipping ? ' flipping' : ''}${canFlip(p) || (canHaunt() && pl.alive) ? ' can' : ''}${hit ? ' haunted' : ''}"
       data-p="${p}" style="--c:${col(p)};left:${pos[p].x}%;top:${pos[p].y}%">
-      <div class="mat-head"><span class="av">${pl.alive ? SEATS[p].label || '🙂' : pl.ghost ? '👻' : '💀'}</span>
+      <div class="mat-head"><span class="av">${pl.alive ? (SEATS[p].label || '🙂') + CTX.skin.face(p, 'fill') : pl.ghost ? '👻' : '💀'}</span>
         <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${nm(p)}${off ? ' 📴' : ''}</span><span class="wins" title="Thử thách đã thắng">${wins}</span></div>
       <div class="mat-sub">${sub}</div>
       <div class="pile">${unfl.map((d, i) => discHTML(d, i === unfl.length - 1 ? 'top' : '')).join('')}${fl.length ? `<span class="flipped">${fl.map(d => discHTML(d)).join('')}</span>` : ''}${!st.length && pl.alive && V.phase !== 'over' ? '<span class="empty"></span>' : ''}</div>

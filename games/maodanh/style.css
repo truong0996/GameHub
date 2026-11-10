@@ -194,3 +194,6 @@
   .mdn .mt-grid { grid-template-columns: repeat(2, 1fr); }
   .mdn .mt-card .bean { width: 34px; height: 34px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face) — chỉ ở thẻ bỏ phiếu + bảng kết quả (theo ghế thật, giống tên); trên bản đồ không vẽ để Biến Hình/Ngụy Trang không lộ */
+.mdn .mt-card .nm .hub-av, .mdn .fo .or .hub-av { width: 1.6em; height: 1.6em; margin-right: 5px; }

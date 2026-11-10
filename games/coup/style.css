@@ -193,3 +193,6 @@
   #cp-actions button.act { min-width: 0; flex: 1 1 calc(50% - 6px); }
   #cp-hand .cb { width: 100px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face(p, "fill")) phủ lên chấm ghế */
+.cp .av { position: relative; }

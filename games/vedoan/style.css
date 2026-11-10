@@ -183,3 +183,14 @@
   .vd .ch { min-width: 0; flex: 1 1 30%; padding: 6px 6px; font-size: 15px; }
   .vd .ch small { font-size: 11px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face) giữa hạng và tên */
+/* khoảng cách bằng margin thay cho column-gap: người không có ảnh thì cột ảnh rỗng không chiếm thêm khe */
+.vd .pl { grid-template-columns: 26px auto minmax(0, 1fr) auto; grid-template-areas: "rk av nm sc" "rk av st sc"; column-gap: 0; }
+.vd .pl .rk, .vd .pl .hub-av { margin-right: 8px; }
+.vd .pl .sc { margin-left: 8px; }
+.vd .pl .hub-av { grid-area: av; width: 30px; height: 30px; }
+@media (max-width: 900px) {
+  .vd .pl .rk, .vd .pl .hub-av, .vd .pl .sc { margin: 0; }
+  .vd .pl .hub-av { width: 22px; height: 22px; }
+}

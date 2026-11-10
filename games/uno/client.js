@@ -122,7 +122,7 @@ function renderOpps() {
   $('#uno-opps').innerHTML = order.map(p => {
     const pl = P(p);
     return `<div class="op${p === dec ? ' turn' : ''}${pl.n === 1 ? ' last' : ''}" data-p="${p}" style="--c:${col(p)}">
-      <div class="op-head"><div class="av">${SEATS[p].label}</div>
+      <div class="op-head"><div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
         <div class="op-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${online(p) ? '' : ' 📴'}
           <div class="op-sub">${V.target ? `<b>${pl.score}</b> điểm` : p === V.dealer ? '🂠 chia bài' : '&nbsp;'}</div></div>
         <div class="op-n" title="Số lá trên tay"><b>${pl.n}</b><small>lá</small></div></div>
@@ -162,7 +162,7 @@ function renderMe() {
   const n = hand.length;
   box.className = `${dec === m ? 'turn' : ''}`;
   box.style.setProperty('--c', col(m));
-  box.innerHTML = `<div class="me-head" data-p="${m}"><div class="av">${SEATS[m].label}</div><b>${nm(m)}</b> <span class="muted small">· ${n} lá${V.target ? ` · ${pl.score} điểm` : ''}</span>
+  box.innerHTML = `<div class="me-head" data-p="${m}"><div class="av">${SEATS[m].label}${CTX.skin.face(m, 'fill')}</div><b>${nm(m)}</b> <span class="muted small">· ${n} lá${V.target ? ` · ${pl.score} điểm` : ''}</span>
       ${n === 1 ? '<span class="uno-badge">UNO!</span>' : ''}<div class="bubble"></div></div>
     <div id="uno-hand" style="--n:${n}">${hand.map(c => {
       let cls = '';
@@ -493,7 +493,7 @@ async function playEvent(e) {
       renderAll();
       SFX.win(); UI.confetti(140);
       say(e.w, 'win');
-      const rows = e.res.slice().sort((a, b) => (a.p === e.w ? -1 : b.p === e.w ? 1 : a.pts - b.pts)).map(r => `<li style="--c:${col(r.p)}"><span class="av">${SEATS[r.p].label}</span>
+      const rows = e.res.slice().sort((a, b) => (a.p === e.w ? -1 : b.p === e.w ? 1 : a.pts - b.pts)).map(r => `<li style="--c:${col(r.p)}"><span class="av">${SEATS[r.p].label}${CTX.skin.face(r.p, 'fill')}</span>
         <span class="grow">${nm(r.p)}</span><span class="hd">${r.p === e.w ? '🏆 hết bài' : sortHand(r.hand).map(c => cardHTML(c, 'micro')).join('')}</span>
         <b class="${r.p === e.w ? 'win' : ''}">${r.p === e.w ? (e.gain ? `+${e.gain}` : '') : `${r.pts}đ`}</b>${V.target ? `<span class="tot">${e.scores[r.p]}</span>` : ''}</li>`).join('');
       log(`<span class="sep">— 🏆 ${who(e.w)} hết bài${e.gain ? ` — +${e.gain} điểm (tổng bài người khác)` : ''}! —</span>`);

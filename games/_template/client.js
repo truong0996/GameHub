@@ -22,7 +22,7 @@ function render() {
   $('#px-round').textContent = `Vòng ${ST.round} · về đích ${ST.target} điểm`;
   const best = Math.max(...ST.players.map(p => p.score || 0));
   $('#px-scores').innerHTML = ST.players.map((pl, i) => (!pl.active ? '' :
-    `<div class="sc${i === me ? ' me' : ''}${pl.score === best && best > 0 ? ' lead' : ''}" style="--c:${seats[i].color}">${pl.kind === 'bot' ? '🤖 ' : ''}${name(i)}<b>${pl.score}</b></div>`)).join('');
+    `<div class="sc${i === me ? ' me' : ''}${pl.score === best && best > 0 ? ' lead' : ''}" style="--c:${seats[i].color}">${CTX.skin.face(i)}${pl.kind === 'bot' ? '🤖 ' : ''}${name(i)}<b>${pl.score}</b></div>`)).join('');
   if (ST.phase === 'over' && !overShown) {
     overShown = true;
     const host = CTX.me().isHost;

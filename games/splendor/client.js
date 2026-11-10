@@ -151,7 +151,7 @@ function renderPlayers() {
     ].join('');
     return `<div class="pb${mine ? ' me' : ''}${p === dec ? ' turn' : ''}${p === V.first ? ' first' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="pb-head">
-        <div class="av">${SEATS[p].label}</div>
+        <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
         <div class="pb-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${mine ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}
           <div class="pb-sub">${p === V.first ? '🥇 đi đầu · ' : ''}${pl.cards.length} thẻ · ${gemCount(pl.gems)}/${MAX_GEMS} ngọc ${tags}</div></div>
         <div class="pb-pts${pl.pts === lead && lead > 0 ? ' lead' : ''}" title="Điểm uy tín"><b>${pl.pts}</b><small>/${V.target}</small></div>
@@ -583,7 +583,7 @@ async function playEvent(e) {
     case 'reveal': {
       for (const r of e.res) { const pl = P(r.p); pl.obj = r.obj; pl.objDone = r.done; if (r.done) pl.pts += r.obj.pts; }
       renderPlayers();
-      const rows = e.res.map(r => { const I = objInfo(r.obj, P(r.p)); return `<li style="--c:${col(r.p)}"><span class="av">${SEATS[r.p].label}</span><span class="grow">${nm(r.p)}<br><small>${I.icon} ${I.name} — ${I.desc}</small></span><b class="${r.done ? '' : 'zero'}">${r.done ? `+${r.obj.pts}` : '✗'}</b></li>`; }).join('');
+      const rows = e.res.map(r => { const I = objInfo(r.obj, P(r.p)); return `<li style="--c:${col(r.p)}"><span class="av">${SEATS[r.p].label}${CTX.skin.face(r.p, 'fill')}</span><span class="grow">${nm(r.p)}<br><small>${I.icon} ${I.name} — ${I.desc}</small></span><b class="${r.done ? '' : 'zero'}">${r.done ? `+${r.obj.pts}` : '✗'}</b></li>`; }).join('');
       log(`🎯 Lật mục tiêu bí mật: ${e.res.map(r => `${who(r.p)} ${r.done ? `<b>+${r.obj.pts}</b>` : '✗'}`).join(', ')}.`);
       SFX.card();
       await spot(`<div class="sum"><h3>🎯 Mục tiêu bí mật</h3><ol>${rows}</ol></div>`, '', 'summary', 3000);

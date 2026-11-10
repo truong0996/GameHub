@@ -40,7 +40,7 @@ function renderTeams() {
     const mem = tm.members.map(p => {
       const voted = V.phase === 'guess' && t === V.cur && V.votes[p] != null;
       const room = CTX.room(), off = room && room.seats[p] && !room.seats[p].online;
-      return `<span class="mem${p === me() ? ' me' : ''}${off ? ' off' : ''}" data-p="${p}">${p === tm.spy ? '🕵️' : P(p).kind === 'bot' ? '🤖' : '🔎'} ${esc(P(p).name)}${voted ? ' <i>✓</i>' : ''}</span>`;
+      return `<span class="mem${p === me() ? ' me' : ''}${off ? ' off' : ''}" data-p="${p}">${CTX.skin.face(p)}${p === tm.spy ? '🕵️' : P(p).kind === 'bot' ? '🤖' : '🔎'} ${esc(P(p).name)}${voted ? ' <i>✓</i>' : ''}</span>`;
     }).join('');
     const sk = tm.skills.map(s => `<span class="sk${s.used ? ' used' : ''}" title="${esc(SKILLS[s.k].name)} — ${esc(SKILLS[s.k].desc)}">${SKILLS[s.k].icon}</span>`).join('');
     const flags = (tm.out ? '<span class="flag">☠️ Bị loại</span>' : '') + (tm.skip ? '<span class="flag" title="Lật trúng Bom">💣 Mất lượt kế</span>' : '')

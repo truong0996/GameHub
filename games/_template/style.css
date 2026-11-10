@@ -14,3 +14,6 @@
 .px .sc.me { box-shadow: 0 0 0 2px var(--ink); }
 .px .sc.lead { background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
 .px .bottom { display: flex; gap: 12px; width: 100%; align-items: center; flex-wrap: wrap; }
+
+/* Ảnh đại diện (ctx.skin.face) trước tên */
+.px .sc .hub-av { margin-right: 6px; }

@@ -111,7 +111,7 @@ function renderPlayers() {
     const tent = pl.tent != null ? `⛺ <b>${pl.tent}</b>` : '⛺ ?';
     const arts = pl.arts.map(a => ARTIFACTS[a.a].icon).join('');
     return `<div class="pp st-${pl.status}${p === m ? ' me' : ''}${deciding && pl.status === 'in' && !pl.locked ? ' wait' : ''}" data-p="${p}" style="--c:${col(p)}">
-      <div class="av">${pl.status === 'dead' ? '💀' : SEATS[p].label}</div>
+      <div class="av">${pl.status === 'dead' ? '💀' : SEATS[p].label + CTX.skin.face(p, 'fill')}</div>
       <div class="pp-body">
         <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
         <div class="pp-sub">${st}</div>

@@ -25,8 +25,8 @@ const cleanName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 16) 
 const banKey = (acct, name) => (acct ? 'a:' + acct : 'n:' + cleanName(name).toLowerCase());
 
 // accounts (hub/accounts.js) + stats (hub/stats.js): có thì người chơi đăng nhập được và kết quả ván được ghi lại.
-// wallet (hub/wallet.js): credit sau mỗi ván + đồ trang trí (look) hiện cho cả phòng.
-export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null, wallet = null }) {
+// wallet (hub/wallet.js): credit sau mỗi ván + đồ trang trí (look) hiện cho cả phòng. avatars (hub/avatars.js): ảnh đại diện tải lên.
+export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null, wallet = null, avatars = null }) {
   const rooms = new Map();
   const catalog = [...games.values()].map(catalogEntry).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
@@ -65,6 +65,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
 
   // Đồ trang trí đang mặc của một thành viên (chỉ tài khoản đã đăng nhập) — { frame?, name?, title?, bubble?, fx? } hoặc null.
   const lookOf = m => (wallet && m && m.acct ? wallet.look(m.acct) : null);
+  // Ảnh đại diện (URL kèm phiên bản) — chỉ tài khoản đã đăng nhập, khách/bot = null.
+  const avOf = m => (avatars && m && m.acct ? avatars.url(m.acct) : null);
   const online = (room, pid) => { const m = room.members.get(pid); return !!(m && m.conns.size); };
   const seatOf = (room, pid) => room.seats.findIndex(s => s.kind === 'human' && s.pid === pid);
   function seatName(room, i) {
@@ -89,11 +91,12 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         online: s.kind === 'bot' || (s.kind === 'human' && online(room, s.pid)),
         acct: s.kind === 'human' && !!(room.members.get(s.pid) || {}).acct,
         look: s.kind === 'human' ? lookOf(room.members.get(s.pid)) : null,
+        av: s.kind === 'human' ? avOf(room.members.get(s.pid)) : null,
       })),
       // voice: đang trong đàm thoại → { m: tắt mic?, v: mã phiên (đổi mỗi lần vào lại → client dựng lại kết nối) }
       // acct: đã đăng nhập (ván có ≥2 người đăng nhập mới được tính vào bảng xếp hạng)
-      // look: đồ trang trí đang mặc (xem public/shop-data.js)
-      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid), acct: !!m.acct, look: lookOf(m),
+      // look: đồ trang trí đang mặc (xem public/shop-data.js), av: URL ảnh đại diện
+      members: [...room.members.values()].map(m => ({ uid: m.uid, name: m.name, online: m.conns.size > 0, seat: seatOf(room, m.pid), acct: !!m.acct, look: lookOf(m), av: avOf(m),
         voice: m.voice ? { m: m.voice.muted, v: m.voice.v } : null })),
     };
   }
@@ -363,16 +366,19 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     };
     // Đồ đang mặc đổi → vẽ lại phòng cho mọi người (nếu thành viên trong phòng là tài khoản này).
     const lookChanged = () => { if (room && member && member.acct === user.id) broadcastRoom(room); };
+    // Kèm URL ảnh đại diện vào thông tin tài khoản gửi về client.
+    const withAv = u => ({ ...u, av: avatars ? avatars.url(u.id) : null });
+    let lastAv = 0;
     const handlers = {
       hello: () => ({ catalog, lan: lanUrls(), pub: publicUrl(), accounts: !!accounts }),
       // Tài khoản: register/login → { token, user }; auth { token } (lúc kết nối lại) → { user }. Có hiệu lực từ lần tạo/vào phòng sau.
-      register(msg) { needAccounts(); const r = accounts.register(msg.name, msg.pin); user = r.user; return r; },
-      login(msg) { needAccounts(); const r = accounts.login(msg.name, msg.pin); user = r.user; return r; },
+      register(msg) { needAccounts(); const r = accounts.register(msg.name, msg.pin); user = r.user; return { ...r, user: withAv(user) }; },
+      login(msg) { needAccounts(); const r = accounts.login(msg.name, msg.pin); user = r.user; return { ...r, user: withAv(user) }; },
       auth(msg) {
         needAccounts();
         user = accounts.byToken(msg.token);
         if (!user) throw new Error('Phiên đăng nhập đã hết hạn, hãy đăng nhập lại');
-        return { user };
+        return { user: withAv(user) };
       },
       logout(msg) { if (accounts) accounts.logout(msg.token); user = null; return {}; },
       // Cửa hàng: shop → { wallet }; buy { item } / equip { slot, item | null } → { wallet } (đang ở phòng thì cả phòng thấy đồ mới).
@@ -383,6 +389,18 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         const w = wallet.equip(user.id, String(msg.slot || ''), msg.item == null ? null : String(msg.item));
         lookChanged();
         return { wallet: w };
+      },
+      // Ảnh đại diện: avatar { data: dataURL JPEG/PNG/WebP đã cắt vuông } → { av: URL }; data null = xoá ảnh.
+      // Mọi phòng có tài khoản này đều thấy ảnh mới ngay (kể cả đang giữa ván).
+      avatar(msg) {
+        needAccounts();
+        if (!avatars) throw new Error('Server này chưa bật ảnh đại diện');
+        if (!user) throw new Error('Đăng nhập để đặt ảnh đại diện');
+        if (Date.now() - lastAv < 2000) throw new Error('Chậm lại chút — đợi vài giây rồi lưu lại');
+        lastAv = Date.now();
+        const av = avatars.set(user.id, msg.data || null);
+        for (const r of rooms.values()) if ([...r.members.values()].some(x => x.acct === user.id)) broadcastRoom(r);
+        return { av };
       },
       create(msg) {
         const r = makeRoom(msg.game);
@@ -516,6 +534,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         const c = { id: ++r.chatSeq, uid: m.uid, name: m.name, seat, color: info ? info.color : null, text, at: m.lastChat };
         const look = lookOf(m);   // hiệu ứng tên, danh hiệu, khung chat lúc gửi
         if (look) { const { name, title, bubble } = look; c.look = { name, title, bubble }; }
+        const av = avOf(m);
+        if (av) c.av = av;
         // Game được giới hạn chat trong ván (vd chỉ chat lúc họp, hồn ma chat riêng): chatTo → undefined/true = cả phòng,
         // chuỗi = báo lỗi không cho gửi, { to: [ghế...], tag? } = chỉ những ghế đó (và chính người gửi) thấy.
         const mt = r.match, L = mt && mt.logic;

@@ -171,3 +171,6 @@
   #ig-actions button small { display: none; }
   .ig .cd.xl { --cw: 110px; --ch: 150px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face(p, "fill")) phủ lên chấm ghế */
+.ig .av { position: relative; }

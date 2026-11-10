@@ -102,7 +102,7 @@ function renderPlayers() {
     const pct = Math.min(100, (pl.total / V.target) * 100);
     return `<div class="pb st-${pl.status}${p === m ? ' me' : ''}${p === dec ? ' turn' : ''}${p === V.dealer ? ' dealer' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="pb-head">
-        <div class="av">${SEATS[p].label}</div>
+        <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
         <div class="pb-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}
           <div class="pb-sub">${STATUS[pl.status] || ''}${p === V.dealer ? ' · 🂠 chia bài' : ''}</div></div>
         <div class="pb-pts" title="Điểm vòng này"><small>vòng</small><b>${pts == null ? '?' : pl.status === 'bust' && !pts ? '0' : '+' + pts}</b></div>
@@ -406,7 +406,7 @@ async function playEvent(e) {
     case 'roundEnd': {
       for (const r of e.res) Object.assign(P(r.p), { nums: r.nums, total: r.total, bonus: r.bonus });
       renderPlayers();
-      const rows = e.res.slice().sort((a, b) => b.pts - a.pts).map(r => `<li style="--c:${col(r.p)}"><span class="av">${SEATS[r.p].label}</span><span class="grow">${nm(r.p)}</span>
+      const rows = e.res.slice().sort((a, b) => b.pts - a.pts).map(r => `<li style="--c:${col(r.p)}"><span class="av">${SEATS[r.p].label}${CTX.skin.face(r.p, 'fill')}</span><span class="grow">${nm(r.p)}</span>
         <span class="st">${STATUS[r.status] || ''}</span><b class="${r.pts ? '' : 'zero'}">+${r.pts}</b><span class="tot">${r.total}</span></li>`).join('');
       for (const r of e.res) if (r.pts) float(r.p, `+${r.pts}`);
       log(`<span class="sep">— Hết vòng ${e.n}: ${e.res.filter(r => r.pts).sort((a, b) => b.pts - a.pts).map(r => `${who(r.p)} +${r.pts}`).join(', ') || 'không ai có điểm'} —</span>`);

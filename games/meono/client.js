@@ -97,7 +97,7 @@ function renderPlayers() {
     const sub = dead ? (ghost ? `👻 Hồn ma · ${pl.count} 🙅` : '💀 Đã nổ')
       : `${pl.count} lá${ST.turn === p && ST.turnsLeft > 1 ? ` · <b class="warn">⚔️ ${ST.turnsLeft} lượt</b>` : ''}`;
     return `<div class="pp${p === ST.turn && !dead ? ' turn' : ''}${p === ask ? ' ask' : ''}${dead ? ' dead' : ''}${ghost ? ' ghost' : ''}${p === m ? ' me' : ''}" data-p="${p}" style="--c:${col(p)}">
-      <div class="av">${dead ? (ghost ? '👻' : '💀') : SEATS[p].label || '🐱'}</div>
+      <div class="av">${dead ? (ghost ? '👻' : '💀') : (SEATS[p].label || '🐱') + CTX.skin.face(p, 'fill')}</div>
       <div class="pp-body">
         <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
         <div class="pp-sub">${sub}</div>

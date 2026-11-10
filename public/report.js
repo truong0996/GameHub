@@ -2,6 +2,7 @@
 // Bộ lọc nằm trên URL (?d=14&game=uno hoặc ?from=2026-11-01&to=2026-11-14) để gửi link cho cả nhóm xem cùng một kỳ.
 import { $, esc } from './ui.js';
 import { nameHtml, titleHtml, fmt } from './shop.js';
+import { avImg } from './avatar.js';
 
 const RANGES = [[7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày'], [0, 'Tất cả'], ['c', 'Tuỳ chọn']];
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -118,7 +119,7 @@ function render(R, from, to) {
     const best = p.best.map(id => `<span title="${esc(g(id).name)}: thắng ${p.byGame[id].wins}/${p.byGame[id].games}">${g(id).icon}</span>`).join(' ');
     html += `<tr class="${p.enough ? '' : 'few'}" title="${esc(p.name)}: chỉ số ${signed(p.score)} · trung bình ${signed(p.avg)} mỗi ván · thắng ${p.wins}/${p.games} ván${p.enough ? '' : ` · chưa đủ ${R.minGames} ván`}">
       <td class="pos-c">${pos ? MEDAL[pos - 1] || pos : '·'}</td>
-      <td class="l">${nameHtml(p.name, p.look)}${titleHtml(p.look)}${p.enough ? '' : ` <span class="guest">chưa đủ ${R.minGames} ván</span>`}</td>
+      <td class="l">${avImg(p.av)}${nameHtml(p.name, p.look)}${titleHtml(p.look)}${p.enough ? '' : ` <span class="guest">chưa đủ ${R.minGames} ván</span>`}</td>
       <td><div class="bar-c"><div class="bar"><span class="mid"></span>${bar}</div><b class="sc ${p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : ''}">${signed(p.score)}</b></div></td>
       <td>${p.games}</td><td>${p.wins}</td><td class="opt">${pct(p.rate)}</td><td class="opt form">${form}</td><td class="l opt">${best || '<span class="muted">—</span>'}</td>
       <td class="opt cr">${p.credits != null ? fmt(p.credits) : ''}</td></tr>`;

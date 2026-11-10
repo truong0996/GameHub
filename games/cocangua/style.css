@@ -121,3 +121,6 @@
   .ccn .side { overflow: visible; }
   .ccn #log { max-height: 220px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face) trước tên */
+.ccn .p-top .hub-av { width: 26px; height: 26px; }

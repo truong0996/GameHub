@@ -149,3 +149,6 @@
   #sk-center .big { font-size: 24px; }
   .sk :is(.disc.lg) { --d: 38px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face(p, "fill")) phủ lên chấm ghế */
+.sk .av { position: relative; }

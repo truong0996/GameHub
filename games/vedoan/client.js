@@ -338,7 +338,7 @@ function renderPlayers() {
     const pl = P(p), live = V.phase !== 'over';
     const cls = ['pl', p === me() ? 'me' : '', V.drawers.includes(p) && live ? 'drawing' : '', guessed(p) && V.phase === 'draw' ? 'ok' : '',
       pl.score > 0 && i < 3 ? 'top' + (i + 1) : ''].join(' ');
-    return `<div class="${cls}" data-p="${p}" style="--c:${color0(p)}"><span class="rk">${i + 1}</span>
+    return `<div class="${cls}" data-p="${p}" style="--c:${color0(p)}"><span class="rk">${i + 1}</span>${CTX.skin.face(p)}
       <span class="nm" title="${esc(pl.name)}">${pl.kind === 'bot' ? '🤖 ' : ''}${esc(pl.name)}${p === me() ? ' <small>(bạn)</small>' : ''}</span>
       <b class="sc">${pl.score}</b>${playerStatus(p)}</div>`;
   }).join(''));

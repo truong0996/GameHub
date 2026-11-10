@@ -529,7 +529,7 @@ function renderPanels() {
     d.style.setProperty('--c', C.SEATS[p].color);
     const status = pl.kind === 'bot' ? '🤖' : seat && seat.online ? '🟢' : '⚫';
     d.innerHTML = `
-      <div class="p-top"><span class="p-name pn">${esc(pl.name)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
+      <div class="p-top">${CTX.skin.face(p)}<span class="p-name pn">${esc(pl.name)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
       <div class="p-sub">${C.SEATS[p].horse} · 🏠${cnt('stable')} 🏇${cnt('track')} 🏁${cnt('home')}${pl.frozen ? ` · ❄️×${pl.frozen}` : ''}</div>
       ${GAME.opts.chaos ? `<div class="p-cards">${pl.cards.map(c => `<span title="${C.CARDS[c].name}: ${C.CARDS[c].desc}">${C.CARDS[c].icon}</span>`).join('') || '<span class="muted small">chưa có thẻ</span>'}</div>` : ''}
       <div class="p-bar"><i style="width:${pct}%"></i></div>

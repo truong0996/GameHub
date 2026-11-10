@@ -224,3 +224,40 @@ select:disabled, input:disabled { opacity: .75; }
   .screen { position: static; min-height: 100vh; padding: 10px 0; }
   #game-root { position: static; }
 }
+
+/* ---------- Ảnh đại diện (public/avatar.js, hub/avatars.js) ---------- */
+/* Ảnh tròn nhỏ cạnh tên: phòng chờ, chat, bảng xếp hạng. */
+.av-img { width: 1.45em; height: 1.45em; border-radius: 50%; object-fit: cover; vertical-align: middle; margin: -.2em .3em -.15em 0;
+  box-shadow: 0 0 0 1px var(--line); background: var(--chip); }
+.cm.me .av-img { display: none; }
+/* Chấm ghế ở phòng chờ có ảnh: ảnh làm nền (khung ảnh mua ở cửa hàng vẫn vẽ bằng ::before/::after quanh nó). */
+.seat-dot.has-av { background: var(--chip) center / cover no-repeat; box-shadow: 0 0 0 3px var(--c), 0 2px 6px rgba(0,0,0,.18); }
+.seat-dot.av-edit { cursor: pointer; }
+.seat-dot.av-edit:hover { filter: brightness(1.08); }
+.seat-dot.av-edit:not(.has-av):not(.lk-fr)::after { content: '📷'; position: absolute; right: -4px; bottom: -4px; font-size: 14px; text-shadow: none; }
+.seat-dot.av-edit:not(.lk-fr) { position: relative; }
+/* Nút ảnh của mình ở thanh tài khoản. */
+.acct button.av-me { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--chip); border: 2px solid var(--primary);
+  box-shadow: none; display: grid; place-items: center; font-size: 18px; overflow: hidden; flex: none; }
+.acct button.av-me .av-img { width: 100%; height: 100%; margin: 0; box-shadow: none; }
+.acct button.av-me.none { border-style: dashed; }
+/* Trong game: ctx.skin.face(seat) → <img class="hub-av">; 'fill' phủ kín phần tử cha (cha: position relative + bo tròn). */
+.hub-av { width: 1.5em; height: 1.5em; border-radius: 50%; object-fit: cover; vertical-align: middle; flex: none; background: var(--chip);
+  box-shadow: 0 0 0 2px var(--c, var(--line)); }
+.hub-av[hidden] { display: none !important; }
+.hub-av.fill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; box-shadow: 0 0 0 2px var(--c, transparent); pointer-events: none; z-index: 1; }
+/* Hộp chỉnh ảnh. */
+.ave h2 { margin-bottom: 6px; }
+.ave-stage { position: relative; width: min(260px, 70vw); aspect-ratio: 1; margin: 12px auto; border-radius: 12px; overflow: hidden;
+  background: repeating-conic-gradient(var(--chip) 0 25%, var(--surface) 0 50%) 0 0 / 20px 20px; border: 1px solid var(--line); }
+.ave-stage.drop { outline: 3px dashed var(--primary); outline-offset: 2px; }
+.ave-stage canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.ave-stage canvas:active { cursor: grabbing; }
+.ave-empty { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: var(--muted); font-size: 15px; cursor: pointer; line-height: 1.6; }
+.ave-empty:first-line { font-size: 34px; }
+.ave-tools { display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 6px; }
+.ave-tools button { padding: 6px 12px; white-space: nowrap; }
+.ave-tools input[type=range] { flex: 1; max-width: 160px; padding: 0; accent-color: var(--primary); }
+.ave .err { color: var(--danger); min-height: 1.3em; font-size: 14px; text-align: center; }
+.ave .btns { justify-content: stretch; align-items: center; }
+button.ghost.danger { color: var(--danger); }

@@ -16,6 +16,7 @@ import { startTunnel } from './hub/tunnel.js';
 import { createAccounts } from './hub/accounts.js';
 import { createStats, buildReport } from './hub/stats.js';
 import { createWallet } from './hub/wallet.js';
+import { createAvatars } from './hub/avatars.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, 'public');
@@ -44,8 +45,8 @@ function lanUrls() {
 
 const games = await loadGames(GAMES, { dev: DEV });
 const gameDirs = new Set([...games.values()].map(g => g.dir));
-const accounts = createAccounts(DATA), stats = createStats(DATA), wallet = createWallet(DATA, stats);
-const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl, accounts, stats, wallet });
+const accounts = createAccounts(DATA), stats = createStats(DATA), wallet = createWallet(DATA, stats), avatars = createAvatars(DATA);
+const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl, accounts, stats, wallet, avatars });
 
 // GET /api/report?from=<ms>&to=<ms>&game=<id> → bảng xếp hạng (public/report.html vẽ).
 function report(url, res) {
@@ -56,7 +57,7 @@ function report(url, res) {
     const R = buildReport(stats.list(), { from: num('from'), to: num('to'), game: q.get('game') || '' },
       id => (accounts.get(id) || {}).name, gameInfo);
     // Đồ trang trí đang mặc (hiệu ứng tên, danh hiệu) + credit hiện có (không theo kỳ đang lọc).
-    for (const p of R.players) { p.look = wallet.look(p.id); p.credits = wallet.info(p.id).credits; }
+    for (const p of R.players) { p.look = wallet.look(p.id); p.credits = wallet.info(p.id).credits; p.av = avatars.url(p.id); }
     body = JSON.stringify(R);
   } catch (e) {
     console.error('[report]', e);
@@ -64,6 +65,19 @@ function report(url, res) {
   }
   res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
   res.end(body);
+}
+
+// GET /avatar/<id tài khoản>?v=<phiên bản> → ảnh đại diện. URL đổi theo nội dung nên cho cache lâu.
+// nosniff + CSP chặn trình duyệt hiểu ảnh thành thứ khác (dù server đã chỉ nhận JPEG/PNG/WebP).
+function avatar(id, req, res) {
+  const a = avatars.file(id);
+  if (!a) { res.writeHead(404, { 'Cache-Control': 'no-store' }); res.end(); return; }
+  fs.readFile(a.file, (err, buf) => {
+    if (err) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'Content-Type': a.type, 'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+    res.end(req.method === 'HEAD' ? undefined : buf);
+  });
 }
 
 // Chỉ phục vụ file nằm trong base; chặn ../ và chặn file logic phía server của game.
@@ -86,6 +100,8 @@ const server = http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return; }
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/api/report') return report(url, res);
+  const av = /^\/avatar\/([0-9a-f]+)$/.exec(url.pathname);
+  if (av) return avatar(av[1], req, res);
   const file = resolveStatic(url.pathname === '/report' ? '/report.html' : url.pathname);
   if (!file) { res.writeHead(404); res.end('Not found'); return; }
   fs.readFile(file, (err, buf) => {

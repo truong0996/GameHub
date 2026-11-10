@@ -164,3 +164,8 @@
   .tp-side { padding-bottom: 120px; }
   #tp-log { max-height: 220px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face(p, "fill")) phủ lên chấm ghế */
+.tp .pl .av { position: relative; }
+.tp :is(.tk, .pl .av) .hub-av.fill { box-shadow: none; }
+.tp .tk.jailed::after { z-index: 2; }

@@ -116,7 +116,7 @@ function buildBoard() {
       : `<div class="ic">${cellIcon(c, V.chaos)}</div><div class="nm">${UI.esc(c.name.replace(/^Sân bay /, ''))}</div><div class="pr"></div>`;
     bd.appendChild(d);
   });
-  $('.tp-tokens').innerHTML = alive().map(p => `<div class="tk" data-p="${p}" style="--c:${col(p)}">${SEATS[p].label}</div>`).join('');
+  $('.tp-tokens').innerHTML = alive().map(p => `<div class="tk" data-p="${p}" style="--c:${col(p)}">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>`).join('');
   built = true;
 }
 
@@ -170,7 +170,7 @@ function renderPlayers() {
       pl.hand.length ? `🃏${pl.hand.length}` : '', sets ? `<span title="Số bộ màu đủ">🏘️${sets}</span>` : ''].filter(Boolean).join(' ');
     const auc = V.phase === 'auction' && V.auc ? (p in V.auc.bids ? ' ✔' : pl.cash >= MIN_BID ? ' ⏳' : '') : '';
     return `<div class="pl${p === m ? ' me' : ''}${p === dec ? ' turn' : ''}" data-p="${p}" style="--c:${col(p)}">
-      <div class="av">${SEATS[p].label}</div>
+      <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
       <div class="pl-main">
         <div class="pl-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}${auc}${rank[0].p === p && rank[0].w > (rank[1] || { w: 0 }).w ? ' 👑' : ''}</div>
         <div class="pl-props">${props || '<span class="muted small">chưa có đất</span>'}</div>

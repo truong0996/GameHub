@@ -142,7 +142,7 @@ function renderMats() {
     const can = targetPick && targetPick.list.includes(p);
     return `<div class="mat${asked.includes(p) ? ' turn' : ''}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${role ? ' ' + role : ''}${can ? ' can' : ''}${passed ? ' passed' : ''}"
       data-p="${p}" style="--c:${col(p)};left:${pos[p].x}%;top:${pos[p].y}%">
-      <div class="mat-head"><span class="av">${pl.alive ? SEATS[p].label || '🙂' : pl.ghost ? '👻' : '💀'}</span>
+      <div class="mat-head"><span class="av">${pl.alive ? (SEATS[p].label || '🙂') + CTX.skin.face(p, 'fill') : pl.ghost ? '👻' : '💀'}</span>
         <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${nm(p)}${off ? ' 📴' : ''}</span>
         ${F ? `<span class="fac" style="--f:${F.color}" title="Phe ${F.name}">${F.icon}</span>` : ''}</div>
       <div class="mat-row"><span class="coins" title="Xu">🪙 <b>${pl.coins}</b></span><span class="cards">${pl.cards.map(c => cardMini(c, p)).join('')}</span></div>

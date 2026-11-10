@@ -172,3 +172,6 @@
   #f7-actions .big { min-width: 0; flex: 1; }
   #f7-actions button small { display: none; }
 }
+
+/* Ảnh đại diện (ctx.skin.face(p, "fill")) phủ lên chấm ghế */
+.f7 .av { position: relative; }

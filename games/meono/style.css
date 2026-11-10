@@ -165,3 +165,6 @@
   .mn .cd.xl { --cw: 120px; --ch: 168px; }
   .mn .stamp { font-size: 16px; }
 }
+
+/* Ảnh đại diện (ctx.skin.face(p, "fill")) phủ lên chấm ghế */
+.mn .av { position: relative; }
