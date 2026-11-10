@@ -57,11 +57,16 @@ echo "== Managed identity $IDN cho GitHub Actions ($REPO, nhánh main)"
 az identity create -g "$RG" -n "$IDN" -l "$LOC" -o none
 CLIENT=$(az identity show -g "$RG" -n "$IDN" --query clientId -o tsv)
 PRINCIPAL=$(az identity show -g "$RG" -n "$IDN" --query principalId -o tsv)
-if ! az identity federated-credential show -g "$RG" --identity-name "$IDN" -n github-main -o none 2>/dev/null; then
-  az identity federated-credential create -g "$RG" --identity-name "$IDN" -n github-main \
-    --issuer https://token.actions.githubusercontent.com \
-    --subject "repo:$REPO:ref:refs/heads/main" --audiences api://AzureADTokenExchange -o none
+# Token OIDC của GitHub ghi chủ + repo kèm mã số cố định: repo:<chủ>@<id chủ>/<repo>@<id repo>:ref:refs/heads/main
+# (cần gh đã đăng nhập; hoặc đặt sẵn SUBJECT=...).
+if [ -z "${SUBJECT:-}" ]; then
+  IDS=$(gh api "repos/$REPO" --jq '"\(.owner.id) \(.id)"' | tr -d '\r')
+  SUBJECT="repo:${REPO%/*}@${IDS% *}/${REPO#*/}@${IDS#* }:ref:refs/heads/main"
 fi
+echo "   subject: $SUBJECT"
+az identity federated-credential create -g "$RG" --identity-name "$IDN" -n github-main \
+  --issuer https://token.actions.githubusercontent.com \
+  --subject "$SUBJECT" --audiences api://AzureADTokenExchange -o none   # create = tạo hoặc ghi đè
 RG_ID=$(az group show -n "$RG" --query id -o tsv)
 # Git Bash (Windows) tự đổi tham số "/subscriptions/..." thành đường dẫn file → tắt cho tham số (không đụng biến môi trường).
 export MSYS2_ARG_CONV_EXCL="*"
