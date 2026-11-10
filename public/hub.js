@@ -579,6 +579,7 @@ initFx($('#fx'));
 initShop({
   request: (t, data) => act(t, data),
   name: () => (ME.user ? ME.user.name : $('#in-name').value.trim()),
+  avatar: () => (ME.user && ME.user.av) || null,
   // ví đổi (mua, trang bị, vừa nhận credit) → vẽ lại chỗ hiện số dư/đồ đang mặc
   onChange: () => { renderAccount(); if (ROOM && !ROOM.playing) renderRoom(); },
 });

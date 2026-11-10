@@ -5,7 +5,7 @@ import { sfx, tone } from './sfx.js';
 import { CREDIT, SLOTS, RARITY, ITEMS, ITEM } from './shop-data.js';
 
 let W = null;      // ví của mình { credits, earned, today, cap, owned, eq } — null = chưa đăng nhập
-let O = null;      // { request(t, data) → Promise, name() → tên mình, loggedIn() → bool, onChange() }
+let O = null;      // { request(t, data) → Promise, name() → tên mình, avatar() → URL ảnh đại diện | null, loggedIn() → bool, onChange() }
 let paintShop = null;
 let tab = 'frame', tryOn = {};   // tab đang mở, đồ đang "thử" trong bảng cửa hàng (chưa mua)
 
@@ -268,10 +268,15 @@ export function creditNotice(m) {
 
 // ---------- bảng cửa hàng ----------
 const SAMPLE = 'Chào cả phòng! 👋';
+// Chấm ảnh đại diện để xem thử khung: có ảnh đại diện thì dùng ảnh, không thì chữ cái đầu tên.
+function avaHtml(cls, look, initial) {
+  const av = O.avatar && O.avatar();
+  return `<div class="sh-ava${cls}${frameCls(look)}${av ? ' has-av' : ''}"${av ? ` style="background-image:url('${esc(av)}')"` : ''}>${av ? '' : esc(initial)}</div>`;
+}
 function preview(it, name, initial) {
   const look = { [it.slot]: it.id };
   switch (it.slot) {
-    case 'frame': return `<div class="sh-ava${frameCls(look)}">${esc(initial)}</div>`;
+    case 'frame': return avaHtml('', look, initial);
     case 'name': return `<div class="sh-nm">${nameHtml(name, look)}</div>`;
     case 'title': return `<div class="sh-nm">${titleHtml(look)}</div>`;
     case 'bubble': return `<div class="cm sh-bub${bubbleCls(look)}">${esc(SAMPLE)}</div>`;
@@ -316,7 +321,7 @@ export function openShop(startTab) {
     // hero: trông mình thế nào với đồ đang mặc + đồ đang thử
     const look = { ...eq, ...tryOn };
     const trying = Object.keys(tryOn).length;
-    hero.innerHTML = `<div class="sh-ava big${frameCls(look)}">${esc(initial)}</div>
+    hero.innerHTML = `${avaHtml(' big', look, initial)}
       <div class="sh-me"><div>${nameHtml(name, look)}${titleHtml(look)}</div>
       <div class="cm sh-bub${bubbleCls(look)}">${esc(SAMPLE)}</div>
       <div class="small muted">${trying ? '👗 Đang thử đồ — chưa mua' : on ? 'Bạn trong mắt cả phòng' : 'Bấm vào món để thử'}${look.fx ? ` · ${FX[look.fx].icon} ${esc(ITEM[look.fx].name)}` : ''}</div></div>

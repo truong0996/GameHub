@@ -229,6 +229,7 @@ body:has(#modal .shop) .lk-dragon, body:has(#modal .shop) .floater { z-index: 76
 .sh-ava { width: 46px; height: 46px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 800; color: #fff;
   background: linear-gradient(135deg, #2f6f62, #3f8f7f); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); text-shadow: 0 1px 2px rgba(0,0,0,.35); }
 .sh-ava.big { width: 72px; height: 72px; font-size: 34px; }
+.sh-ava.has-av { background: var(--chip) center / cover no-repeat; }
 .sh-ava.big.lk-fr::after { font-size: 26px; }
 .sh-ava.big.lk-fr-gold::after { top: -30px; }
 .sh-ava.big.lk-fr-galaxy::after { --orb: 46px; }
