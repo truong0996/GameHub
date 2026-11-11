@@ -7,12 +7,14 @@ import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
 import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected, voiceVolumes } from './voice.js';
 import { initShop, openShop, setWallet, myWallet, fmt, extraEmotes, nameHtml, titleHtml, frameCls, playFx, creditNotice, skinCls, setSkin, drawHat } from './shop.js';
 import { avImg, openAvatarEditor } from './avatar.js';
+import { apply as applyDelta } from './delta.js';
 
 const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
 const ME = { pid: null, uid: null, code: null, lan: [], pub: null, user: null, accounts: false };   // user: tài khoản đã đăng nhập { id, name }
 let CATALOG = [], ROOM = null;
 let current = null;            // game đang mount: { matchId, key, entry, realtime, inst, css: [] }
 const GQ = [];                 // hàng đợi tin 'game' (phát lần lượt để animation không chồng nhau)
+let GS = null;                 // { matchId, base }: state mới nhất đã dựng lại (nền để áp delta)
 let pumping = false;
 
 const mySeat = () => (ROOM ? ROOM.seats.findIndex(s => s.kind === 'human' && s.uid === ME.uid) : -1);
@@ -23,16 +25,22 @@ const range = g => g.minPlayers === g.maxPlayers ? g.minPlayers : `${g.minPlayer
 const session = () => JSON.parse(sessionStorage.getItem('hub_session') || 'null');
 
 // ================= KẾT NỐI =================
+// Server chạy nhiều tiến trình, mỗi phòng nằm ở một tiến trình: kết nối kèm ?room=<mã> để vào thẳng đúng chỗ.
+// Vào phòng ở tiến trình khác thì server trả { moved } → move(mã) kết nối lại rồi gửi lại.
 const net = (() => {
-  let ws = null, seq = 0, backoff = 400, ready = false;
+  let ws = null, seq = 0, backoff = 400, ready = false, moving = false;
+  let room = (session() || {}).code || new URLSearchParams(location.search).get('room') || '';
   const pending = new Map(), waiting = [];
   function connect() {
-    ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+    const q = /^[A-Za-z]{4}$/.test(room) ? '?room=' + room.toUpperCase() : '';
+    ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws${q}`);
     ws.binaryType = 'arraybuffer';
+    const me = ws;
     ws.onopen = async () => {
       backoff = 400;
       $('#net').classList.add('hidden');
       await onConnected();
+      if (ws !== me) return;   // onConnected đã chuyển sang tiến trình khác (move) — kết nối mới sẽ lo phần còn lại
       ready = true;
       while (waiting.length) waiting.shift()();
     };
@@ -46,11 +54,22 @@ const net = (() => {
       ready = false;
       for (const cb of pending.values()) cb({ ok: false, err: 'Mất kết nối tới server' });
       pending.clear();
+      if (moving) { moving = false; connect(); return; }
       $('#net').classList.remove('hidden');
       setTimeout(connect, backoff);
       backoff = Math.min(backoff * 2, 5000);
     };
   }
+  // Đổi phòng đích của kết nối (lần kết nối lại sau đi thẳng tới tiến trình giữ phòng này).
+  const setRoom = code => { room = code || ''; };
+  // Kết nối lại ngay tới tiến trình giữ phòng `code`; request() sau đó tự chờ kết nối mới sẵn sàng.
+  function move(code) {
+    room = code;
+    ready = false;
+    if (ws && ws.readyState <= 1) { moving = true; ws.close(); } else connect();
+  }
+  // Mất đồng bộ (nhận delta mà không có bản gốc) → kết nối lại để nhận state đầy đủ.
+  const resync = () => { if (ws && ws.readyState === 1) ws.close(); };
   // raw: gửi ngay (dùng lúc vừa kết nối để vào lại phòng). request: chờ tới khi đã vào lại phòng xong.
   function raw(t, data = {}) {
     return new Promise(res => {
@@ -66,8 +85,15 @@ const net = (() => {
   // sendBin: gói tiếng đàm thoại; mạng đang ứ thì bỏ (thà mất một đoạn còn hơn trễ dần).
   const sendBin = buf => { if (ready && ws.readyState === 1 && ws.bufferedAmount < 32768) ws.send(buf); };
   connect();
-  return { raw, request, post, sendBin };
+  return { raw, request, post, sendBin, setRoom, move, resync };
 })();
+// Vào phòng `data.code`: phòng ở tiến trình khác thì chuyển kết nối sang đó rồi thử lại (một lần).
+async function joinRoom(data) {
+  let j = await net.request('join', data);
+  if (!j.ok && j.moved) { net.move(data.code); j = await net.request('join', data); }
+  if (!j.ok) { toast('⚠️ ' + esc(j.err)); sfx.error(); }
+  return j;
+}
 
 async function act(t, data) {
   const r = await net.request(t, data);
@@ -89,6 +115,7 @@ async function onConnected() {
   const s = session();
   if (!s) return;
   const j = await net.raw('join', { code: s.code, pid: s.pid });
+  if (!j.ok && j.moved) { net.move(s.code); return; }   // kết nối mới (đúng tiến trình) sẽ tự vào lại
   if (j.ok) { enterRoom(j); voiceReconnected(); }
   else { sessionStorage.removeItem('hub_session'); if (ROOM) resetToHome('⚠️ ' + esc(j.err)); }
 }
@@ -97,12 +124,23 @@ function enterRoom(j) {
   Object.assign(ME, { code: j.code, pid: j.pid, uid: j.uid, lan: j.lan || ME.lan, pub: j.pub || ME.pub });
   CATALOG = j.catalog ? withTags(j.catalog) : CATALOG;
   sessionStorage.setItem('hub_session', JSON.stringify({ code: j.code, pid: j.pid }));
+  net.setRoom(j.code);
   history.replaceState(null, '', '?room=' + j.code);
 }
 
 function onMessage(m) {
   if (m.t === 'room') onRoom(m.room);
-  else if (m.t === 'game') { m.recvAt = Date.now(); GQ.push(m); pump(); }
+  else if (m.t === 'game') {
+    // Server gửi state đầy đủ (state) hoặc chỉ phần đổi so với lần trước (ds, xem delta.js). GS.base là bản gốc hub giữ riêng;
+    // game nhận bản sao để có sửa state tại chỗ cũng không làm hỏng bản gốc.
+    if (m.ds) {
+      if (!GS || GS.matchId !== m.matchId) return net.resync();
+      GS.base = applyDelta(GS.base, m.ds);
+      delete m.ds;
+    } else GS = { matchId: m.matchId, base: m.state };
+    m.state = structuredClone(GS.base);
+    m.recvAt = Date.now(); GQ.push(m); pump();
+  }
   else if (m.t === 'emote') onEmote(m);
   else if (m.t === 'chatLog') chatLog(m.log);
   else if (m.t === 'chat') chatMsg(m.msg);
@@ -614,7 +652,7 @@ const join = async () => {
   const code = $('#in-code').value.trim().toUpperCase();
   if (code.length !== 4) return toast('Mã phòng gồm 4 chữ cái');
   const s = session();
-  const j = await act('join', { code, name, pid: s && s.code === code ? s.pid : undefined });
+  const j = await joinRoom({ code, name, pid: s && s.code === code ? s.pid : undefined });
   if (j.ok) enterRoom(j);
 };
 $('#btn-join').onclick = join;

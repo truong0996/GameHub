@@ -1,31 +1,33 @@
 // Tài khoản người chơi: tên + mã PIN, để bảng xếp hạng biết chắc ai là ai (khách vẫn chơi được nhưng không được tính).
-// Lưu trong <data>/accounts.json: PIN băm bằng scrypt, token đăng nhập chỉ lưu mã băm (lộ file cũng không đăng nhập hộ được).
+// Lưu trong hub.db (hub/db.js): PIN băm bằng scrypt, token đăng nhập chỉ lưu mã băm (lộ file cũng không đăng nhập hộ được).
+// scrypt chạy bất đồng bộ (luồng nền của libuv) nên hàng loạt người đăng nhập cùng lúc không làm khựng các phòng đang chơi.
 import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
+import { promisify } from 'node:util';
+import { tx } from './db.js';
 
 const MAX_FAILS = 5;              // sai PIN liên tiếp chừng này lần thì khoá tạm
 const LOCK_MS = 60000;
 const TOKENS_PER_USER = 10;       // mỗi người đăng nhập tối đa chừng này máy, máy cũ nhất bị đăng xuất
 
+const scrypt = promisify(crypto.scrypt);
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const keyOf = name => name.normalize('NFC').toLowerCase();
 export const cleanName = s => String(s || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 
-export function createAccounts(dir) {
-  const file = path.join(dir, 'accounts.json');
-  let db = { users: {}, tokens: {} };
-  try { db = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
-  const fails = new Map();        // tên → { n, until }
-
-  // Ghi ra file tạm rồi đổi tên: tắt server giữa chừng cũng không làm hỏng file.
-  function save() {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(file + '.tmp', JSON.stringify(db, null, 1));
-    fs.renameSync(file + '.tmp', file);
-  }
-  const hashPin = (pin, salt) => crypto.scryptSync(pin, salt, 32).toString('hex');
-  const findByName = name => Object.values(db.users).find(u => keyOf(u.name) === keyOf(name));
+export function createAccounts(db) {
+  const q = {
+    byKey: db.prepare('SELECT * FROM users WHERE nkey = ?'),
+    byId: db.prepare('SELECT id, name FROM users WHERE id = ?'),
+    addUser: db.prepare('INSERT INTO users (id, name, nkey, salt, hash, at) VALUES (?, ?, ?, ?, ?, ?)'),
+    addTok: db.prepare('INSERT INTO tokens (h, id, at) VALUES (?, ?, ?)'),
+    trimTok: db.prepare('DELETE FROM tokens WHERE id = ? AND h NOT IN (SELECT h FROM tokens WHERE id = ? ORDER BY at DESC LIMIT ?)'),
+    tok: db.prepare('SELECT u.id, u.name FROM tokens t JOIN users u ON u.id = t.id WHERE t.h = ?'),
+    delTok: db.prepare('DELETE FROM tokens WHERE h = ?'),
+    fail: db.prepare('SELECT n, until FROM fails WHERE k = ?'),
+    setFail: db.prepare('INSERT INTO fails (k, n, until) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET n = excluded.n, until = excluded.until'),
+    clearFail: db.prepare('DELETE FROM fails WHERE k = ?'),
+  };
+  const hashPin = async (pin, salt) => (await scrypt(pin, salt, 32)).toString('hex');
   const pub = u => ({ id: u.id, name: u.name });
 
   function checkPin(pin) {
@@ -35,51 +37,48 @@ export function createAccounts(dir) {
   }
   function issue(u) {
     const token = crypto.randomBytes(24).toString('hex');
-    db.tokens[sha(token)] = { id: u.id, at: Date.now() };
-    const mine = Object.entries(db.tokens).filter(([, t]) => t.id === u.id).sort((a, b) => a[1].at - b[1].at);
-    for (const [k] of mine.slice(0, -TOKENS_PER_USER)) delete db.tokens[k];
-    save();
+    tx(db, () => {
+      q.addTok.run(sha(token), u.id, Date.now());
+      q.trimTok.run(u.id, u.id, TOKENS_PER_USER);
+    });
     return { token, user: pub(u) };
   }
 
   return {
-    register(name, pin) {
+    async register(name, pin) {
       name = cleanName(name);
       if ([...name].length < 2) throw new Error('Tên cần ít nhất 2 ký tự');
       pin = checkPin(pin);
-      if (findByName(name)) throw new Error(`Tên "${name}" đã có người dùng — chọn tên khác hoặc đăng nhập`);
+      const taken = () => new Error(`Tên "${name}" đã có người dùng — chọn tên khác hoặc đăng nhập`);
+      if (q.byKey.get(keyOf(name))) throw taken();
       const salt = crypto.randomBytes(16).toString('hex');
-      const u = { id: crypto.randomBytes(6).toString('hex'), name, salt, hash: hashPin(pin, salt), at: Date.now() };
-      db.users[u.id] = u;
+      const u = { id: crypto.randomBytes(6).toString('hex'), name, salt, hash: await hashPin(pin, salt), at: Date.now() };
+      try { q.addUser.run(u.id, u.name, keyOf(u.name), u.salt, u.hash, u.at); }
+      catch (e) { if (/UNIQUE/.test(e.message)) throw taken(); throw e; }   // người khác vừa lấy tên này trong lúc đang băm PIN
       return issue(u);
     },
-    login(name, pin) {
+    async login(name, pin) {
       name = cleanName(name);
-      const k = keyOf(name), now = Date.now(), f = fails.get(k) || { n: 0, until: 0 };
+      const k = keyOf(name), now = Date.now(), f = q.fail.get(k) || { n: 0, until: 0 };
       if (f.until > now) throw new Error(`Sai PIN nhiều lần — thử lại sau ${Math.ceil((f.until - now) / 1000)} giây`);
-      const u = findByName(name);
+      const u = q.byKey.get(k);
       if (!u) throw new Error(`Chưa có tài khoản "${name}" — bấm Đăng ký để tạo`);
-      const ok = crypto.timingSafeEqual(Buffer.from(hashPin(String(pin || ''), u.salt), 'hex'), Buffer.from(u.hash, 'hex'));
+      const ok = crypto.timingSafeEqual(Buffer.from(await hashPin(String(pin || ''), u.salt), 'hex'), Buffer.from(u.hash, 'hex'));
       if (!ok) {
-        f.n = f.until ? 1 : f.n + 1;   // vừa hết khoá thì đếm lại từ đầu
-        f.until = f.n >= MAX_FAILS ? now + LOCK_MS : 0;
-        fails.set(k, f);
+        const n = f.until ? 1 : f.n + 1;   // vừa hết khoá thì đếm lại từ đầu
+        q.setFail.run(k, n, n >= MAX_FAILS ? now + LOCK_MS : 0);
         throw new Error('Sai mã PIN');
       }
-      fails.delete(k);
+      if (f.n) q.clearFail.run(k);
       return issue(u);
     },
     byToken(token) {
-      const t = token && db.tokens[sha(String(token))];
-      const u = t && db.users[t.id];
+      const u = token && q.tok.get(sha(String(token)));
       return u ? pub(u) : null;
     },
     logout(token) {
-      if (!token || !db.tokens[sha(String(token))]) return;
-      delete db.tokens[sha(String(token))];
-      save();
+      if (token) q.delTok.run(sha(String(token)));
     },
-    get: id => (db.users[id] ? pub(db.users[id]) : null),
-    all: () => Object.values(db.users).map(pub),
+    get(id) { const u = id && q.byId.get(id); return u ? pub(u) : null; },
   };
 }

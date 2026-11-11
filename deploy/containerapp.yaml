@@ -20,6 +20,12 @@ properties:
         env:
           - name: HUB_DATA
             value: /app/data
+          # 0.25 vCPU → một tiến trình là đủ (máy nhiều lõi thì bỏ dòng này: mặc định = số lõi).
+          - name: HUB_WORKERS
+            value: "1"
+          # hub.db nằm trên Azure Files (SMB) — ổ mạng không hỗ trợ WAL của SQLite → dùng journal kiểu cũ.
+          - name: HUB_DB_WAL
+            value: "0"
         volumeMounts:
           - volumeName: hubdata
             mountPath: /app/data

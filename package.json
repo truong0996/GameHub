@@ -5,13 +5,14 @@
   "type": "module",
   "main": "server.js",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.13"
   },
   "scripts": {
     "start": "node server.js",
     "online": "node server.js --online",
     "sim": "node tools/simulate.js",
-    "smoke": "node tools/smoke.js"
+    "smoke": "node tools/smoke.js",
+    "load": "node tools/load.js"
   },
   "license": "MIT"
 }

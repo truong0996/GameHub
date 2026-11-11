@@ -57,6 +57,15 @@ export function createAvatars(dataDir) {
       index.set(id, { ext, v: verOf(buf) });
       return this.url(id);
     },
+    // Tiến trình khác vừa đổi/xoá ảnh của tài khoản này → đọc lại từ thư mục.
+    refresh(id) {
+      if (!ID_RE.test(String(id))) return;
+      index.delete(id);
+      for (const ext of Object.keys(TYPES)) {
+        try { index.set(id, { ext, v: verOf(fs.readFileSync(path.join(dir, `${id}.${ext}`))) }); return; }
+        catch (e) { if (e.code !== 'ENOENT') throw e; }
+      }
+    },
     // Cho HTTP: { file, type } hoặc null.
     file(id) {
       const a = ID_RE.test(String(id)) && index.get(id);

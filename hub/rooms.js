@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import { catalogEntry, defaultOpts } from './registry.js';
 import { ranksOf } from './stats.js';
+import { split, diff, full } from '../public/delta.js';
 
 const BOT_NAMES = ['Tí', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
 export const EMOTES = ['😂', '😎', '😡', '😭', '🔥', '👏', '🐴', '💀', '🙏', '🤡'];
@@ -17,16 +18,26 @@ const RTC_MAX = 16000;            // tin bắt tay WebRTC (SDP/ICE) tối đa ~1
 const RELAY_MAX = 2048;           // một gói tiếng chuyển qua server (μ-law 16kHz, 40ms = 640 byte)
 const RELAY_BACKLOG = 64 * 1024;  // người nhận mạng chậm, đang ứ quá nhiều thì bỏ gói tiếng
 const KICK_BAN_MS = 2 * 60 * 1000; // bị chủ phòng mời ra thì 2 phút sau mới vào lại được phòng đó
+const SEND_BACKLOG = 2 * 1024 * 1024; // kết nối ứ quá chừng này byte chưa gửi được (mạng quá chậm/treo) → ngắt, client tự vào lại nhận state mới
 
 const AFTER = Symbol('after');
 const rid = n => crypto.randomBytes(n).toString('hex');
 const cleanName = s => String(s || '').replace(/[<>]/g, '').trim().slice(0, 16) || 'Ẩn danh';
 // Người bị mời ra: chặn theo tài khoản, khách thì theo tên (khách đổi tên là vào được — chỉ để khỏi vào lại ngay theo thói quen).
 const banKey = (acct, name) => (acct ? 'a:' + acct : 'n:' + cleanName(name).toLowerCase());
+// Phòng mã `code` thuộc tiến trình nào (server.js chuyển kết nối /ws?room=<mã> tới đúng tiến trình đó).
+export function shardOf(code, shards) {
+  let h = 0;
+  for (const ch of String(code).toUpperCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % shards;
+}
 
 // accounts (hub/accounts.js) + stats (hub/stats.js): có thì người chơi đăng nhập được và kết quả ván được ghi lại.
 // wallet (hub/wallet.js): credit sau mỗi ván + đồ trang trí (look) hiện cho cả phòng. avatars (hub/avatars.js): ảnh đại diện tải lên.
-export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null, wallet = null, avatars = null }) {
+// Chạy nhiều tiến trình (server.js): tiến trình thứ `shard` trong `shards` chỉ giữ phòng có shardOf(mã) === shard;
+// onAcct(id) = báo các tiến trình khác rằng ảnh/đồ trang trí của tài khoản này vừa đổi (họ gọi hub.acctChanged(id)).
+export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null, wallet = null, avatars = null,
+  shard = 0, shards = 1, onAcct = () => {} }) {
   const rooms = new Map();
   const catalog = [...games.values()].map(catalogEntry).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
@@ -35,7 +46,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     let code;
     do code = Array.from({ length: 4 }, () => A[crypto.randomInt(A.length)]).join('');
-    while (rooms.has(code));
+    while (rooms.has(code) || shardOf(code, shards) !== shard);
     const room = { code, host: null, members: new Map(), gameKey: null, optsByGame: {}, seats: [], match: null, matchSeq: 0, chat: [], chatSeq: 0, kicked: new Map(), touched: Date.now() };
     setGame(room, gameKey && games.has(gameKey) ? gameKey : catalog[0].id);
     rooms.set(code, room);
@@ -102,7 +113,10 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
   }
 
   // ---------- gửi tin ----------
-  const send = (ws, obj) => ws.send(typeof obj === 'string' ? obj : JSON.stringify(obj));
+  const send = (ws, obj) => {
+    if (ws.buffered > SEND_BACKLOG) return ws.close(1013);
+    ws.send(typeof obj === 'string' ? obj : JSON.stringify(obj));
+  };
   function eachConn(room, fn) { for (const m of room.members.values()) for (const ws of m.conns) fn(ws, m); }
   function broadcastRoom(room) {
     const data = JSON.stringify({ t: 'room', room: publicRoom(room) });
@@ -142,12 +156,29 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         ...(x.to ? { to: x.to, mid: mt.id } : {}), ...(x.tag ? { tag: x.tag } : {}) });
     }
   }
+  // Phát trạng thái ván: tính view một lần cho mỗi ghế (người xem chung một bản), gửi delta so với lần phát trước của ghế đó
+  // (public/delta.js). Kết nối chưa có bản gốc của ván này (mới vào/vào lại — welcome gửi state ở thời điểm khác lần phát)
+  // thì nhận state đầy đủ, từ lần sau mới nhận delta.
   function broadcastGame(room, events = [], meta) {
-    const L = room.match.logic;
-    if (!L.view && !L.viewEvents) {
-      const data = JSON.stringify(gameMsg(room, events, meta, -1));
-      eachConn(room, ws => send(ws, data));
-    } else eachConn(room, (ws, m) => send(ws, gameMsg(room, events, meta, seatOf(room, m.pid))));
+    const mt = room.match, L = mt.logic, per = !!(L.view || L.viewEvents);
+    const groups = new Map();
+    eachConn(room, (ws, m) => {
+      const s = per ? seatOf(room, m.pid) : -1;
+      if (!groups.has(s)) groups.set(s, []);
+      groups.get(s).push(ws);
+    });
+    const deadlineIn = mt.deadline ? Math.max(0, mt.deadline - Date.now()) : 0;
+    for (const [seat, conns] of groups) {
+      const head = JSON.stringify({ t: 'game', matchId: mt.id, game: room.gameKey,
+        events: L.viewEvents ? L.viewEvents(events, seat, mt.state) : events, meta: meta || null, deadlineIn }).slice(0, -1);
+      const cur = split(L.view ? L.view(mt.state, seat) : mt.state), prev = mt.vc.get(seat);
+      let whole, delta;
+      for (const ws of conns) {
+        if (prev && ws.gsync === mt.id) send(ws, delta ??= `${head},"ds":${diff(prev, cur)}}`);
+        else { send(ws, whole ??= `${head},"state":${full(cur)}}`); ws.gsync = mt.id; }
+      }
+      mt.vc.set(seat, cur);
+    }
   }
 
   // ---------- vòng đời ván ----------
@@ -162,7 +193,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     const players = room.seats.map((s, i) => (info[i] ? { seat: i, acct: s.kind === 'human' ? (room.members.get(s.pid) || {}).acct || null : null,
       name: info[i].name, ...(s.kind === 'bot' ? { bot: true } : {}) } : null)).filter(Boolean);
     room.match = { id: ++room.matchSeq, logic: g.logic, turnMs: M.turnMs || DEFAULT_TURN_MS, state, timer: null, tick: null, busyUntil: now, deadline: 0,
-      game: room.gameKey, opts: { ...optsOf(room) }, players, startedAt: now, recorded: false };
+      game: room.gameKey, opts: { ...optsOf(room) }, players, startedAt: now, recorded: false,
+      vc: new Map() };   // vc: ghế → bản đã phát lần trước (split) để tính delta
     broadcastRoom(room);
     afterAction(room, events || []);
     if (g.logic.tickRate) {
@@ -365,15 +397,16 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
       if (!user) throw new Error('Đăng nhập để nhận credit và mua đồ');
     };
     // Đồ đang mặc đổi → vẽ lại phòng cho mọi người (nếu thành viên trong phòng là tài khoản này).
-    const lookChanged = () => { if (room && member && member.acct === user.id) broadcastRoom(room); };
+    const lookChanged = () => { acctChanged(user.id); onAcct(user.id); };
     // Kèm URL ảnh đại diện vào thông tin tài khoản gửi về client.
     const withAv = u => ({ ...u, av: avatars ? avatars.url(u.id) : null });
     let lastAv = 0;
     const handlers = {
       hello: () => ({ catalog, lan: lanUrls(), pub: publicUrl(), accounts: !!accounts }),
       // Tài khoản: register/login → { token, user }; auth { token } (lúc kết nối lại) → { user }. Có hiệu lực từ lần tạo/vào phòng sau.
-      register(msg) { needAccounts(); const r = accounts.register(msg.name, msg.pin); user = r.user; return { ...r, user: withAv(user) }; },
-      login(msg) { needAccounts(); const r = accounts.login(msg.name, msg.pin); user = r.user; return { ...r, user: withAv(user) }; },
+      // (bất đồng bộ: băm PIN chạy ở luồng nền — tin tiếp theo của kết nối này chờ xong mới xử lý, xem ws.on('message'))
+      async register(msg) { needAccounts(); const r = await accounts.register(msg.name, msg.pin); user = r.user; return { ...r, user: withAv(user) }; },
+      async login(msg) { needAccounts(); const r = await accounts.login(msg.name, msg.pin); user = r.user; return { ...r, user: withAv(user) }; },
       auth(msg) {
         needAccounts();
         user = accounts.byToken(msg.token);
@@ -399,7 +432,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         if (Date.now() - lastAv < 2000) throw new Error('Chậm lại chút — đợi vài giây rồi lưu lại');
         lastAv = Date.now();
         const av = avatars.set(user.id, msg.data || null);
-        for (const r of rooms.values()) if ([...r.members.values()].some(x => x.acct === user.id)) broadcastRoom(r);
+        acctChanged(user.id, { av: true });
+        onAcct(user.id);
         return { av };
       },
       create(msg) {
@@ -409,7 +443,11 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         return welcome(r, m);
       },
       join(msg) {
-        const r = rooms.get(String(msg.code || '').toUpperCase().trim());
+        const code = String(msg.code || '').toUpperCase().trim(), r = rooms.get(code);
+        if (!r && shardOf(code, shards) !== shard) {
+          // Phòng nằm ở tiến trình khác: client kết nối lại /ws?room=<mã> (server.js chuyển tới đúng tiến trình) rồi gửi lại.
+          throw Object.assign(new Error('Phòng ở máy chủ khác — đang chuyển...'), { moved: true });
+        }
         if (!r) throw new Error('Không tìm thấy phòng (có thể server đã khởi động lại)');
         let m = r.members.get(msg.pid);
         if (m && user && m.acct && m.acct !== user.id) m = null;   // tab này đã đổi sang tài khoản khác
@@ -517,8 +555,9 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
         return 'nobroadcast';
       },
       emote(msg, r, m) {
+        if (Date.now() - m.lastEmote < 600) return 'nobroadcast';
         const ok = EMOTES.includes(msg.e) || (wallet && m.acct && wallet.emotes(m.acct).includes(msg.e));   // gói biểu cảm đã mua
-        if (!ok || Date.now() - m.lastEmote < 600) return 'nobroadcast';
+        if (!ok) return 'nobroadcast';
         m.lastEmote = Date.now();
         const data = JSON.stringify({ t: 'emote', uid: m.uid, name: m.name, seat: seatOf(r, m.pid), e: msg.e });
         eachConn(r, w => send(w, data));
@@ -584,13 +623,23 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
       }
     });
 
-    ws.on('message', raw => {
+    const fail = e => ({ ok: false, err: e.message || String(e), ...(e.moved ? { moved: true } : {}) });
+    function reply(msg, res) {
+      const after = res[AFTER];
+      if (msg.id != null) send(ws, { t: 'res', id: msg.id, ...res });
+      if (after) after();
+    }
+    // Xử lý một tin. Trả Promise nếu handler bất đồng bộ (đăng nhập/đăng ký), không thì undefined.
+    function onMessage(raw) {
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
       let res;
       try {
-        if (handlers[msg.t]) res = { ok: true, ...handlers[msg.t](msg) };
-        else if (roomHandlers[msg.t]) {
+        if (handlers[msg.t]) {
+          const out = handlers[msg.t](msg);
+          if (out && typeof out.then === 'function') return out.then(r => reply(msg, { ok: true, ...r }), e => reply(msg, fail(e)));
+          res = { ok: true, ...out };
+        } else if (roomHandlers[msg.t]) {
           if (!room) throw new Error('Bạn chưa vào phòng');
           room.touched = Date.now();
           const out = roomHandlers[msg.t](msg, room, member);
@@ -598,11 +647,22 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
           res = { ok: true, ...(out && typeof out === 'object' ? out : {}) };
         } else throw new Error('Lệnh không hợp lệ: ' + msg.t);
       } catch (e) {
-        res = { ok: false, err: e.message || String(e) };
+        res = fail(e);
       }
-      const after = res[AFTER];
-      if (msg.id != null) send(ws, { t: 'res', id: msg.id, ...res });
-      if (after) after();
+      reply(msg, res);
+    }
+    // Giữ đúng thứ tự tin của một kết nối: đang chờ handler bất đồng bộ thì các tin sau xếp hàng chờ.
+    let waiting = 0, chain = null;
+    ws.on('message', raw => {
+      if (!waiting) {
+        const p = onMessage(raw);
+        if (!p) return;
+        waiting++;
+        chain = p.finally(() => waiting--);
+        return;
+      }
+      waiting++;
+      chain = chain.then(() => onMessage(raw)).finally(() => waiting--);
     });
     ws.on('close', detach);
   }
@@ -616,5 +676,22 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     }
   }, 60000).unref();
 
-  return { handleConnection, catalog, rooms };
+  // Ảnh đại diện / đồ trang trí của tài khoản `id` vừa đổi (ở tiến trình này hoặc tiến trình khác báo sang):
+  // bỏ bản nhớ tạm rồi vẽ lại mọi phòng có tài khoản đó (kể cả đang giữa ván). av: true = ảnh do chính tiến trình này lưu.
+  function acctChanged(id, { av = false } = {}) {
+    if (wallet && wallet.forget) wallet.forget(id);
+    if (avatars && avatars.refresh && !av) avatars.refresh(id);
+    for (const r of rooms.values()) for (const m of r.members.values()) if (m.acct === id) { broadcastRoom(r); break; }
+  }
+  // Số liệu cho GET /api/health.
+  function load() {
+    let conns = 0, playing = 0;
+    for (const r of rooms.values()) {
+      if (r.match) playing++;
+      for (const m of r.members.values()) conns += m.conns.size;
+    }
+    return { rooms: rooms.size, playing, conns };
+  }
+
+  return { handleConnection, catalog, rooms, acctChanged, load };
 }

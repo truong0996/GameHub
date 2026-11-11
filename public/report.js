@@ -99,7 +99,9 @@ function render(R, from, to) {
       <span class="small muted">Ván được tính khi có ít nhất 2 người đã đăng nhập chơi đến hết. Đăng nhập ở trang chủ Game Hub.</span></div>` + recentHtml(R, g);
     return;
   }
-  const ranked = P.filter(p => p.enough), lead = ranked[0], last = ranked.length > 1 ? ranked[ranked.length - 1] : null;
+  // Server chỉ gửi R.players = top người đứng đầu (R.total = tổng số người) → chỉ biết "đội sổ" khi đã có cả bảng.
+  const all = !R.total || R.total <= P.length;
+  const ranked = P.filter(p => p.enough), lead = ranked[0], last = all && ranked.length > 1 ? ranked[ranked.length - 1] : null;
   const max = Math.max(1, ...P.map(p => Math.abs(p.score)));
   let html = `<div class="rp-sum card"><div class="small muted">${period} · ${F.game ? R.counts[F.game] || 0 : total} ván được tính</div>` +
     (lead ? `<div class="rp-hl"><span>👑 Dẫn đầu: <b>${esc(lead.name)}</b> <span class="sc pos">${signed(lead.score)}</span></span>` +
@@ -124,9 +126,9 @@ function render(R, from, to) {
       <td>${p.games}</td><td>${p.wins}</td><td class="opt">${pct(p.rate)}</td><td class="opt form">${form}</td><td class="l opt">${best || '<span class="muted">—</span>'}</td>
       <td class="opt cr">${p.credits != null ? fmt(p.credits) : ''}</td></tr>`;
   }
-  html += '</tbody></table></div>';
+  html += '</tbody></table>' + (all ? '' : `<div class="small muted center">Hiện ${P.length} người đứng đầu / ${R.total} người chơi trong kỳ.</div>`) + '</div>';
 
-  // đối đầu
+  // đối đầu (server chỉ gửi ma trận của nhóm đứng đầu)
   if (P.length > 1) {
     const H = R.h2h, names = H.ids.map(id => P.find(p => p.id === id).name);
     html += `<div class="card rp-card"><h2>⚔️ Đối đầu</h2><div class="small muted">Ô hàng <b>A</b>, cột <b>B</b> = số ván A xếp trên B – số ván B xếp trên A.</div>

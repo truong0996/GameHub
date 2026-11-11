@@ -42,10 +42,13 @@ export class WebSocketConn extends EventEmitter {
       if (len > MAX_PAYLOAD) return this.close(1009);
       if (!masked) return this.close(1002); // client bắt buộc phải mask
       if (b.length < off + 4 + len) return;
-      const mask = b.subarray(off, off + 4);
+      const mask = b.readUInt32LE(off), mb = b.subarray(off, off + 4);
       off += 4;
       const data = Buffer.from(b.subarray(off, off + len));
-      for (let i = 0; i < len; i++) data[i] ^= mask[i & 3];
+      // Mở khoá theo khối 4 byte (nhanh hơn từng byte), phần lẻ cuối làm từng byte.
+      const n4 = len & ~3;
+      for (let i = 0; i < n4; i += 4) data.writeInt32LE(data.readInt32LE(i) ^ mask, i);
+      for (let i = n4; i < len; i++) data[i] ^= mb[i & 3];
       this.buf = b.subarray(off + len);
       this._frame(fin, op, data);
     }
@@ -68,17 +71,20 @@ export class WebSocketConn extends EventEmitter {
     else this.emit('message', buf.toString('utf8'));
   }
 
+  // Một frame = một buffer: đầu frame + dữ liệu ghi thẳng vào cùng vùng nhớ (chuỗi thì mã hoá UTF-8 ngay tại chỗ, khỏi copy lần hai).
   _send(op, payload) {
     if (!this.open || this.socket.destroyed) return;
-    const len = payload.length;
-    let head;
-    if (len < 126) head = Buffer.from([0x80 | op, len]);
-    else if (len < 65536) { head = Buffer.alloc(4); head[0] = 0x80 | op; head[1] = 126; head.writeUInt16BE(len, 2); }
-    else { head = Buffer.alloc(10); head[0] = 0x80 | op; head[1] = 127; head.writeUInt32BE(0, 2); head.writeUInt32BE(len, 6); }
-    this.socket.write(Buffer.concat([head, payload]));
+    const str = typeof payload === 'string', len = str ? Buffer.byteLength(payload, 'utf8') : payload.length;
+    const hl = len < 126 ? 2 : len < 65536 ? 4 : 10, out = Buffer.allocUnsafe(hl + len);
+    out[0] = 0x80 | op;
+    if (hl === 2) out[1] = len;
+    else if (hl === 4) { out[1] = 126; out.writeUInt16BE(len, 2); }
+    else { out[1] = 127; out.writeUInt32BE(0, 2); out.writeUInt32BE(len, 6); }
+    if (str) out.write(payload, hl, 'utf8'); else payload.copy(out, hl);
+    this.socket.write(out);
   }
 
-  send(str) { this._send(0x1, Buffer.from(str, 'utf8')); }
+  send(str) { this._send(0x1, str); }
   sendBinary(buf) { this._send(0x2, buf); }
   get buffered() { return this.socket.writableLength; }
   ping() { this._send(0x9, Buffer.alloc(0)); }

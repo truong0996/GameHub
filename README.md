@@ -20,7 +20,7 @@ Tạo phòng, rủ bạn bè vào bằng mã 4 chữ, chủ phòng chọn game r
 
 ## Chạy
 
-Cần Node.js 18+. Không cần `npm install`.
+Cần Node.js 22.13+ (dùng SQLite có sẵn trong Node). Không cần `npm install`.
 
 ```bash
 node server.js            # hoặc: npm start
@@ -50,11 +50,19 @@ Chủ phòng **mời người khác ra** được: chọn 🚪 *Mời ra* ở me
 - Ván có **ít nhất 2 người đã đăng nhập** chơi đến hết thì được ghi lại. Mỗi ván cho **điểm từ −1 đến +1** theo việc bạn xếp trên bao nhiêu phần trăm số người cùng bàn (nhất +1, bét −1, bàn đông hay vắng cũng vậy). Ván dài được tính nặng hơn theo thời lượng thật: cứ 10 phút là ×1 (làm tròn 0.5), từ ×1 tới ×3 — ván UNO 3 phút ×1, Cờ Tỷ Phú 30 phút ×3. **Chỉ số** xếp hạng (−100 đến +100) là trung bình có trọng số các ván, cộng thêm 3 ván hoà ảo để vài ván ăn may không vọt lên đầu — xếp theo trung bình nên vắng vài buổi không thiệt cũng không lợi. Dương là đang thắng, âm là đang thua. Bot và khách vẫn chơi cùng được nhưng không có điểm.
 - Trang **`/report`** (nút 🏆 ở trang chủ và trong phòng): bảng xếp hạng theo 7/14/30 ngày hoặc khoảng ngày tuỳ chọn, lọc theo từng game, bảng đối đầu (ai thắng ai), các ván gần đây, và số ván bị chủ phòng bỏ dở giữa chừng. Link giữ nguyên bộ lọc nên gửi cho cả nhóm xem cùng một kỳ được.
 - **Credit & 🛍️ Cửa hàng**: mỗi ván được ghi lại, ai đã đăng nhập cũng nhận credit — thắng hay thua đều có: **10 × trọng số thời lượng** (×1…×3 như trên), **nhất bàn ×1.5**, tối đa **300 credit mỗi ngày**. Ván bỏ dở thì không ai được, không ai bị trừ. Credit dùng mua **đồ trang trí** (khung ảnh, hiệu ứng tên, danh hiệu, khung chat, hiệu ứng thắng, gói biểu cảm; trong game: lưng bài cho UNO/Mèo Nổ/Coup, xúc xắc cho Cờ Cá Ngựa/Cờ Tỷ Phú, mũ cho Kẻ Mạo Danh, khung tranh cho Vẽ Đoán) — chỉ để khoe, **không ảnh hưởng thắng thua**, màu ghế trong game giữ nguyên. Đồ hiện ở phòng chờ, khung chat, bảng xếp hạng; hiệu ứng thắng cả phòng thấy khi bạn nhất bàn. Credit tính lại từ lịch sử ván nên người chơi cũ có sẵn credit.
-- Dữ liệu nằm trong thư mục **`data/`** cạnh `server.js` (`accounts.json` + `matches.jsonl` + `wallet.json` = đồ đã mua; chỉ `matches.jsonl` được đưa lên git). Muốn giữ lịch sử thì luôn chạy hub trên cùng một máy và thỉnh thoảng sao lưu thư mục này. Đổi chỗ lưu bằng `HUB_DATA=<thư mục>`.
+- Dữ liệu nằm trong thư mục **`data/`** cạnh `server.js` (không vào git): **`hub.db`** (SQLite: tài khoản, lịch sử ván, ví/đồ đã mua) + `avatars/`. Lần đầu chạy bản mới, hub tự chuyển các file JSON của bản cũ (`accounts.json`, `matches.jsonl`, `wallet.json`) vào `hub.db` rồi xoá chúng. Muốn giữ lịch sử thì luôn chạy hub trên cùng một máy và thỉnh thoảng sao lưu thư mục này (chép `hub.db` lúc server đang tắt). Đổi chỗ lưu bằng `HUB_DATA=<thư mục>`.
+
+### ⚙️ Chạy cho đông người
+
+Hub tự chạy **mỗi lõi CPU một tiến trình phòng** (`HUB_WORKERS=<n>` để đổi, `1` = một tiến trình). Mỗi phòng nằm trọn trong một tiến trình (chọn theo mã phòng). Tiến trình chính chỉ nhận kết nối rồi chuyển cho đúng tiến trình, dữ liệu dùng chung nằm trong `hub.db`. Trạng thái ván gửi dạng **chỉ phần thay đổi** (delta), bằng ~15–25% dung lượng gửi nguyên trạng thái với game real-time và game theo lượt điển hình. Bảng xếp hạng tính ở luồng nền, nhớ 30 giây, hiện 200 người đứng đầu.
+
+- `GET /api/health`: số phòng/kết nối, % CPU, độ trễ vòng lặp sự kiện, RAM của từng tiến trình.
+- `node tools/load.js <game> [số phòng] [người/phòng] [giây] [port]`: mở hàng loạt phòng có bot để đo tải. Đo trên laptop i7-1260P: 500 phòng Kẻ Mạo Danh (5.000 người + bot, 2.000 kết nối) chạy trên 8 tiến trình, mỗi tiến trình ~80% một lõi, độ trễ p99 ~40ms. Bản một tiến trình cũ bão hoà ở mức đó và chỉ phát được ~1/3 số tin.
+- Trên một máy, tải tăng theo số lõi. Quá sức một máy thì cần thêm máy và một bộ định tuyến theo mã phòng (chưa làm).
 
 ## Triển khai lên Azure (CI/CD)
 
-Bản online chạy trên **Azure Container Apps** (gói consumption, vùng Australia East — policy của subscription chỉ cho phép vùng này): không ai chơi thì app ngủ (gần như miễn phí), người đầu tiên vào phải chờ ~10–20s. Tối đa 1 bản chạy vì phòng nằm trong RAM. Thư mục `data/` của server là một **Azure Files share** (`hubdata`) gắn vào `/app/data`, nên tài khoản, lịch sử ván và ví giữ nguyên qua các lần deploy.
+Bản online chạy trên **Azure Container Apps** (gói consumption, vùng Australia East — policy của subscription chỉ cho phép vùng này): không ai chơi thì app ngủ (gần như miễn phí), người đầu tiên vào phải chờ ~10–20s. Tối đa 1 bản chạy vì phòng nằm trong RAM. Với 0.25 vCPU, bản này chạy 1 tiến trình (`HUB_WORKERS=1`). Thư mục `data/` của server là một **Azure Files share** (`hubdata`) gắn vào `/app/data`, nên tài khoản, lịch sử ván và ví giữ nguyên qua các lần deploy. Ổ mạng SMB không hỗ trợ chế độ WAL của SQLite nên đặt `HUB_DB_WAL=0`.
 
 Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
 - **Mọi push/PR vào `main`**: mô phỏng mọi game bằng bot (`simulate`, 3 ván mỗi game), build Docker image, chạy container rồi `smoke` qua WebSocket.

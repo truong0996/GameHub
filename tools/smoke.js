@@ -2,20 +2,30 @@
 //   node tools/smoke.js [gameId] [port] [giây]
 // Chủ phòng tạo phòng → khách vào bằng mã → ngồi ghế → lấp bot → bắt đầu → khách tự chơi phần của mình
 // → kiểm tra cả 2 đều nhận tin 'game' → khách rớt mạng & vào lại đúng ghế → về phòng chờ.
+import { apply as applyDelta } from '../public/delta.js';
 const [gameId = 'cocangua', port = '3000', secs = '15'] = process.argv.slice(2);
 const URL_WS = `ws://localhost:${port}/ws`;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let failed = false;
 const check = (cond, msg) => { console.log(`${cond ? '✅' : '❌'} ${msg}`); if (!cond) failed = true; };
 
-function client(name) {
-  const ws = new WebSocket(URL_WS);
-  const c = { ws, name, seq: 0, pending: new Map(), room: null, game: null, games: 0, events: {} };
+// code: vào thẳng tiến trình giữ phòng này (server chạy nhiều tiến trình — xem server.js).
+function client(name, code) {
+  const ws = new WebSocket(URL_WS + (code ? '?room=' + code : ''));
+  const c = { ws, name, seq: 0, pending: new Map(), room: null, game: null, games: 0, deltas: 0, events: {} };
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     if (m.t === 'res') { c.pending.get(m.id)?.(m); c.pending.delete(m.id); return; }
     if (m.t === 'room') c.room = m.room;
-    if (m.t === 'game') { c.game = m; c.games++; for (const ev of m.events) c.events[ev.t] = (c.events[ev.t] || 0) + 1; }
+    if (m.t === 'game') {
+      // State đầy đủ hoặc delta so với tin trước (public/delta.js).
+      if (m.ds) {
+        if (!c.game || c.game.matchId !== m.matchId) { console.log('❌ nhận delta khi chưa có state gốc'); failed = true; return; }
+        m.state = applyDelta(c.game.state, m.ds);
+        c.deltas++;
+      }
+      c.game = m; c.games++; for (const ev of m.events) c.events[ev.t] = (c.events[ev.t] || 0) + 1;
+    }
   };
   c.req = (t, data = {}) => new Promise(res => { const id = ++c.seq; c.pending.set(id, res); ws.send(JSON.stringify({ id, t, ...data })); });
   c.ready = new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
@@ -29,9 +39,17 @@ check(created.ok && created.code, `tạo phòng ${created.code}`);
 check((await host.req('selectGame', { game: gameId })).ok, `chọn game ${gameId}`);
 check((await host.req('sit', { seat: 0 })).ok, 'chủ phòng ngồi ghế 0');
 
-const guest = client('Khách');
+// Khách kết nối chưa kèm mã phòng (như từ trang chủ): phòng ở tiến trình khác thì server trả moved → kết nối lại kèm ?room=.
+let guest = client('Khách');
 await guest.ready;
-const joined = await guest.req('join', { code: created.code, name: 'Khách' });
+let joined = await guest.req('join', { code: created.code, name: 'Khách' });
+if (!joined.ok && joined.moved) {
+  console.log('   (phòng ở tiến trình khác → kết nối lại kèm ?room=)');
+  guest.ws.close();
+  guest = client('Khách', created.code);
+  await guest.ready;
+  joined = await guest.req('join', { code: created.code, name: 'Khách' });
+}
 check(joined.ok, 'khách vào phòng bằng mã');
 check((await guest.req('sit', { seat: 1 })).ok, 'khách ngồi ghế 1');
 check(!(await guest.req('start')).ok, 'khách KHÔNG được bắt đầu ván (chỉ chủ phòng)');
@@ -115,12 +133,13 @@ while (Date.now() < end) {
 check(host.games > 1 && guest.games > 1, `cả 2 nhận tin game (chủ ${host.games}, khách ${guest.games})`);
 check(acted > 0, `người chơi gửi được ${acted} hành động`);
 console.log('   sự kiện đã thấy:', JSON.stringify(host.events));
+check(host.games < 3 || host.deltas > 0, `nhận state dạng delta (${host.deltas}/${host.games} tin)`);
 
 // Rớt mạng rồi vào lại
 guest.ws.close();
 await sleep(300);
 check(host.room.seats[1].online === false, 'khách rớt mạng → ghế hiện offline');
-const back = client('Khách');
+const back = client('Khách', created.code);
 await back.ready;
 const rejoin = await back.req('join', { code: created.code, pid: joined.pid });
 await sleep(300);
