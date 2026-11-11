@@ -38,4 +38,6 @@ properties:
       - name: hubdata
         storageType: AzureFile
         storageName: hubdata
-        mountOptions: uid=1000,gid=1000,dir_mode=0700,file_mode=0600
+        # nobrl: SMB không chuyển được khoá byte-range mà SQLite dùng ("database is locked") → để khoá xử lý ngay trong container.
+        # An toàn vì chỉ có 1 bản, 1 tiến trình (HUB_WORKERS=1) ghi hub.db.
+        mountOptions: uid=1000,gid=1000,dir_mode=0700,file_mode=0600,nobrl

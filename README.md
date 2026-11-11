@@ -62,7 +62,7 @@ Hub tự chạy **mỗi lõi CPU một tiến trình phòng** (`HUB_WORKERS=<n>`
 
 ## Triển khai lên Azure (CI/CD)
 
-Bản online chạy trên **Azure Container Apps** (gói consumption, vùng Australia East — policy của subscription chỉ cho phép vùng này): không ai chơi thì app ngủ (gần như miễn phí), người đầu tiên vào phải chờ ~10–20s. Tối đa 1 bản chạy vì phòng nằm trong RAM. Với 0.25 vCPU, bản này chạy 1 tiến trình (`HUB_WORKERS=1`). Thư mục `data/` của server là một **Azure Files share** (`hubdata`) gắn vào `/app/data`, nên tài khoản, lịch sử ván và ví giữ nguyên qua các lần deploy. Ổ mạng SMB không hỗ trợ chế độ WAL của SQLite nên đặt `HUB_DB_WAL=0`.
+Bản online chạy trên **Azure Container Apps** (gói consumption, vùng Australia East — policy của subscription chỉ cho phép vùng này): không ai chơi thì app ngủ (gần như miễn phí), người đầu tiên vào phải chờ ~10–20s. Tối đa 1 bản chạy vì phòng nằm trong RAM. Với 0.25 vCPU, bản này chạy 1 tiến trình (`HUB_WORKERS=1`). Thư mục `data/` của server là một **Azure Files share** (`hubdata`) gắn vào `/app/data`, nên tài khoản, lịch sử ván và ví giữ nguyên qua các lần deploy. Ổ mạng SMB không hỗ trợ chế độ WAL của SQLite nên đặt `HUB_DB_WAL=0`, và share được gắn với `nobrl` (SMB không chuyển được khoá byte-range của SQLite → "database is locked").
 
 Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
 - **Mọi push/PR vào `main`**: mô phỏng mọi game bằng bot (`simulate`, 3 ván mỗi game), build Docker image, chạy container rồi `smoke` qua WebSocket.
