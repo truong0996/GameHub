@@ -8,7 +8,8 @@
 @keyframes lk-hue { to { filter: hue-rotate(1turn); } }
 @keyframes lk-bob { 50% { transform: translate(-50%, -3px) rotate(-12deg); } }
 @keyframes lk-twinkle { 0%, 100% { opacity: .2; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
-@keyframes lk-shine { 0% { left: -60%; } 60%, 100% { left: 130%; } }
+/* vệt sáng lướt qua: phần tử phủ kín cha, chỉ chạy transform (GPU) — chạy `left` thì trình duyệt tính lại layout mỗi khung hình, tốn pin */
+@keyframes lk-shine { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(100%); } }
 @keyframes lk-orbit { from { transform: rotate(0turn) translateX(var(--orb, 30px)) rotate(0turn); } to { transform: rotate(1turn) translateX(var(--orb, 30px)) rotate(-1turn); } }
 
 /* ---------- Khung ảnh: vòng sáng xoay quanh ảnh đại diện ---------- */
@@ -73,8 +74,8 @@ b.lk-nx, .lk-nx { position: relative; background-size: 200% auto; -webkit-backgr
 .lk-ttl.rar-e { background: linear-gradient(135deg, #7b1fe0, #ff2ea6); box-shadow: 0 0 10px rgba(190,40,255,.6); }
 .lk-ttl.rar-l { background: linear-gradient(110deg, #ff5a00, #ffc400, #ff2d6f, #ff5a00); background-size: 250% 100%; animation: lk-slide 2.5s linear infinite;
   box-shadow: 0 0 12px rgba(255,120,0,.75); }
-.lk-ttl.rar-e::after, .lk-ttl.rar-l::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; transform: skewX(-20deg);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); animation: lk-shine 2.4s ease-in-out infinite; }
+.lk-ttl.rar-e::after, .lk-ttl.rar-l::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.75) 50%, transparent 70%); animation: lk-shine 2.4s ease-in-out infinite; }
 .seat-who .lk-ttl { display: table; margin: 3px 0 0; }   /* phòng chờ: danh hiệu xuống dòng dưới tên */
 .cm.me .lk-ttl { display: none; }
 
@@ -108,8 +109,8 @@ b.lk-nx, .lk-nx { position: relative; background-size: 200% auto; -webkit-backgr
 
 /* ---------- Nút cửa hàng + số credit bay lên ---------- */
 .lk-shopbtn { position: relative; overflow: hidden; white-space: nowrap; }
-.lk-shopbtn::after { content: ''; position: absolute; top: 0; bottom: 0; width: 35%; left: -60%; transform: skewX(-20deg);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); animation: lk-shine 3s ease-in-out infinite; }
+.lk-shopbtn::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(110deg, transparent 32%, rgba(255,255,255,.55) 50%, transparent 68%); animation: lk-shine 3s ease-in-out infinite; }
 .room-top .lk-shopbtn { font-size: 15px; padding: 7px 12px; }
 .acct-btns { display: inline-flex; gap: 8px; }
 .floater.lk-gain { font-size: 46px; font-weight: 900; color: #ffb300; -webkit-text-stroke: 1.5px #7a4a00; text-shadow: 0 0 18px rgba(255,200,0,.9), 0 3px 0 #7a4a00;

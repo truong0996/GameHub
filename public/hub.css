@@ -209,8 +209,12 @@ select:disabled, input:disabled { opacity: .75; }
 .vmic { display: inline-block; font-size: 12px; border-radius: 99px; padding: 0 2px; transition: box-shadow .15s; }
 .vmic.talking { background: color-mix(in srgb, var(--primary) 18%, transparent); }
 .vtalk { position: fixed; z-index: 60; pointer-events: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
-  background: var(--surface); border: 1px solid var(--primary); transform: translate(-50%, -150%); animation: vtalk 1s ease-in-out infinite; }
-@keyframes vtalk { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 30%, transparent); } }
+  background: var(--surface); border: 1px solid var(--primary); left: 0; top: 0; }
+.vtalk.moving { transition: transform .12s linear; }   /* voice.js dời 10 lần/giây bằng transform (không tính lại layout) */
+/* vòng nhịp chỉ chạy transform/opacity (GPU) — box-shadow động thì vẽ lại mỗi khung hình, tốn pin điện thoại */
+.vtalk::after { content: ''; position: absolute; inset: -1px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  animation: vtalk 1s ease-in-out infinite; }
+@keyframes vtalk { 0%, 100% { transform: scale(1); opacity: 0; } 50% { transform: scale(1.35); opacity: 1; } }
 /* Lời thoại bay lên tại ghế người gửi */
 .say { position: fixed; z-index: 61; pointer-events: none; max-width: 180px; padding: 6px 11px; border-radius: 12px; background: var(--surface); color: var(--ink);
   border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.18); font-size: 14px; font-weight: 600; text-align: center; overflow-wrap: anywhere;

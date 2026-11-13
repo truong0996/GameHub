@@ -69,6 +69,31 @@ registerProcessor('vr-play', class extends AudioWorkletProcessor {
   }
 });
 `;
+// Bật DTX của Opus trong mô tả của BÊN KIA trước khi setRemoteDescription: tham số fmtp là điều bên nhận muốn, nên trình duyệt
+// mình hiểu là "bên kia muốn DTX" và lúc im lặng chỉ gửi ~2 gói/giây thay vì 50 → đỡ mã hoá, đỡ sóng wifi/4G (pin điện thoại).
+// Sửa mô tả của bên kia là được phép (chỉ mô tả của chính mình mới bị cấm sửa).
+function dtx(sdp) {
+  const pts = [...sdp.matchAll(/^a=rtpmap:(\d+) opus\/48000/gim)].map(m => m[1]);
+  for (const pt of pts) {
+    const re = new RegExp(`^a=fmtp:${pt} (.*)$`, 'm');
+    if (re.test(sdp)) sdp = sdp.replace(re, (l, p) => (/usedtx=/.test(p) ? l : `a=fmtp:${pt} ${p};usedtx=1`));
+    else sdp = sdp.replace(new RegExp(`^(a=rtpmap:${pt} opus/48000.*)$`, 'm'), `$1\r\na=fmtp:${pt} usedtx=1`);
+  }
+  return sdp;
+}
+const withDtx = d => ({ type: d.type, sdp: dtx(d.sdp) });
+
+// Độ to người khác lấy thẳng từ WebRTC (RTP audio level) — khỏi nối tiếng của từng người vào Web Audio chỉ để đo.
+// Gói không mới hơn lần đo trước (DTX đang im) = im lặng. Trình duyệt không có getSynchronizationSources thì vẫn đo bằng Web Audio.
+const SSRC_OK = !!window.RTCRtpReceiver?.prototype?.getSynchronizationSources;
+function rtcLevel(p) {
+  const s = p.recv && p.recv.getSynchronizationSources()[0];
+  if (!s || s.audioLevel == null) return 0;
+  const fresh = s.timestamp !== p.lastTs;
+  p.lastTs = s.timestamp;
+  return fresh ? s.audioLevel : 0;
+}
+
 // Bảng giải mã μ-law → [-1, 1].
 const ULAW = new Float32Array(256).map((_, u) => {
   u = ~u & 255;
@@ -79,11 +104,11 @@ const ULAW = new Float32Array(256).map((_, u) => {
 let o = null;               // { request, post, myUid, anchorOf }
 let room = null;
 let stream = null, actx = null, selfMeter = null, vid = null, joining = false, muted = false;
-const peers = new Map();    // uid → { vid, pc, polite, makingOffer, ignoreOffer, q, audio, meter, timer, relay, node, gain }
+const peers = new Map();    // uid → { vid, pc, polite, makingOffer, ignoreOffer, q, audio, recv, lastTs, meter, timer, relay, node, gain }
 const talkUntil = new Map(); // uid → hết "đang nói" lúc
 const deaf = new Set();     // uid mình tự tắt tiếng (chỉ phía mình)
 let vols = null;            // uid → âm lượng 0..1 do game đặt (vd đàm thoại theo khoảng cách); null = nghe đủ mọi người
-let talkers = new Set(), meterTimer = 0, raf = 0;
+let talkers = new Set(), meterTimer = 0;
 let wl = null;              // Promise<bool>: đã nạp WORKLET vào actx hiện tại
 let cap = null, gateUntil = 0, prevChunk = null;   // thu tiếng gửi qua server
 let mix = null;             // { gain, audio, pcs }: nơi trộn tiếng nhận qua server rồi phát ra loa
@@ -261,6 +286,8 @@ function addPeer(uid, v) {
     p.audio.srcObject = e.streams[0] || new MediaStream([e.track]);
     applyVol(uid, p);
     p.audio.play().catch(() => {});
+    p.recv = e.receiver;
+    if (SSRC_OK) return;
     if (p.meter) p.meter.src.disconnect();
     p.meter = meter(p.audio.srcObject);
   };
@@ -275,7 +302,7 @@ async function handle(uid, p, d) {
     const collision = d.sdp.type === 'offer' && (p.makingOffer || pc.signalingState !== 'stable');
     p.ignoreOffer = !p.polite && collision;
     if (p.ignoreOffer) return;
-    await pc.setRemoteDescription(d.sdp);
+    await pc.setRemoteDescription(withDtx(d.sdp));
     if (d.sdp.type === 'offer') {
       await pc.setLocalDescription();
       signal(uid, p, { sdp: pc.localDescription });
@@ -380,7 +407,7 @@ function mixIn() {
     await a.setLocalDescription();
     await b.setRemoteDescription(a.localDescription);
     await b.setLocalDescription();
-    await a.setRemoteDescription(b.localDescription);
+    await a.setRemoteDescription(withDtx(b.localDescription));   // lúc không ai nói qua server thì vòng này cũng nghỉ
   })().catch(() => play(dest.stream));
   setTimeout(() => { if (b.connectionState !== 'connected') play(dest.stream); }, 3000);
   return gain;
@@ -403,9 +430,14 @@ function level(mt) {
 function measure() {
   const now = Date.now();
   if (selfMeter && !muted && level(selfMeter) > TALK_LEVEL) talkUntil.set(o.myUid(), now + TALK_HOLD);
-  for (const [uid, p] of peers) if (p.meter && volOf(uid) > 0.02 && level(p.meter) > TALK_LEVEL) talkUntil.set(uid, now + TALK_HOLD);
+  for (const [uid, p] of peers) {
+    if (volOf(uid) <= 0.02) continue;
+    const lv = p.meter ? level(p.meter) : !p.relay && p.recv ? rtcLevel(p) : 0;
+    if (lv > TALK_LEVEL) talkUntil.set(uid, now + TALK_HOLD);
+  }
   const next = new Set([...talkUntil].filter(([, t]) => t > now).map(([uid]) => uid));
   if (next.size !== talkers.size || [...next].some(u => !talkers.has(u))) { talkers = next; paintTalk(); }
+  else if (talkers.size) follow();
 }
 
 // Vòng sáng cho mọi phần tử [data-vuid] (ghế ở phòng chờ, chip trong khung chat) + bong bóng 🔊 tại ghế khi đang chơi.
@@ -413,22 +445,23 @@ function paintTalk() {
   if (!stream) talkers = new Set();
   for (const e of document.querySelectorAll('[data-vuid]')) e.classList.toggle('talking', talkers.has(e.dataset.vuid));
   $('#voice-btn').classList.toggle('talking', talkers.has(o.myUid()));
-  if (!raf && talkers.size) raf = requestAnimationFrame(follow);
+  follow();
 }
+// Bong bóng đi theo ghế: cập nhật cùng nhịp đo (10 lần/giây), dời bằng transform + transition ngắn cho mượt —
+// không chạy requestAnimationFrame mỗi khung hình (mỗi lần lại hỏi toạ độ = tính layout, tốn pin điện thoại).
 function follow() {
-  raf = 0;
   const box = $('#voice-talk'), seen = new Set();
   for (const uid of talkers) {
     const m = memberOf(uid), pt = m && m.seat >= 0 ? o.anchorOf(m.seat) : null;
     if (!pt) continue;
     seen.add(uid);
-    let b = box.querySelector(`[data-u="${uid}"]`);
-    if (!b) { b = el('div', 'vtalk', '🔊'); b.dataset.u = uid; box.appendChild(b); }
-    b.style.left = pt.x + 'px';
-    b.style.top = pt.y + 'px';
+    let b = box.querySelector(`[data-u="${uid}"]`), fresh = false;
+    if (!b) { b = el('div', 'vtalk', '🔊'); b.dataset.u = uid; box.appendChild(b); fresh = true; }
+    const tf = `translate(${Math.round(pt.x)}px, ${Math.round(pt.y)}px) translate(-50%, -150%)`;
+    if (b.dataset.tf !== tf) { b.dataset.tf = tf; b.style.transform = tf; }
+    if (fresh) b.getBoundingClientRect(), b.classList.add('moving');   // vừa tạo thì đặt ngay chỗ, không trượt từ góc màn hình
   }
   for (const b of [...box.children]) if (!seen.has(b.dataset.u)) b.remove();
-  if (talkers.size) raf = requestAnimationFrame(follow);
 }
 
 // ---------- giao diện: nút 🎙️ cạnh nút chat + thanh đàm thoại trong khung chat ----------
