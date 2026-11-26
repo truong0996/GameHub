@@ -104,13 +104,13 @@ function render(R, from, to) {
   const ranked = P.filter(p => p.enough), lead = ranked[0], last = all && ranked.length > 1 ? ranked[ranked.length - 1] : null;
   const max = Math.max(1, ...P.map(p => Math.abs(p.score)));
   let html = `<div class="rp-sum card"><div class="small muted">${period} · ${F.game ? R.counts[F.game] || 0 : total} ván hợp lệ</div>` +
-    (lead ? `<div class="rp-hl"><span>👑 Dẫn đầu: ${avImg(lead.av, lead.look)}${nameHtml(lead.name, lead.look)}${titleHtml(lead.look)} <span class="sc pos">${signed(lead.score)}</span></span>` +
-      (last && last.score < lead.score ? `<span>📉 Cuối bảng: ${avImg(last.av, last.look)}${nameHtml(last.name, last.look)} <span class="sc ${last.score < 0 ? 'neg' : ''}">${signed(last.score)}</span></span>` : '') + '</div>'
+    (lead ? `<div class="rp-hl"><span>👑 Dẫn đầu: <span class="rp-pl">${avImg(lead.av, lead.look)}${nameHtml(lead.name, lead.look)}</span>${titleHtml(lead.look)} <span class="sc pos">${signed(lead.score)}</span></span>` +
+      (last && last.score < lead.score ? `<span>📉 Cuối bảng: <span class="rp-pl">${avImg(last.av, last.look)}${nameHtml(last.name, last.look)}</span> <span class="sc ${last.score < 0 ? 'neg' : ''}">${signed(last.score)}</span></span>` : '') + '</div>'
       : `<div class="rp-hl muted">Chưa có người chơi nào đạt tối thiểu ${R.minGames} ván để xếp hạng chính thức.</div>`) + '</div>';
 
   // bảng xếp hạng
   let rank = 0;
-  html += `<div class="card rp-card"><table class="rp-tbl"><thead><tr><th>#</th><th class="l">Người chơi</th><th class="bar-h" title="Thang −100 đến +100: trung bình có trọng số mỗi ván, cộng ${R.prior} ván hoà khởi đầu">Chỉ số</th>
+  html += `<div class="card rp-card"><div class="rp-scroll"><table class="rp-tbl"><thead><tr><th>#</th><th class="l">Người chơi</th><th class="bar-h" title="Thang −100 đến +100: trung bình có trọng số mỗi ván, cộng ${R.prior} ván hoà khởi đầu">Chỉ số</th>
     <th>Số ván</th><th>Thắng</th><th class="opt">Tỉ lệ</th><th class="opt">Phong độ</th><th class="l opt">Sở trường</th>
     <th class="opt" title="Tổng credit khả dụng hiện tại — tích luỹ qua các ván hợp lệ để đổi vật phẩm tại Cửa hàng">💰</th></tr></thead><tbody>`;
   for (const p of P) {
@@ -121,12 +121,12 @@ function render(R, from, to) {
     const best = p.best.map(id => `<span title="${esc(g(id).name)}: thắng ${p.byGame[id].wins}/${p.byGame[id].games}">${g(id).icon}</span>`).join(' ');
     html += `<tr class="${p.enough ? '' : 'few'}" title="${esc(p.name)}: chỉ số ${signed(p.score)} · trung bình ${signed(p.avg)} mỗi ván · thắng ${p.wins}/${p.games} ván${p.enough ? '' : ` · chưa đủ ${R.minGames} ván`}">
       <td class="pos-c">${pos ? MEDAL[pos - 1] || pos : '·'}</td>
-      <td class="l">${avImg(p.av, p.look)}${nameHtml(p.name, p.look)}${titleHtml(p.look)}${p.enough ? '' : ` <span class="guest">Chưa đủ ${R.minGames} ván</span>`}</td>
+      <td class="l"><span class="rp-pl">${avImg(p.av, p.look)}${nameHtml(p.name, p.look)}</span>${titleHtml(p.look)}${p.enough ? '' : ` <span class="guest">Chưa đủ ${R.minGames} ván</span>`}</td>
       <td><div class="bar-c"><div class="bar"><span class="mid"></span>${bar}</div><b class="sc ${p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : ''}">${signed(p.score)}</b></div></td>
       <td>${p.games}</td><td>${p.wins}</td><td class="opt">${pct(p.rate)}</td><td class="opt form">${form}</td><td class="l opt">${best || '<span class="muted">—</span>'}</td>
       <td class="opt cr">${p.credits != null ? fmt(p.credits) : ''}</td></tr>`;
   }
-  html += '</tbody></table>' + (all ? '' : `<div class="small muted center" style="margin-top:8px">Đang hiển thị ${P.length} người dẫn đầu trong tổng số ${R.total} người chơi.</div>`) + '</div>';
+  html += '</tbody></table></div>' + (all ? '' : `<div class="small muted center" style="margin-top:8px">Đang hiển thị ${P.length} người dẫn đầu trong tổng số ${R.total} người chơi.</div>`) + '</div>';
 
   // đối đầu (server chỉ gửi ma trận của nhóm đứng đầu)
   if (P.length > 1) {

@@ -416,14 +416,15 @@ function renderRoom() {
     const info = entry.seats[i];
     const d = el('div', `seat seat-${s.kind}${s.uid && s.uid === ME.uid ? ' mine' : ''}${s.kind === 'human' ? comboCls(s.look) : ''}`);
     d.style.setProperty('--c', info.color);
-    const who = s.kind === 'human' ? `${s.look || s.av ? '' : '👤 '}${nameHtml(s.name, s.look)}${s.uid === ME.uid ? ' (bạn)' : ''}${guestTag(s)}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(ngoại tuyến)</span>'}${titleHtml(s.look)}`
+    const isMe = s.kind === 'human' && s.uid === ME.uid;
+    const who = s.kind === 'human' ? `${s.look || s.av ? '' : '👤 '}${nameHtml(s.name, s.look)}${guestTag(s)}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(ngoại tuyến)</span>'}${titleHtml(s.look)}`
       : s.kind === 'bot' ? `🤖 ${esc(s.name)}`
       : s.kind === 'closed' ? '<span class="muted">🚫 Đã khoá</span>'
       : '<span class="muted">Nhấn để ngồi</span>';
     const av = s.kind === 'human' && s.av;
     const dot = av ? '' : s.kind === 'human' ? esc([...s.name][0] || '?').toUpperCase() : s.kind === 'bot' ? '🤖' : '';
-    const mineAv = s.kind === 'human' && s.uid === ME.uid && ME.user;   // bấm vào chấm của mình → đổi ảnh đại diện
-    d.innerHTML = `${s.kind === 'human' ? comboStage(s.look) : ''}<div class="seat-dot${s.kind === 'human' ? frameCls(s.look) + comboCls(s.look) : ''}${av ? ' has-av' : ''}${mineAv ? ' av-edit' : ''}"${av ? ` style="background-image:url('${esc(av)}')"` : ''}${mineAv ? ' title="Cập nhật ảnh đại diện"' : ''}>${dot}${s.kind === 'human' ? comboFx(s.look) : ''}</div><div><div class="seat-color">${esc(info.name)}${info.label ? ' · ' + esc(info.label) : ''}</div><div class="seat-who">${who}</div></div>`;
+    const mineAv = isMe && ME.user;   // bấm vào chấm của mình → đổi ảnh đại diện
+    d.innerHTML = `${s.kind === 'human' ? comboStage(s.look) : ''}<div class="seat-avcol"><div class="seat-dot${s.kind === 'human' ? frameCls(s.look) + comboCls(s.look) : ''}${av ? ' has-av' : ''}${mineAv ? ' av-edit' : ''}"${av ? ` style="background-image:url('${esc(av)}')"` : ''}${mineAv ? ' title="Cập nhật ảnh đại diện"' : ''}>${dot}${s.kind === 'human' ? comboFx(s.look) : ''}</div>${isMe ? '<span class="seat-you">Bạn</span>' : ''}</div><div class="seat-info"><div class="seat-color">${esc(info.name)}${info.label ? ' · ' + esc(info.label) : ''}</div><div class="seat-who">${who}</div></div>`;
     if (s.kind === 'open') d.onclick = () => { sfx.pop(); act('sit', { seat: i }); };
     if (host) {
       const sel = el('select', 'seat-sel');
@@ -588,7 +589,7 @@ function renderAccount() {
   if (!ME.accounts) return;
   box.innerHTML = u
     ? `<button class="av-me${u.av ? '' : ' none'}${frameCls(look)}${comboCls(look)}" data-av title="${u.av ? 'Đổi' : 'Đặt'} ảnh đại diện">${u.av ? avImg(u.av) : '📷'}${comboFx(look)}</button>` +
-      `<span>${nameHtml(u.name, look)}${titleHtml(look)} <button class="ghost acct-ren" data-ren title="${renameCards() ? `Đổi tên tài khoản (đang có ${renameCards()} thẻ)` : 'Đổi tên tài khoản (cần Thẻ Đổi Tên)'}">✏️</button> <span class="muted small">· Đã bật lưu xếp hạng</span></span>` +
+      `<div class="acct-info"><div class="acct-name">${nameHtml(u.name, look)}${titleHtml(look)}</div><div class="acct-sub"><button class="ghost acct-ren" data-ren title="${renameCards() ? `Đổi tên tài khoản (đang có ${renameCards()} thẻ)` : 'Đổi tên tài khoản (cần Thẻ Đổi Tên)'}">✏️</button> <span class="muted small">· Đã bật lưu xếp hạng</span></div></div>` +
       `<span class="acct-btns"><button class="gold lk-shopbtn" data-shop title="Cửa hàng vật phẩm trang trí — tích luỹ credit qua mỗi ván đấu">🛍️ Cửa hàng · <b>${w ? fmt(w.credits) : '…'}</b> 💰</button>` +
       `<button class="ghost" data-ach title="Thành tựu — hoàn thành thử thách để nhận xu và danh hiệu">🎖️ Thành tựu</button>` +
       `<button class="ghost" data-out>Đăng xuất</button></span>`

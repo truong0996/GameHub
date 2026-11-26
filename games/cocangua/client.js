@@ -8,12 +8,13 @@ const TEMPLATE = `
     <div id="players"></div>
     <div id="g-info" class="infobox"></div>
   </aside>
-  <main id="board-wrap" class="dark">
-    <svg id="board" viewBox="-640 -640 1280 1280"></svg>
+  <main id="board-wrap">
+    <svg id="board" class="dark" viewBox="-640 -640 1280 1280"></svg>
+    <div id="stb-names"></div>
     <div id="weather"></div>
     <div id="dice"><div class="cube"></div></div>
     <div id="dice-mods"></div>
-    <div id="banner"></div>
+    <div id="banner" class="dark"></div>
   </main>
   <aside class="side side-right">
     <div id="status"></div>
@@ -92,6 +93,7 @@ function setGeometry(st) {
   const wrap = $('#board-wrap');
   wrap.style.setProperty('--cx', (-VB.x / VB.s * 100).toFixed(2) + '%');
   wrap.style.setProperty('--cy', (-VB.y / VB.s * 100).toFixed(2) + '%');
+  wrap.style.setProperty('--stb-fs', (23 / VB.s * 100).toFixed(3) + 'cqw');
 }
 const ang = k => (ROT + 360 / N * k) * Math.PI / 180;
 const polar = (r, k) => ({ x: r * Math.cos(ang(k)), y: r * Math.sin(ang(k)) });
@@ -128,7 +130,7 @@ function buildBoard(st) {
     <radialGradient id="gBoard" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#4c7961"/><stop offset="1" stop-color="#2c4c3d"/></radialGradient>
     <radialGradient id="gCenter"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".45"/><stop offset="1" stop-color="#ffd23f" stop-opacity="0"/></radialGradient>
     <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    ${SEATS.map((s, p) => `<radialGradient id="hg${p}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".38" stop-color="${s.color}"/><stop offset="1" stop-color="${shade(s.color, -0.5)}"/></radialGradient>`).join('')}`;
+    ${SEATS.map((s, p) => `<radialGradient id="hg${p}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="${shade(s.color, 0.28)}"/><stop offset=".52" stop-color="${s.color}"/><stop offset="1" stop-color="${shade(s.color, -0.24)}"/></radialGradient>`).join('')}`;
   const bg = S('g', {}, svg);
   S('polygon', { points: poly(ROUT), fill: 'url(#gBoard)', stroke: '#927158', 'stroke-width': 14, 'stroke-linejoin': 'round' }, bg);
   for (let k = 0; k < N; k++) {
@@ -168,33 +170,56 @@ function buildBoard(st) {
     const col = SEATS[p].color, c = stableCenter(p);
     STB[p] = S('circle', { cx: c.x, cy: c.y, r: 60, fill: col, 'fill-opacity': 0.16, stroke: edge(col), 'stroke-width': 3, class: 'stb' }, bg);
     pl.horses.forEach((_, h) => { const q = stablePos(p, h); S('circle', { cx: q.x, cy: q.y, r: 16, fill: 'rgba(42,39,35,.1)', stroke: edge(col), 'stroke-opacity': 0.6 }, bg); });
-    S('text', { x: c.x, y: c.y + Math.sign(c.y) * 82, 'font-size': 24, fill: shade(col, isLight(col) ? -0.6 : -0.42), class: 'lbl lbl-out' }, bg).textContent = pl.name;
   });
+  renderStableNames(st);
   L_SPEC = S('g', {}, svg); L_MET = S('g', {}, svg); L_HINT = S('g', {}, svg); L_HORSE = S('g', {}, svg);
   HE = st.players.map((pl, p) => pl.horses.map((_, h) => makeHorse(p, h)));
   TURN_P = undefined;
   syncHorses(st);
 }
 
+function renderStableNames(st) {
+  const box = $('#stb-names');
+  if (!box || !st || !VB) return;
+  box.innerHTML = '';
+  st.players.forEach((pl, p) => {
+    if (!pl.active) return;
+    const c = stableCenter(p);
+    const x = (c.x - VB.x) / VB.s * 100;
+    const y = (c.y + Math.sign(c.y) * 82 - VB.y) / VB.s * 100;
+    const d = UI.el('div', 'stb-nm' + (p === TURN_P ? ' turn' : ''), CTX.skin.name(p, pl.name, SEATS[p].color));
+    d.dataset.p = p;
+    d.style.left = x.toFixed(2) + '%';
+    d.style.top = y.toFixed(2) + '%';
+    d.style.setProperty('--c', SEATS[p].color);
+    box.appendChild(d);
+  });
+}
+
 function makeHorse(p, h) {
   const g = S('g', { class: 'horse', 'data-p': p, 'data-h': h }, L_HORSE);
   S('circle', { r: 30, fill: 'transparent' }, g); // vùng chạm rộng cho điện thoại
   S('ellipse', { cx: 0, cy: 14, rx: 13, ry: 4, fill: 'rgba(0,0,0,.45)' }, g);
-  S('circle', { class: 'turnc', r: 22, style: `--c:${SEATS[p].color}` }, g);
-  S('circle', { class: 'halo', r: 21 }, g);
-  S('circle', { class: 'shieldc', r: 23 }, g);
+  S('circle', { class: 'turnc', r: 21, style: `--c:${SEATS[p].color}` }, g);
+  S('circle', { class: 'halo', r: 20 }, g);
+  S('circle', { class: 'shieldc', r: 17.5 }, g);
   const body = S('g', { class: 'body' }, g); // nhún nhẹ khi tới lượt (transform của g dùng để đặt vị trí)
-  S('circle', { r: 16, fill: `url(#hg${p})`, stroke: '#fff', 'stroke-width': 2.5 }, body);
+  S('circle', { r: 15.5, fill: 'none', stroke: 'rgba(10,18,14,.72)', 'stroke-width': 5 }, body);
+  S('circle', { r: 15, fill: `url(#hg${p})`, stroke: '#fff', 'stroke-width': 2.2 }, body);
   S('text', { y: 1, class: 'knight' }, body).textContent = KNIGHT;
+  const sb = S('g', { class: 'shield-badge', transform: 'translate(12 -13)' }, body);
+  S('path', { d: 'M0,-6.5 L5.6,-4.2 L5.6,1 C5.6,4.5 2.8,6.7 0,7.9 C-2.8,6.7 -5.6,4.5 -5.6,1 L-5.6,-4.2 Z', fill: '#6beeff', stroke: '#073444', 'stroke-width': 1.8, 'stroke-linejoin': 'round' }, sb);
+  S('path', { d: 'M0,-4.5 L3.3,-3 L3.3,0.8 C3.3,2.8 1.7,4.2 0,5 Z', fill: 'rgba(255,255,255,.45)' }, sb);
   return g;
 }
-// Làm nổi ngựa + chuồng của ghế đang tới lượt (p = null: không ai, vd hết ván); ngựa người khác mờ bớt.
+// Làm nổi ngựa + chuồng của ghế đang tới lượt (p = null: không ai, vd hết ván).
 function markTurn(p) {
   if (!HE || p === TURN_P) return;
   TURN_P = p;
   $('#board').classList.toggle('has-turn', p != null);
   HE.forEach((row, q) => row.forEach(g => g.classList.toggle('turn', q === p)));
   STB.forEach((c, q) => c && c.classList.toggle('turn', q === p));
+  ROOT.querySelectorAll('.stb-nm').forEach(e => e.classList.toggle('turn', +e.dataset.p === p));
   if (p != null && HE[p]) HE[p].forEach(raise); // nằm trên ngựa khác khi chung ô
 }
 function placeHorse(g, x, y, extra) { g._x = x; g._y = y; g.setAttribute('transform', `translate(${x} ${y})${extra ? ' ' + extra : ''}`); }
@@ -216,8 +241,12 @@ function renderSpecials(list) {
     let tip;
     if (s.type === 'portal') {
       const col = s.pair ? '#ff4fd8' : '#00e5ff';
-      S('circle', { r: 16, fill: 'rgba(0,0,0,.55)', stroke: col, 'stroke-width': 3.5, 'stroke-dasharray': '7 4', class: 'spin' }, g);
-      emoji(g, '🌀', 17);
+      S('circle', { r: 18.5, fill: 'rgba(8,12,24,.76)', stroke: col, 'stroke-width': 2.6 }, g);
+      const sp = S('g', { class: 'spin' }, g);
+      S('circle', { r: 12, fill: 'none', stroke: col, 'stroke-width': 1.8, 'stroke-dasharray': '5 5', 'stroke-opacity': 0.85 }, sp);
+      S('circle', { cx: 18.5, cy: 0, r: 3.2, fill: col, stroke: '#fff', 'stroke-width': 1 }, sp);
+      S('circle', { cx: -18.5, cy: 0, r: 3.2, fill: col, stroke: '#fff', 'stroke-width': 1 }, sp);
+      emoji(g, '🌀', 15);
       tip = 'Cổng dịch chuyển: dừng ở đây sẽ bay tới cổng cùng màu!';
     } else if (s.type === 'card') {
       S('circle', { r: 15, fill: '#ffcf3f', stroke: '#fff', 'stroke-width': 2 }, g);
@@ -235,9 +264,12 @@ function renderMeteors(m) {
   L_MET.innerHTML = '';
   if (!m) return;
   for (const c of m.cells) {
-    const q = trackPos(c), g = S('g', { transform: `translate(${q.x} ${q.y})` }, L_MET);
-    S('circle', { r: 22, class: 'm-ring' }, g);
-    emoji(g, '☄️', 16, -30);
+    const q = trackPos(c), g = S('g', { transform: `translate(${q.x} ${q.y})`, class: 'm-cell' }, L_MET);
+    S('circle', { r: 19, class: 'm-glow' }, g);
+    S('path', { d: 'M-19,-11 L-19,-19 L-11,-19 M11,-19 L19,-19 L19,-11 M19,11 L19,19 L11,19 M-11,19 L-19,19 L-19,11', class: 'm-ring' }, g);
+    const b = S('g', { transform: 'translate(-18 -18)', class: 'm-badge' }, g);
+    S('circle', { r: 7, fill: 'rgba(34,10,4,.92)', stroke: '#ff6a2a', 'stroke-width': 1.5 }, b);
+    emoji(b, '☄️', 10, 0.5, 0);
   }
 }
 const clearHint = () => { if (L_HINT) L_HINT.innerHTML = ''; };
@@ -506,6 +538,7 @@ function renderGame() {
   markTurn(GAME.phase === 'over' ? null : GAME.turn);
   if (GAME.turn != null && GAME.phase !== 'over') CTX.skin.set($('#dice'), GAME.turn, 'dice');
   renderPanels();
+  renderStableNames(GAME);
   renderInfo();
   renderControls();
   if (GAME.phase === 'over' && !overShown) showGameOver();
@@ -530,7 +563,7 @@ function renderPanels() {
     const status = pl.kind === 'bot' ? '🤖' : seat && seat.online ? '🟢' : '⚫';
     const ttl = CTX.skin.title(p);
     d.innerHTML = `
-      <div class="p-top">${CTX.skin.face(p)}<span class="p-name">${CTX.skin.name(p, pl.name, SEATS[p].color)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
+      <div class="p-top">${CTX.skin.face(p)}<span class="p-name" title="${esc(pl.name)}">${CTX.skin.name(p, pl.name, SEATS[p].color)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
       ${ttl ? `<div class="p-ttl">${ttl}</div>` : ''}
       <div class="p-sub">${SEATS[p].label} · 🏠${cnt('stable')} 🏇${cnt('track')} 🏁${cnt('home')}${pl.frozen ? ` · ❄️×${pl.frozen}` : ''}</div>
       ${GAME.opts.chaos ? `<div class="p-cards">${pl.cards.map(c => `<span title="${C.CARDS[c].name}: ${C.CARDS[c].desc}">${C.CARDS[c].icon}</span>`).join('') || '<span class="muted small">chưa có thẻ</span>'}</div>` : ''}
@@ -762,7 +795,7 @@ export default {
     timerInt = setInterval(updateTimer, 250);
     return {
       update,
-      onRoom: () => { if (GAME && !playing) renderPanels(); },
+      onRoom: () => { if (GAME && !playing) { renderPanels(); renderStableNames(GAME); } },
       emoteAnchor: seat => (HE && seat >= 0 && GAME.players[seat] && GAME.players[seat].active ? toScreen(stableCenter(seat)) : null),
       unmount() {
         clearInterval(timerInt);

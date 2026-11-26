@@ -10,7 +10,7 @@ const SEATS = [
   { color: '#e0313f', name: 'Đỏ',   horse: 'Xích Thố' },
   { color: '#f254b8', name: 'Hồng', horse: 'Đào Hoa' },
   { color: '#eab80e', name: 'Vàng', horse: 'Kim Phong' },
-  { color: '#23b562', name: 'Lục',  horse: 'Thanh Vân' },
+  { color: '#40e04d', name: 'Lục',  horse: 'Thanh Vân' },
   { color: '#2a85f7', name: 'Lam',  horse: 'Thuỷ Mã' },
   { color: '#9354eb', name: 'Tím',  horse: 'Tử Long' },
 ];

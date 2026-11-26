@@ -8,6 +8,7 @@
 @keyframes lk-hue { to { filter: hue-rotate(1turn); } }
 @keyframes lk-bob { 50% { transform: translate(-50%, -3px) rotate(-12deg); } }
 @keyframes lk-twinkle { 0%, 100% { opacity: .2; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes lk-twinkle-y { 0%, 100% { opacity: .2; transform: translateY(-50%) scale(.6); } 50% { opacity: 1; transform: translateY(-50%) scale(1.15); } }
 /* vệt sáng lướt qua: phần tử phủ kín cha, chỉ chạy transform (GPU) — chạy `left` thì trình duyệt tính lại layout mỗi khung hình, tốn pin */
 @keyframes lk-shine { 0% { transform: translateX(-110%); } 60%, 100% { transform: translateX(110%); } }
 @keyframes lk-orbit { from { transform: translate(-50%, -50%) rotate(0turn) translateX(var(--orb, 29px)) rotate(0turn); } to { transform: translate(-50%, -50%) rotate(1turn) translateX(var(--orb, 29px)) rotate(-1turn); } }
@@ -88,13 +89,13 @@ b.lk-nx, .lk-nx { position: relative; background-size: 200% auto; -webkit-backgr
   animation: lk-slide 2.4s linear infinite; filter: drop-shadow(0 0 4px rgba(255,195,0,.7)) drop-shadow(0 1px 0 rgba(90,60,0,.35)); }
 .lk-nx-fire { background-image: linear-gradient(90deg, #d61c00, #ff6a00, #ffdf5e, #ff3d00, #d61c00);
   animation: lk-slide 1.5s linear infinite; filter: drop-shadow(0 0 6px rgba(255,85,0,.8)) drop-shadow(0 1px 0 rgba(120,20,0,.35)); }
-.lk-nx-xmas { background-image: linear-gradient(90deg, #c23b3b 0%, #e09f1f 28%, #276749 52%, #e09f1f 74%, #c23b3b 100%);
+.lk-nx-xmas { padding-right: 1.05em; background-image: linear-gradient(90deg, #c23b3b 0%, #e09f1f 28%, #276749 52%, #e09f1f 74%, #c23b3b 100%);
   animation: lk-slide 2.6s linear infinite; filter: drop-shadow(0 0 4px rgba(255,210,80,.55)) drop-shadow(0 1px 0 rgba(40,20,10,.25)); }
 .dark .lk-nx-xmas, .sh-hero .lk-nx-xmas, .lk-bb-xmas .lk-nx-xmas {
   background-image: linear-gradient(90deg, #ff6b6b 0%, #ffe066 28%, #63d49b 52%, #ffffff 66%, #ffe066 80%, #ff6b6b 100%);
   filter: drop-shadow(0 0 5px rgba(255,220,110,.7)) drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
-.lk-nx-xmas::after { content: '❄️'; display: inline-block; margin-left: 3px; font-size: .78em; vertical-align: 1px; -webkit-text-fill-color: #dff6ff; color: #dff6ff;
-  filter: drop-shadow(0 0 4px rgba(150,225,255,.9)); animation: lk-twinkle 1.6s ease-in-out infinite; }
+.lk-nx-xmas::after { content: '❄️'; position: absolute; right: 0; top: 50%; font-size: .78em; -webkit-text-fill-color: #dff6ff; color: #dff6ff;
+  filter: drop-shadow(0 0 4px rgba(150,225,255,.9)); animation: lk-twinkle-y 1.6s ease-in-out infinite; }
 /* Huyền thoại (l): đa tầng chuyển động + hào quang mạnh + dấu sao lấp lánh 2 đầu */
 .lk-nx-rainbow { background-image: linear-gradient(90deg, #f0003c, #ff7a00, #e0b000, #00b35a, #0090e0, #6a3dff, #d4009e, #f0003c);
   animation: lk-slide 2.2s linear infinite; filter: drop-shadow(0 0 4px rgba(255,80,180,.38)) drop-shadow(0 1px 0 rgba(0,0,0,.18)); }
@@ -112,7 +113,7 @@ b.lk-nx, .lk-nx { position: relative; background-size: 200% auto; -webkit-backgr
   filter: drop-shadow(0 0 3px #00e5ff); animation: lk-twinkle 1.8s ease-in-out infinite; }
 .lk-nx-rainbow::before, .lk-nx-rainbow::after { -webkit-text-fill-color: #ff3cac; color: #ff3cac; filter: drop-shadow(0 0 3px #ffd23f); }
 .lk-nx-galaxy::after { -webkit-text-fill-color: #ffe08a; color: #ffe08a; font-size: .9em; filter: drop-shadow(0 0 4px #00e5ff) drop-shadow(0 0 7px #7c4dff); }
-.seat-who .lk-nx, .floater .lk-nx, .lk-nx-rainbow, .lk-nx-galaxy { padding-right: 10px; }
+.lk-nx-rainbow, .lk-nx-galaxy { padding-right: 10px; }
 
 /* ---------- Danh hiệu: mỗi danh hiệu một phong cách riêng (.ttl-*), rar-* làm nền dự phòng ---------- */
 .lk-ttl { position: relative; display: inline-block; overflow: hidden; vertical-align: middle; margin-left: 4px; padding: 1px 8px; border-radius: 99px;

@@ -22,31 +22,43 @@
 .ccn .emo { text-anchor: middle; dominant-baseline: central; font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif; pointer-events: none; }
 .ccn .lbl { text-anchor: middle; dominant-baseline: central; font-weight: 800; paint-order: stroke; stroke: rgba(0,0,0,.6); stroke-width: 5px; pointer-events: none; }
 .ccn .lbl-out { stroke: rgba(252,253,249,.92); }
-.ccn .horse .knight { font-size: 21px; fill: #fff; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: rgba(0,0,0,.45); stroke-width: 2px; font-family: 'Segoe UI Symbol', 'DejaVu Sans', 'Noto Sans Symbols2', serif; pointer-events: none; }
+.ccn .horse .knight { font-size: 21px; fill: #fff; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: rgba(0,0,0,.72); stroke-width: 2.6px; font-family: 'Segoe UI Symbol', 'DejaVu Sans', 'Noto Sans Symbols2', serif; pointer-events: none; }
 .ccn .horse .halo { fill: none; stroke: #fff; stroke-width: 3.5; opacity: 0; transform-box: fill-box; transform-origin: center; }
 .ccn .horse.sel { cursor: pointer; }
 .ccn .horse.sel .halo { opacity: 1; animation: ccn-halo .9s ease-in-out infinite; }
 .ccn .horse.sel-opp .halo { stroke: #ff5a5a; }
 @keyframes ccn-halo { 0%,100% { transform: scale(1); opacity: .95; } 50% { transform: scale(1.4); opacity: .2; } }
-/* Ngựa của người đang tới lượt: vòng màu ghế nhấp nháy + nhún nhẹ; ngựa người khác mờ bớt */
-.ccn .horse { transition: opacity .3s; }
-.ccn #board.has-turn .horse:not(.turn) { opacity: .62; }
+/* Ngựa của người đang tới lượt: vòng màu ghế nhấp nháy + nhún nhẹ; ngựa người khác giữ nguyên độ rõ để không bị lẫn với nền ô */
 .ccn .horse .turnc { fill: color-mix(in srgb, var(--c) 30%, transparent); stroke: var(--c); stroke-width: 4; opacity: 0; transform-box: fill-box; transform-origin: center; }
 .ccn .horse.turn .turnc { opacity: 1; animation: ccn-turnc 1.1s ease-in-out infinite; }
 .ccn .horse.turn.sel .turnc { animation: none; opacity: .5; }  /* ngựa đi được đã có vòng trắng riêng */
 .ccn .horse.turn .body { animation: ccn-bob 1.1s ease-in-out infinite; }
 @keyframes ccn-turnc { 0%,100% { transform: scale(1); stroke-width: 4; } 50% { transform: scale(1.22); stroke-width: 2.5; } }
-@keyframes ccn-bob { 50% { transform: translateY(-3px); } }
+@keyframes ccn-bob { 50% { transform: translateY(-3px) scale(1.06); } }
 .ccn .stb { transition: fill-opacity .3s, stroke-width .3s; }
 .ccn .stb.turn { fill-opacity: .32; stroke-width: 6; animation: ccn-stb 1.1s ease-in-out infinite; }
 @keyframes ccn-stb { 50% { stroke-width: 3; stroke-opacity: .55; } }
-.ccn .horse .shieldc { fill: rgba(126,232,255,.16); stroke: #7ee8ff; stroke-width: 2.5; stroke-dasharray: 6 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
-.ccn .horse.shielded .shieldc { opacity: 1; animation: ccn-spin 3s linear infinite; }
+.ccn .horse .shieldc { fill: rgba(126,232,255,.16); stroke: #8cf2ff; stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.ccn .horse.shielded .shieldc { opacity: 1; }
+.ccn .horse .shield-badge { opacity: 0; pointer-events: none; transition: opacity .2s; }
+.ccn .horse.shielded .shield-badge { opacity: 1; }
 .ccn .spin { transform-box: fill-box; transform-origin: center; animation: ccn-spin 4s linear infinite; }
 .ccn .sp-mystery circle { transform-box: fill-box; transform-origin: center; animation: ccn-pulse 1.6s ease-in-out infinite; }
 @keyframes ccn-pulse { 50% { transform: scale(1.15); } }
-.ccn .m-ring { fill: rgba(255,80,20,.2); stroke: #ff5a2a; stroke-width: 3; stroke-dasharray: 6 4; transform-box: fill-box; transform-origin: center; animation: ccn-mpulse .7s ease-in-out infinite alternate; }
-@keyframes ccn-mpulse { to { transform: scale(1.18); fill: rgba(255,80,20,.38); } }
+.ccn .m-glow { fill: rgba(255,80,20,.18); stroke: none; transform-box: fill-box; transform-origin: center; animation: ccn-mpulse .7s ease-in-out infinite alternate; }
+.ccn .m-ring { fill: none; stroke: #ff5a2a; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; transform-box: fill-box; transform-origin: center; animation: ccn-mpulse .7s ease-in-out infinite alternate; }
+@keyframes ccn-mpulse { to { transform: scale(1.14); } }
+
+/* Tên người chơi ở chuồng ngựa (HTML phủ lên để đồng bộ hiệu ứng tên) */
+.ccn #stb-names { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.ccn .stb-nm { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font-size: var(--stb-fs, 1.9cqw); font-weight: 800; line-height: 1.25;
+  padding: .1em .55em; border-radius: 99px; background: color-mix(in srgb, var(--surface) 84%, transparent);
+  border: 1px solid color-mix(in srgb, oklch(from var(--c) min(l, .72) c h) 32%, var(--line));
+  box-shadow: 0 1px 4px rgba(0,0,0,.08); transition: background .25s, border-color .25s, box-shadow .25s; }
+.ccn .stb-nm.turn { background: color-mix(in srgb, var(--c) 14%, var(--surface));
+  border-color: oklch(from var(--c) min(l, .68) c h);
+  box-shadow: 0 0 0 1.5px oklch(from var(--c) min(l, .68) c h), 0 2px 8px rgba(0,0,0,.12); }
+.ccn .stb-nm .lk-nx-rainbow, .ccn .stb-nm .lk-nx-galaxy { padding-right: 10px; }
 .ccn .hint { fill: rgba(255,255,255,.12); stroke: #fff; stroke-width: 2.5; stroke-dasharray: 5 4; transform-box: fill-box; transform-origin: center; animation: ccn-spin 2s linear infinite; pointer-events: none; }
 
 /* Xúc xắc 3D */
@@ -93,8 +105,9 @@
 .ccn .pcard { position: relative; border-radius: 14px; padding: 9px 11px 11px; background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--c); border-left-color: oklch(from var(--c) min(l, .72) c h); transition: transform .2s, box-shadow .2s; }
 .ccn .pcard.active { background: color-mix(in srgb, var(--c) 14%, var(--surface)); box-shadow: 0 0 0 2px var(--c); box-shadow: 0 0 0 2px oklch(from var(--c) min(l, .72) c h); transform: translateX(4px); }
 .ccn .p-top { display: flex; align-items: center; gap: 6px; font-weight: 700; }
-.ccn .p-name { flex: 1; min-width: 0; white-space: nowrap; }
-.ccn .tag { font-size: 10px; background: var(--ink); color: var(--surface); padding: 1px 6px; border-radius: 99px; }
+.ccn .p-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: oklch(from var(--c) min(l, .50) c h); }
+.ccn .tag { flex-shrink: 0; font-size: 10px; background: var(--ink); color: var(--surface); padding: 1px 6px; border-radius: 99px; }
+.ccn .p-top > :last-child { flex-shrink: 0; }
 .ccn .p-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .ccn .p-cards { margin-top: 4px; font-size: 18px; min-height: 22px; letter-spacing: 2px; }
 .ccn .p-cards .muted { letter-spacing: normal; }
@@ -106,6 +119,7 @@
 .ccn .timer i.low { background: var(--danger); }
 .ccn .infobox { font-size: 13px; padding: 8px 10px; border-radius: 12px; background: var(--chip); line-height: 1.5; }
 .ccn #status { font-size: 15px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); min-height: 46px; line-height: 1.35; }
+.ccn #status .lk-nx-rainbow, .ccn #status .lk-nx-galaxy { margin-right: 4px; }
 .ccn #status.mine { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .ccn #btn-roll { width: 100%; }
 .ccn .hand-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
@@ -132,6 +146,6 @@
 
 /* Ảnh đại diện (ctx.skin.face) + danh hiệu trên thẻ người chơi */
 .ccn .p-top :is(.hub-av, .hub-avw) { width: 26px; height: 26px; margin-right: 1px; }
-.ccn .p-top .p-name .lk-nx { padding-right: 10px; }
+.ccn .p-top .p-name :is(.lk-nx-rainbow, .lk-nx-galaxy) { padding-right: 10px; }
 .ccn .p-ttl { margin: 2px 0 -1px; }
 .ccn .p-ttl .lk-ttl { margin-left: 0; font-size: 10px; line-height: 15px; }

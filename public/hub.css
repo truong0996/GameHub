@@ -113,6 +113,9 @@ button.home-pill.has-new::after { content: ''; width: 7px; height: 7px; border-r
 .acct { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: center; padding: 10px 13px; border-radius: 14px;
   background: color-mix(in srgb, var(--chip) 75%, #fff); border: 1px solid var(--line); font-size: 13.5px; }
 .acct.on { background: color-mix(in srgb, var(--primary) 8%, var(--surface)); border-color: color-mix(in srgb, var(--primary) 28%, var(--line)); }
+.acct-info { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; min-width: 0; }
+.acct-name { max-width: 100%; }
+.acct-sub { display: flex; align-items: center; gap: 4px; }
 .acct button { padding: 6px 12px; font-size: 13px; }
 .home-foot { display: flex; justify-content: center; padding-top: 2px; }
 .rank-link { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-weight: 600; text-decoration: none;
@@ -204,6 +207,10 @@ button.home-pill.has-new::after { content: ''; width: 7px; height: 7px; border-r
 .seat-open:hover { transform: translateY(-2px); background: color-mix(in srgb, var(--c) 14%, var(--surface)); box-shadow: 0 6px 16px rgba(39,51,44,.06); }
 .seat-closed { opacity: .48; }
 .seat.mine { box-shadow: 0 0 0 2px var(--primary), 0 6px 18px color-mix(in srgb, var(--primary) 16%, transparent); }
+.seat-avcol { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; }
+.seat-you { font-size: 10.5px; font-weight: 800; line-height: 1.3; padding: 1px 8px; border-radius: 99px;
+  background: var(--primary); color: #fff; letter-spacing: .03em; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.seat-info { flex: 1; min-width: 0; }
 .seat-dot { width: 46px; height: 46px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 800; color: #fff;
   background: var(--c); box-shadow: inset 0 0 0 1.5px rgba(39,51,44,.16), inset 0 -2px 0 rgba(0,0,0,.15); text-shadow: 0 1px 2px rgba(0,0,0,.3);
   color: oklch(from var(--c) calc((.92 - l) * infinity) 0 h); }
