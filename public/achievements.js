@@ -14,6 +14,10 @@ export function initAchievements(o) { O = o; }
 export const myAchievements = () => A;
 export function setAchievements(a) {
   A = a || null;
+  repaintAchievements();
+}
+// Ví đổi (đeo/gỡ danh hiệu, nhận credit...) → vẽ lại modal Thành tựu nếu đang mở (hub gọi trong onChange của ví).
+export function repaintAchievements() {
   if (paintAch && $('#modal .ach')) paintAch(); else paintAch = null;
 }
 

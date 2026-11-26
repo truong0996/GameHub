@@ -82,7 +82,7 @@ const TEMPLATE = `<div class="tp">
         <div id="tp-event"></div>
         <div class="tp-mid">
           <div class="tp-dice"><div class="die lk-df" id="die0"></div><div class="die lk-df" id="die1"></div></div>
-          <div id="tp-status"></div>
+          <div id="tp-status" class="lk-still"></div>
         </div>
         <div class="tp-timer"><i id="tp-timer"></i></div>
         <div id="tp-acts"></div>
@@ -95,7 +95,7 @@ const TEMPLATE = `<div class="tp">
   <aside class="tp-side">
     <div class="tp-shead"><b>🎩 Cờ Tỷ Phú</b><span id="tp-mode" class="muted small"></span></div>
     <div id="tp-players"></div>
-    <div id="tp-log"></div>
+    <div id="tp-log" class="lk-still"></div>
     <div id="tp-emotes"></div>
     <div id="tp-tools"></div>
   </aside>
@@ -169,7 +169,7 @@ function renderPlayers() {
     const badges = [pl.jail ? '🔒' : '', pl.jailCards ? `🔑${pl.jailCards > 1 ? '×' + pl.jailCards : ''}` : '', pl.stock ? `📈${money(pl.stock)}` : '',
       pl.hand.length ? `🃏${pl.hand.length}` : '', sets ? `<span title="Số bộ màu đủ">🏘️${sets}</span>` : ''].filter(Boolean).join(' ');
     const auc = V.phase === 'auction' && V.auc ? (p in V.auc.bids ? ' ✔' : pl.cash >= MIN_BID ? ' ⏳' : '') : '';
-    return `<div class="pl${p === m ? ' me' : ''}${p === dec ? ' turn' : ''}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="pl${p === m ? ' me' : ''}${p === dec ? ' turn' : ' lk-still'}" data-p="${p}" style="--c:${col(p)}">
       <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
       <div class="pl-main">
         <div class="pl-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}${auc}${rank[0].p === p && rank[0].w > (rank[1] || { w: 0 }).w ? ' 👑' : ''}</div>
@@ -789,5 +789,6 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); V = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

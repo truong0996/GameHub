@@ -703,7 +703,7 @@ function paintMeetTimer() {
 // ---------- màn hình lớn: vai trò / chết / đẩy ra / kết thúc ----------
 function full(html, cls = '', ms = 0) {
   const f = $('.mdn-full');
-  f.className = 'mdn-full ' + cls;
+  f.className = 'mdn-full lk-still ' + cls;
   f.innerHTML = html;
   clearTimeout(f._t);
   if (ms) f._t = setTimeout(() => f.classList.add('hidden'), ms);
@@ -916,7 +916,7 @@ export default {
       <div class="mdn-joy hidden"><i></i></div>
       <div class="mdn-task hidden"><div class="mgw"><div class="mg"></div><button class="ghost mg-x" title="Đóng (Esc)">✕</button></div></div>
       <div class="mdn-map hidden"><div class="mm"><div class="mm-head"><b>🗺️ Bản đồ</b><button class="ghost" data-x>✕</button></div><canvas></canvas><div class="sabs hidden"></div></div></div>
-      <div class="mdn-meet hidden"></div>
+      <div class="mdn-meet lk-still hidden"></div>
       <div class="mdn-full hidden"></div>
     </div>`;
     cv = $('.mdn-cv'); g = cv.getContext('2d');

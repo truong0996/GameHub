@@ -72,7 +72,7 @@ const TEMPLATE = `<div class="sk">
       <div id="sk-center"></div>
       <div id="sk-mats"></div>
     </div>
-    <div id="sk-status"></div>
+    <div id="sk-status" class="lk-still"></div>
     <div id="sk-actions"></div>
     <div class="sk-timer"><i id="sk-timer"></i></div>
     <div id="sk-hand"></div>
@@ -80,7 +80,7 @@ const TEMPLATE = `<div class="sk">
   <aside class="sk-side">
     <div class="sk-head"><b>💀 Hoa & Sọ</b><span id="sk-mode" class="muted small"></span></div>
     <div id="sk-omen"></div>
-    <div id="sk-log"></div>
+    <div id="sk-log" class="lk-still"></div>
     <div id="sk-emotes"></div>
     <div id="sk-tools"></div>
   </aside>
@@ -122,7 +122,7 @@ function renderMats() {
     const unfl = st.filter(d => !d.fl), fl = st.filter(d => d.fl);
     const hit = V.flip && V.flip.hit && V.flip.hit.includes(p);
     const ttl = CTX.skin.title(p);
-    return `<div class="mat${asked.includes(p) ? ' turn' : ''}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${flipping ? ' flipping' : ''}${canFlip(p) || (canHaunt() && pl.alive) ? ' can' : ''}${hit ? ' haunted' : ''}"
+    return `<div class="mat${asked.includes(p) ? ' turn' : ' lk-still'}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${flipping ? ' flipping' : ''}${canFlip(p) || (canHaunt() && pl.alive) ? ' can' : ''}${hit ? ' haunted' : ''}"
       data-p="${p}" style="--c:${col(p)};left:${pos[p].x}%;top:${pos[p].y}%">
       <div class="mat-head"><span class="av">${pl.alive ? (SEATS[p].label || '🙂') + CTX.skin.face(p, 'fill') : pl.ghost ? '👻' : '💀'}</span>
         <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${CTX.skin.name(p, pl.name)}${off ? ' 📴' : ''}</span><span class="wins" title="Thử thách đã thắng">${wins}</span></div>
@@ -592,5 +592,6 @@ export default {
       unmount() { clearInterval(timerInt); V = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

@@ -2,7 +2,7 @@
 /* hub.css khoá cuộn ở html/body (height 100% + overflow hidden) → cho chính body cuộn trong khung màn hình */
 .rp { --pos: #358068; --neg: #c66b49; height: 100%; overflow-y: auto; }
 .rp main { position: relative; z-index: 1; width: min(1000px, 96vw); margin: 0 auto; padding: 24px 0 48px; display: flex; flex-direction: column; gap: 15px; }
-.rp .card { background: color-mix(in srgb, var(--surface) 92%, #fff); backdrop-filter: blur(12px);
+.rp .card { background: color-mix(in srgb, var(--surface) 92%, #fff);
   border: 1px solid color-mix(in srgb, var(--line) 85%, #fff); border-radius: 20px;
   box-shadow: 0 4px 12px rgba(39,51,44,.04), 0 16px 38px rgba(45,66,54,.07); }
 .rp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

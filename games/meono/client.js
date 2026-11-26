@@ -71,7 +71,7 @@ const TEMPLATE = `<div class="mn">
       <div id="mn-stage"></div>
       <div class="pile" id="mn-discard"><div class="stack"></div><div class="pile-info" id="mn-discard-info"></div></div>
     </div>
-    <div id="mn-status"></div>
+    <div id="mn-status" class="lk-still"></div>
     <div id="mn-know"></div>
     <div id="mn-actions"></div>
     <div class="mn-timer"><i id="mn-timer"></i></div>
@@ -79,7 +79,7 @@ const TEMPLATE = `<div class="mn">
   </div>
   <aside class="mn-side">
     <div class="mn-head"><b>💣 Mèo Nổ</b><span id="mn-mode" class="muted small"></span></div>
-    <div id="mn-log"></div>
+    <div id="mn-log" class="lk-still"></div>
     <div id="mn-emotes"></div>
     <div id="mn-tools"></div>
   </aside>
@@ -96,7 +96,7 @@ function renderPlayers() {
     const backs = Math.min(pl.count, 8);
     const sub = dead ? (ghost ? `👻 Hồn ma · ${pl.count} 🙅` : '💀 Đã nổ')
       : `${pl.count} lá${ST.turn === p && ST.turnsLeft > 1 ? ` · <b class="warn">⚔️ ${ST.turnsLeft} lượt</b>` : ''}`;
-    return `<div class="pp${p === ST.turn && !dead ? ' turn' : ''}${p === ask ? ' ask' : ''}${dead ? ' dead' : ''}${ghost ? ' ghost' : ''}${p === m ? ' me' : ''}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="pp${p === ST.turn && !dead ? ' turn' : ' lk-still'}${p === ask ? ' ask' : ''}${dead ? ' dead' : ''}${ghost ? ' ghost' : ''}${p === m ? ' me' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="av">${dead ? (ghost ? '👻' : '💀') : (SEATS[p].label || '🐱') + CTX.skin.face(p, 'fill')}</div>
       <div class="pp-body">
         <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
@@ -296,8 +296,8 @@ async function playEvent(e) {
       S.riffle();
       break;
     case 'turn':
-      ROOT.querySelectorAll('.pp.turn').forEach(x => x.classList.remove('turn'));
-      ROOT.querySelector(`.pp[data-p="${e.p}"]`)?.classList.add('turn');
+      ROOT.querySelectorAll('.pp.turn').forEach(x => x.classList.replace('turn', 'lk-still'));
+      ROOT.querySelector(`.pp[data-p="${e.p}"]`)?.classList.replace('lk-still', 'turn');
       log(`<span class="sep">— Lượt của ${who(e.p)}${e.turns > 1 ? ` (còn ${e.turns} lượt)` : ''} —</span>`);
       if (e.p === m) SFX.myTurn();
       break;
@@ -677,5 +677,6 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); ST = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; ST = null; showHelp(); },
 };

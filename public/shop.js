@@ -16,7 +16,8 @@ export const renameCards = () => (W && W.bag && W.bag.cards && W.bag.cards['u-re
 export function setWallet(w) {
   W = w || null;
   if (O) O.onChange();
-  if (paintShop && $('#modal .shop')) paintShop(); else paintShop = null;
+  // modal Thành tựu cũng mang class .shop (mượn giao diện) → loại ra, không thì vẽ nhầm vào cửa hàng đã đóng
+  if (paintShop && $('#modal .shop:not(.ach)')) paintShop(); else paintShop = null;
 }
 export const fmt = n => Number(n || 0).toLocaleString('vi-VN');
 // Biểu cảm thêm từ các gói đã mua (thanh emoji trong game).

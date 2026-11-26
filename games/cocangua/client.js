@@ -10,20 +10,20 @@ const TEMPLATE = `
   </aside>
   <main id="board-wrap">
     <svg id="board" class="dark" viewBox="-640 -640 1280 1280"></svg>
-    <div id="stb-names"></div>
+    <div id="stb-names" class="lk-still"></div>
     <div id="weather"></div>
     <div id="dice"><div class="cube"></div></div>
     <div id="dice-mods"></div>
-    <div id="banner" class="dark"></div>
+    <div id="banner" class="dark lk-still"></div>
   </main>
   <aside class="side side-right">
-    <div id="status"></div>
+    <div id="status" class="lk-still"></div>
     <button id="btn-roll" class="gold big">🎲 Gieo xúc xắc</button>
     <div class="hand-title" id="hand-title">Thẻ kỹ năng của bạn</div>
     <div id="hand"></div>
     <div id="card-hint"></div>
     <div id="emotes"></div>
-    <div id="log"></div>
+    <div id="log" class="lk-still"></div>
     <div id="tools"></div>
   </aside>
 </div>`;
@@ -544,7 +544,7 @@ function renderGame() {
   if (GAME.phase === 'over' && !overShown) showGameOver();
 }
 function setTurnUI(p) {
-  ROOT.querySelectorAll('.pcard').forEach(d => d.classList.toggle('active', +d.dataset.p === p));
+  ROOT.querySelectorAll('.pcard').forEach(d => { const on = +d.dataset.p === p; d.classList.toggle('active', on); d.classList.toggle('lk-still', !on); });
   markTurn(p);
   $('#dice').style.setProperty('--glow', SEATS[p].color);
   CTX.skin.set($('#dice'), p, 'dice');
@@ -557,7 +557,8 @@ function renderPanels() {
     const seat = room.seats[p];
     const cnt = k => pl.horses.filter(h => h.loc === k).length;
     const pct = Math.round(C.scoreOf(GAME, pl) / C.maxScore(GAME, pl) * 100);
-    const d = UI.el('div', 'pcard' + (p === GAME.turn && GAME.phase !== 'over' ? ' active' : ''));
+    // chỉ người đang tới lượt chạy hiệu ứng tên/danh hiệu; thẻ khác đứng yên (lk-still) cho đỡ vẽ lại liên tục
+    const d = UI.el('div', 'pcard' + (p === GAME.turn && GAME.phase !== 'over' ? ' active' : ' lk-still'));
     d.dataset.p = p;
     d.style.setProperty('--c', SEATS[p].color);
     const status = pl.kind === 'bot' ? '🤖' : seat && seat.online ? '🟢' : '⚫';
@@ -804,5 +805,6 @@ export default {
       },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; GAME = null; showHelp(); },
 };

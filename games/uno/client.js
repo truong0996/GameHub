@@ -86,7 +86,7 @@ const TEMPLATE = `<div class="uno">
     <div class="uno-bottom">
       <div id="uno-me"></div>
       <div class="uno-ctl">
-        <div id="uno-status"></div>
+        <div id="uno-status" class="lk-still"></div>
         <div class="uno-timer"><i id="uno-timer"></i></div>
         <div id="uno-actions"></div>
       </div>
@@ -95,7 +95,7 @@ const TEMPLATE = `<div class="uno">
   <aside class="uno-side">
     <div class="uno-head"><b>🎴 UNO</b><span id="uno-mode" class="muted small"></span></div>
     <div id="uno-rules" class="small muted"></div>
-    <div id="uno-log"></div>
+    <div id="uno-log" class="lk-still"></div>
     <div id="uno-emotes"></div>
     <div id="uno-tools"></div>
   </aside>
@@ -121,7 +121,7 @@ function renderOpps() {
   const order = seats.slice(start).concat(seats.slice(0, start)).filter(p => p !== m);
   $('#uno-opps').innerHTML = order.map(p => {
     const pl = P(p);
-    return `<div class="op${p === dec ? ' turn' : ''}${pl.n === 1 ? ' last' : ''}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="op${p === dec ? ' turn' : ' lk-still'}${pl.n === 1 ? ' last' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="op-head"><div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
         <div class="op-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${online(p) ? '' : ' 📴'}
           <div class="op-sub">${V.target ? `<b>${pl.score}</b> điểm` : p === V.dealer ? '🂠 chia bài' : '&nbsp;'}</div></div>
@@ -701,5 +701,6 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); if (pickDone) pickDone(null); pickDone = null; V = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

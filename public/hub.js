@@ -6,7 +6,7 @@ import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sf
 import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
 import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected, voiceVolumes } from './voice.js';
 import { initShop, openShop, openRenameModal, renameCards, setWallet, myWallet, fmt, extraEmotes, nameHtml, titleHtml, frameCls, comboCls, comboFx, comboStage, playFx, creditNotice, skinCls, setSkin, drawHat } from './shop.js';
-import { initAchievements, openAchievements, setAchievements, achNotice } from './achievements.js';
+import { initAchievements, openAchievements, setAchievements, repaintAchievements, achNotice } from './achievements.js';
 import { avImg, openAvatarEditor } from './avatar.js';
 import { apply as applyDelta } from './delta.js';
 
@@ -690,7 +690,7 @@ initShop({
   openAch: () => openAchievements(),
   onRename: u => { if (u) { ME.user = u; localStorage.setItem('hub_name', u.name); } },
   // ví đổi (mua, trang bị, vừa nhận credit) → vẽ lại chỗ hiện số dư/đồ đang mặc
-  onChange: () => { renderAccount(); if (ROOM && !ROOM.playing) renderRoom(); },
+  onChange: () => { renderAccount(); if (ROOM && !ROOM.playing) renderRoom(); repaintAchievements(); },
 });
 initAchievements({
   request: (t, data) => act(t, data),

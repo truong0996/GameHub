@@ -94,7 +94,7 @@ b.lk-nx, .lk-nx { position: relative; background-size: 200% auto; -webkit-backgr
 .dark .lk-nx-xmas, .sh-hero .lk-nx-xmas, .lk-bb-xmas .lk-nx-xmas {
   background-image: linear-gradient(90deg, #ff6b6b 0%, #ffe066 28%, #63d49b 52%, #ffffff 66%, #ffe066 80%, #ff6b6b 100%);
   filter: drop-shadow(0 0 5px rgba(255,220,110,.7)) drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
-.lk-nx-xmas::after { content: '❄️'; position: absolute; right: 0; top: 50%; font-size: .78em; -webkit-text-fill-color: #dff6ff; color: #dff6ff;
+.lk-nx-xmas::after { content: '❄️'; position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-size: .78em; -webkit-text-fill-color: #dff6ff; color: #dff6ff;
   filter: drop-shadow(0 0 4px rgba(150,225,255,.9)); animation: lk-twinkle-y 1.6s ease-in-out infinite; }
 /* Huyền thoại (l): đa tầng chuyển động + hào quang mạnh + dấu sao lấp lánh 2 đầu */
 .lk-nx-rainbow { background-image: linear-gradient(90deg, #f0003c, #ff7a00, #e0b000, #00b35a, #0090e0, #6a3dff, #d4009e, #f0003c);
@@ -114,6 +114,11 @@ b.lk-nx, .lk-nx { position: relative; background-size: 200% auto; -webkit-backgr
 .lk-nx-rainbow::before, .lk-nx-rainbow::after { -webkit-text-fill-color: #ff3cac; color: #ff3cac; filter: drop-shadow(0 0 3px #ffd23f); }
 .lk-nx-galaxy::after { -webkit-text-fill-color: #ffe08a; color: #ffe08a; font-size: .9em; filter: drop-shadow(0 0 4px #00e5ff) drop-shadow(0 0 7px #7c4dff); }
 .lk-nx-rainbow, .lk-nx-galaxy { padding-right: 10px; }
+/* .lk-still: tên/danh hiệu lặp lại nhiều lần (nhật ký ván, dòng trạng thái, chat cũ...) giữ màu hiệu ứng nhưng đứng yên.
+   background-position/filter không chạy trên GPU compositor → mỗi tên đang chạy hiệu ứng bắt trình duyệt vẽ lại mỗi khung hình;
+   vài chục tên trong nhật ký là đủ làm game giật và GPU máy yếu chạy 80%+. Chỗ chính (thẻ người chơi, ghế phòng chờ) vẫn chạy. */
+.lk-still .lk-nx, .lk-still .lk-nx::before, .lk-still .lk-nx::after,
+.lk-still .lk-ttl, .lk-still .lk-ttl::before, .lk-still .lk-ttl::after { animation: none !important; }
 
 /* ---------- Danh hiệu: mỗi danh hiệu một phong cách riêng (.ttl-*), rar-* làm nền dự phòng ---------- */
 .lk-ttl { position: relative; display: inline-block; overflow: hidden; vertical-align: middle; margin-left: 4px; padding: 1px 8px; border-radius: 99px;

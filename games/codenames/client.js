@@ -40,7 +40,7 @@ function renderTeams() {
     const mem = tm.members.map(p => {
       const voted = V.phase === 'guess' && t === V.cur && V.votes[p] != null;
       const room = CTX.room(), off = room && room.seats[p] && !room.seats[p].online;
-      return `<span class="mem${p === me() ? ' me' : ''}${off ? ' off' : ''}" data-p="${p}">${CTX.skin.face(p)}${p === tm.spy ? '🕵️' : P(p).kind === 'bot' ? '🤖' : '🔎'} ${CTX.skin.name(p, P(p).name)}${CTX.skin.title(p)}${voted ? ' <i>✓</i>' : ''}</span>`;
+      return `<span class="mem${p === me() ? ' me' : ''}${cur ? '' : ' lk-still'}${off ? ' off' : ''}" data-p="${p}">${CTX.skin.face(p)}${p === tm.spy ? '🕵️' : P(p).kind === 'bot' ? '🤖' : '🔎'} ${CTX.skin.name(p, P(p).name)}${CTX.skin.title(p)}${voted ? ' <i>✓</i>' : ''}</span>`;
     }).join('');
     const sk = tm.skills.map(s => `<span class="sk${s.used ? ' used' : ''}" title="${esc(SKILLS[s.k].name)} — ${esc(SKILLS[s.k].desc)}">${SKILLS[s.k].icon}</span>`).join('');
     const flags = (tm.out ? '<span class="flag">☠️ Bị loại</span>' : '') + (tm.skip ? '<span class="flag" title="Lật trúng Bom">💣 Mất lượt kế</span>' : '')
@@ -162,7 +162,7 @@ function renderAll() {
 async function banner(html, ms = 1800, cls = '') {
   if (QUICK) return;
   const b = $('#cn-banner');
-  b.className = cls;
+  b.className = ('lk-still ' + cls).trim();   // tên trong banner đứng yên (xem .lk-still ở shop.css)
   b.innerHTML = html;
   void b.offsetWidth;
   b.classList.add('show');
@@ -431,10 +431,10 @@ const TEMPLATE = `<div class="cn">
     <div class="cn-bottom"><div id="cn-emotes" class="grow"></div><div id="cn-tools"></div></div>
   </div>
   <aside class="cn-side">
-    <h3>📜 Các gợi ý</h3><div id="cn-hist" class="cn-hist"></div>
-    <h3>📰 Diễn biến</h3><div id="cn-log" class="cn-log"></div>
+    <h3>📜 Các gợi ý</h3><div id="cn-hist" class="lk-still cn-hist"></div>
+    <h3>📰 Diễn biến</h3><div id="cn-log" class="lk-still cn-log"></div>
   </aside>
-  <div id="cn-banner"></div>
+  <div id="cn-banner" class="lk-still"></div>
 </div>`;
 
 export default {
@@ -469,5 +469,6 @@ export default {
       unmount() { clearInterval(timerInt); V = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

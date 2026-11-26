@@ -82,7 +82,7 @@ const TEMPLATE = `<div class="ig">
         <div id="ig-path"></div>
       </div>
     </div>
-    <div id="ig-status"></div>
+    <div id="ig-status" class="lk-still"></div>
     <div class="ig-timer"><i id="ig-timer"></i></div>
     <div id="ig-actions"></div>
     <div id="ig-charms"></div>
@@ -90,7 +90,7 @@ const TEMPLATE = `<div class="ig">
   <aside class="ig-side">
     <div class="ig-head"><b>💎 Kho Báu Inca</b><span id="ig-mode" class="muted small"></span></div>
     <div id="ig-tent"></div>
-    <div id="ig-log"></div>
+    <div id="ig-log" class="lk-still"></div>
     <div id="ig-emotes"></div>
     <div id="ig-tools"></div>
   </aside>
@@ -110,7 +110,8 @@ function renderPlayers() {
     }
     const tent = pl.tent != null ? `⛺ <b>${pl.tent}</b>` : '⛺ ?';
     const arts = pl.arts.map(a => ARTIFACTS[a.a].icon).join('');
-    return `<div class="pp st-${pl.status}${p === m ? ' me' : ''}${deciding && pl.status === 'in' && !pl.locked ? ' wait' : ''}" data-p="${p}" style="--c:${col(p)}">
+    // mọi người chọn cùng lúc nên không có "người tới lượt" → tên/danh hiệu đều đứng yên (.lk-still, đỡ vẽ lại liên tục)
+    return `<div class="pp st-${pl.status}${p === m ? ' me' : ''}${deciding && pl.status === 'in' && !pl.locked ? ' wait' : ''} lk-still" data-p="${p}" style="--c:${col(p)}">
       <div class="av">${pl.status === 'dead' ? '💀' : SEATS[p].label + CTX.skin.face(p, 'fill')}</div>
       <div class="pp-body">
         <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
@@ -598,5 +599,6 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); V = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

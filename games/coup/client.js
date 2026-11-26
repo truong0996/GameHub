@@ -94,7 +94,7 @@ const TEMPLATE = `<div class="cp">
       <div id="cp-center"></div>
       <div id="cp-mats"></div>
     </div>
-    <div id="cp-status"></div>
+    <div id="cp-status" class="lk-still"></div>
     <div class="cp-timer"><i id="cp-timer"></i></div>
     <div id="cp-actions"></div>
     <div id="cp-hand"></div>
@@ -103,7 +103,7 @@ const TEMPLATE = `<div class="cp">
     <div class="cp-head"><b>🎭 Coup</b><span id="cp-mode" class="muted small"></span></div>
     <div id="cp-roles"></div>
     <div id="cp-event"></div>
-    <div id="cp-log"></div>
+    <div id="cp-log" class="lk-still"></div>
     <div id="cp-emotes"></div>
     <div id="cp-tools"></div>
   </aside>
@@ -141,7 +141,7 @@ function renderMats() {
     const role = Pd && Pd.by === p ? 'actor' : Pd && Pd.t === p ? 'target' : Pd && Pd.block && Pd.block.by === p ? 'blocker' : '';
     const can = targetPick && targetPick.list.includes(p);
       const ttl = CTX.skin.title(p);
-      return `<div class="mat${asked.includes(p) ? ' turn' : ''}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${role ? ' ' + role : ''}${can ? ' can' : ''}${passed ? ' passed' : ''}"
+      return `<div class="mat${asked.includes(p) ? ' turn' : ' lk-still'}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${role ? ' ' + role : ''}${can ? ' can' : ''}${passed ? ' passed' : ''}"
       data-p="${p}" style="--c:${col(p)};left:${pos[p].x}%;top:${pos[p].y}%">
       <div class="mat-head"><span class="av">${pl.alive ? (SEATS[p].label || '🙂') + CTX.skin.face(p, 'fill') : pl.ghost ? '👻' : '💀'}</span>
         <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${CTX.skin.name(p, pl.name)}${off ? ' 📴' : ''}</span>
@@ -754,5 +754,6 @@ export default {
       unmount() { clearInterval(timerInt); V = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

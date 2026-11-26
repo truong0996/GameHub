@@ -93,7 +93,7 @@ const TEMPLATE = `<div class="spl">
       <div id="sp-players"></div>
     </div>
     <div class="sp-ctl">
-      <div id="sp-status"></div>
+      <div id="sp-status" class="lk-still"></div>
       <div class="sp-timer"><i id="sp-timer"></i></div>
       <div id="sp-actions"></div>
     </div>
@@ -102,7 +102,7 @@ const TEMPLATE = `<div class="spl">
     <div class="sp-head"><b>💎 Splendor</b><span id="sp-mode" class="muted small"></span></div>
     <div id="sp-round"></div>
     <div id="sp-obj"></div>
-    <div id="sp-log"></div>
+    <div id="sp-log" class="lk-still"></div>
     <div id="sp-emotes"></div>
     <div id="sp-tools"></div>
   </aside>
@@ -149,7 +149,7 @@ function renderPlayers() {
       pl.obj && !mine ? (pl.obj.hid ? '<span class="chip" title="Mục tiêu bí mật — lật ra cuối ván">🎯 ?</span>'
         : `<span class="chip" title="${UI.esc(`${objInfo(pl.obj, pl).name}: ${objInfo(pl.obj, pl).desc}`)}">${objInfo(pl.obj, pl).icon} ${pl.objDone ? '+' + pl.obj.pts : '✗'}</span>`) : '',
     ].join('');
-    return `<div class="pb${mine ? ' me' : ''}${p === dec ? ' turn' : ''}${p === V.first ? ' first' : ''}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="pb${mine ? ' me' : ''}${p === dec ? ' turn' : ' lk-still'}${p === V.first ? ' first' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="pb-head">
         <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
         <div class="pb-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${mine ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}
@@ -728,5 +728,6 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler, true); V = null; },
     };
   },
-  help(ctx) { CTX = ctx; UI = ctx.ui; showHelp(); },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };
