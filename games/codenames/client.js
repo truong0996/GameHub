@@ -14,7 +14,7 @@ const P = p => (V && p >= 0 ? V.players[p] : null);
 const myTeam = () => (P(me()) ? P(me()).team : -1);
 const tcol = t => TEAMS[t].color;
 const tname = t => `<b class="pn" style="--c:${tcol(t)}">${TEAMS[t].icon} ${TEAMS[t].name}</b>`;
-const who = p => (P(p) ? `<b class="pn" style="--c:${tcol(P(p).team)}">${esc(P(p).name)}</b>` : '?');
+const who = p => (P(p) ? CTX.skin.name(p, P(p).name, tcol(P(p).team)) : '?');
 const isSpy = p => !!P(p) && V.teams[P(p).team].spy === p;
 const amSpy = () => isSpy(me());
 const canClue = () => V && V.phase === 'clue' && V.teams[V.cur].spy === me() && !playing;
@@ -40,7 +40,7 @@ function renderTeams() {
     const mem = tm.members.map(p => {
       const voted = V.phase === 'guess' && t === V.cur && V.votes[p] != null;
       const room = CTX.room(), off = room && room.seats[p] && !room.seats[p].online;
-      return `<span class="mem${p === me() ? ' me' : ''}${off ? ' off' : ''}" data-p="${p}">${CTX.skin.face(p)}${p === tm.spy ? '🕵️' : P(p).kind === 'bot' ? '🤖' : '🔎'} ${esc(P(p).name)}${voted ? ' <i>✓</i>' : ''}</span>`;
+      return `<span class="mem${p === me() ? ' me' : ''}${off ? ' off' : ''}" data-p="${p}">${CTX.skin.face(p)}${p === tm.spy ? '🕵️' : P(p).kind === 'bot' ? '🤖' : '🔎'} ${CTX.skin.name(p, P(p).name)}${CTX.skin.title(p)}${voted ? ' <i>✓</i>' : ''}</span>`;
     }).join('');
     const sk = tm.skills.map(s => `<span class="sk${s.used ? ' used' : ''}" title="${esc(SKILLS[s.k].name)} — ${esc(SKILLS[s.k].desc)}">${SKILLS[s.k].icon}</span>`).join('');
     const flags = (tm.out ? '<span class="flag">☠️ Bị loại</span>' : '') + (tm.skip ? '<span class="flag" title="Lật trúng Bom">💣 Mất lượt kế</span>' : '')
@@ -469,4 +469,6 @@ export default {
       unmount() { clearInterval(timerInt); V = null; },
     };
   },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

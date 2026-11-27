@@ -64,6 +64,8 @@
 .cp .mat-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .cp .av { width: 24px; height: 24px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 14px; background: var(--c); }
 .cp .mat-name { flex: 1; min-width: 0; font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cp .mat-ttl { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cp .mat-ttl .lk-ttl { margin-left: 0; font-size: 9.5px; line-height: 14px; padding: 0 6px; }
 .cp .fac { flex: none; font-size: 12px; padding: 0 4px; border-radius: 99px; background: color-mix(in srgb, var(--f) 55%, transparent); }
 .cp .mat-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 4px 0 2px; }
 .cp .mat-row .coins { font-size: 14px; white-space: nowrap; }

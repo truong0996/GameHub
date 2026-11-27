@@ -11,7 +11,7 @@ function press(e) {
 function render() {
   const me = CTX.me().seat, seats = CTX.game.seats, pad = $('#px-pad');
   const out = ST.early.includes(me);
-  const name = p => UI.esc(ST.players[p].name);
+  const name = p => CTX.skin.name(p, ST.players[p].name, seats[p].color);
   pad.className = ST.phase + (out ? ' out' : '');
   pad.innerHTML = {
     wait: () => (out ? 'BẤM SỚM RỒI 😅<small>Chờ vòng sau</small>' : 'CHỜ ĐÃ...<small>Bấm khi chuyển XANH</small>'),
@@ -22,7 +22,7 @@ function render() {
   $('#px-round').textContent = `Vòng ${ST.round} · về đích ${ST.target} điểm`;
   const best = Math.max(...ST.players.map(p => p.score || 0));
   $('#px-scores').innerHTML = ST.players.map((pl, i) => (!pl.active ? '' :
-    `<div class="sc${i === me ? ' me' : ''}${pl.score === best && best > 0 ? ' lead' : ''}" style="--c:${seats[i].color}">${CTX.skin.face(i)}${pl.kind === 'bot' ? '🤖 ' : ''}${name(i)}<b>${pl.score}</b></div>`)).join('');
+    `<div class="sc${i === me ? ' me' : ''}${pl.score === best && best > 0 ? ' lead' : ''}" style="--c:${seats[i].color}">${CTX.skin.face(i)}${pl.kind === 'bot' ? '🤖 ' : ''}${name(i)}${CTX.skin.title(i)}<b>${pl.score}</b></div>`)).join('');
   if (ST.phase === 'over' && !overShown) {
     overShown = true;
     const host = CTX.me().isHost;

@@ -12,7 +12,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => V.players[p];
 const nm = p => UI.esc(V.players[p] ? V.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#888');
-const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
+const who = p => CTX.skin.name(p, V.players[p] ? V.players[p].name : '?', col(p));
 const seatedList = () => V.players.map((pl, i) => (pl.off ? -1 : i)).filter(i => i >= 0);
 const myHand = () => (mySeat() >= 0 && P(mySeat()).hand) || [];
 const tableOf = () => ({ top: V.top, color: V.color, stack: V.stack, ev: V.ev, opts: V.opts });
@@ -123,7 +123,7 @@ function renderOpps() {
     const pl = P(p);
     return `<div class="op${p === dec ? ' turn' : ''}${pl.n === 1 ? ' last' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="op-head"><div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
-        <div class="op-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${online(p) ? '' : ' 📴'}
+        <div class="op-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${online(p) ? '' : ' 📴'}
           <div class="op-sub">${V.target ? `<b>${pl.score}</b> điểm` : p === V.dealer ? '🂠 chia bài' : '&nbsp;'}</div></div>
         <div class="op-n" title="Số lá trên tay"><b>${pl.n}</b><small>lá</small></div></div>
       ${fanHTML(p)}
@@ -162,7 +162,7 @@ function renderMe() {
   const n = hand.length;
   box.className = `${dec === m ? 'turn' : ''}`;
   box.style.setProperty('--c', col(m));
-  box.innerHTML = `<div class="me-head" data-p="${m}"><div class="av">${SEATS[m].label}${CTX.skin.face(m, 'fill')}</div><b>${nm(m)}</b> <span class="muted small">· ${n} lá${V.target ? ` · ${pl.score} điểm` : ''}</span>
+  box.innerHTML = `<div class="me-head" data-p="${m}"><div class="av">${SEATS[m].label}${CTX.skin.face(m, 'fill')}</div>${CTX.skin.name(m, pl.name, col(m))}${CTX.skin.title(m)} <span class="muted small">· ${n} lá${V.target ? ` · ${pl.score} điểm` : ''}</span>
       ${n === 1 ? '<span class="uno-badge">UNO!</span>' : ''}<div class="bubble"></div></div>
     <div id="uno-hand" style="--n:${n}">${hand.map(c => {
       let cls = '';
@@ -553,7 +553,7 @@ function showGameOver() {
 }
 
 function showHelp() {
-  const chaos = V && V.chaos, o = V ? V.opts : {};
+  const roomOpts = (CTX.room && CTX.room().opts) || {}, chaos = V ? V.chaos : roomOpts.chaos !== false, o = V ? V.opts : roomOpts, target = V ? V.target : (roomOpts.target || 0);
   const cards = Object.values(CARDS).filter(C => chaos || !C.chaos).map(C => `<li><b class="ic">${C.icon}</b> <b>${C.name}</b>${C.chaos ? ' <span class="tag">Bất Ngờ</span>' : ''} — ${C.desc} <span class="muted">(${C.pts}đ)</span></li>`).join('');
   openTagged('help', `<div class="help">
     <h2>📖 Luật chơi — UNO</h2>
@@ -561,7 +561,7 @@ function showHelp() {
       <li>Mỗi người 7 lá. Đến lượt thì đánh 1 lá <b>cùng màu</b> hoặc <b>cùng số/ký hiệu</b> với lá trên cùng; lá đổi màu đánh lúc nào cũng được.</li>
       <li>Không đánh được (hoặc không muốn) thì <b>🂠 Rút bài</b>${o.drawUntil ? ' — rút tới khi được lá đánh được' : ' 1 lá'}; lá rút được mà hợp thì đánh luôn được, không thì bỏ lượt.</li>
       <li>Còn 2 lá, trước khi đánh lá áp chót hãy bấm <b>📣 UNO!</b> (phím U). Quên thì người khác có ${CATCH_MS / 1000} giây để <b>🚨 Bắt lỗi</b> — bị phạt rút 2. Bạn vẫn kịp tự hô trong lúc đó.</li>
-      <li>${V && V.target ? `Hết bài trước thì thắng vòng và được cộng điểm bài còn lại của mọi người (số = điểm số, lá chức năng 20–50). Ai đạt <b>${V.target}</b> điểm trước thắng.` : 'Ai hết bài trước thắng.'}</li>
+      <li>${target ? `Hết bài trước thì thắng vòng và được cộng điểm bài còn lại của mọi người (số = điểm số, lá chức năng 20–50). Ai đạt <b>${target}</b> điểm trước thắng.` : 'Ai hết bài trước thắng.'}</li>
       <li>Mỗi lượt có ${Math.round(CTX.room().turnMs / 1000)} giây — hết giờ máy đánh giúp.</li>
     </ul>
     <h3>Luật nhà đang bật</h3><ul>
@@ -701,4 +701,6 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); if (pickDone) pickDone(null); pickDone = null; V = null; },
     };
   },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

@@ -11,7 +11,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => V.players[p];
 const nm = p => UI.esc(V.players[p] ? V.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#888');
-const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
+const who = p => CTX.skin.name(p, V.players[p] ? V.players[p].name : '?', col(p));
 const whos = ps => ps.map(who).join(', ');
 const seatsIn = () => V.players.map((pl, i) => (pl.active && pl.status === 'in' ? i : -1)).filter(i => i >= 0);
 const hz = h => `${HAZARDS[h].icon} ${HAZARDS[h].name}`;
@@ -113,7 +113,7 @@ function renderPlayers() {
     return `<div class="pp st-${pl.status}${p === m ? ' me' : ''}${deciding && pl.status === 'in' && !pl.locked ? ' wait' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="av">${pl.status === 'dead' ? '💀' : SEATS[p].label + CTX.skin.face(p, 'fill')}</div>
       <div class="pp-body">
-        <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
+        <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
         <div class="pp-sub">${st}</div>
         <div class="pp-gems"><span class="carry" title="Ngọc đang cầm trong hang (mất nếu chết)">💎 <b>${pl.carried}</b></span><span class="tentv" title="Ngọc đã cất trong lều (an toàn, bí mật)">${tent}</span>
           ${arts ? `<span class="arts" title="Cổ vật">${arts}</span>` : ''}${V.chaos && pl.nCharms ? `<span class="nch" title="Số bùa còn lại">✨${pl.nCharms}</span>` : ''}</div>
@@ -505,17 +505,18 @@ function showGameOver() {
 }
 
 function showHelp() {
-  const chaos = V && V.chaos;
+  const o = (CTX.room && CTX.room().opts) || {};
+  const chaos = V ? V.chaos : o.chaos !== false, rounds = V ? V.rounds : (o.rounds || 5);
   const li = obj => Object.values(obj).map(x => `<li>${x.icon} <b>${x.name}</b> — ${x.desc}</li>`).join('');
   openTagged('help', `<div class="help">
     <h2>📖 Luật chơi — Kho Báu Inca</h2>
     <h3>Cơ bản</h3><ul>
-      <li>Có ${V ? V.rounds : 5} ngôi đền (vòng). Mỗi vòng cả đoàn vào hang, mỗi lượt lật 1 lá đường hầm.</li>
+      <li>Có ${rounds} ngôi đền (vòng). Mỗi vòng cả đoàn vào hang, mỗi lượt lật 1 lá đường hầm.</li>
       <li>💎 <b>Kho báu:</b> chia đều cho người đang trong hang, số dư rơi lại trên lá.</li>
       <li>☠️ <b>Hiểm hoạ</b> (${HAZ_KEYS.map(h => HAZARDS[h].icon).join(' ')}): lá đầu tiên của mỗi loại chưa sao. Lá <b>thứ hai cùng loại</b> → ai còn trong hang mất sạch ngọc đang cầm, hết vòng (lá đó bị loại khỏi các vòng sau).</li>
       <li>Sau mỗi lá, mọi người <b>bí mật chọn cùng lúc</b>: ⛏️ Ở lại đào tiếp, hoặc ⛺ Về lều. Về lều thì cất ngọc an toàn (bí mật), và chia đều ngọc rơi trên đường với những người về cùng lượt.</li>
       <li>🏺 <b>Cổ vật:</b> mỗi vòng thêm 1 cái. Chỉ người về <b>một mình</b> mới mang được. 3 cái đầu đáng 5 ngọc, sau đó đáng 10. Bỏ lại trong hang là mất.</li>
-      <li>Hết ${V ? V.rounds : 5} đền, ai nhiều ngọc nhất (lều + cổ vật) thắng. Mỗi lượt có ${Math.round(CTX.room().turnMs / 1000)} giây — hết giờ máy chọn <b>Về</b> giúp.</li>
+      <li>Hết ${rounds} đền, ai nhiều ngọc nhất (lều + cổ vật) thắng. Mỗi lượt có ${Math.round(CTX.room().turnMs / 1000)} giây — hết giờ máy chọn <b>Về</b> giúp.</li>
     </ul>
     ${chaos ? `<h3>🔥 Hỗn Loạn — Bùa (mỗi người 3 bùa, dùng 1 lần, khi đang trong hang và chưa chốt)</h3><ul>${li(CHARMS)}</ul>
     <h3>❔ Lá bí ẩn trong hang</h3><ul>${li(MYSTERY)}</ul>
@@ -597,4 +598,6 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); V = null; },
     };
   },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

@@ -5,7 +5,8 @@ import { $, el, esc, toast, openModal, closeModal, modalOpen, floatAt, initFx } 
 import { sfx, tone, noise, ac, soundOn, musicOn, setSound, setMusic } from './sfx.js';
 import { initChat, showChat, resetChat, chatLog, chatMsg } from './chat.js';
 import { initVoice, voiceRoom, voiceSignal, voiceAudio, voiceReset, voiceReconnected, voiceVolumes } from './voice.js';
-import { initShop, openShop, setWallet, myWallet, fmt, extraEmotes, nameHtml, titleHtml, frameCls, playFx, creditNotice, skinCls, setSkin, drawHat } from './shop.js';
+import { initShop, openShop, openRenameModal, renameCards, setWallet, myWallet, fmt, extraEmotes, nameHtml, titleHtml, frameCls, comboCls, comboStage, playFx, creditNotice, skinCls, setSkin, drawHat } from './shop.js';
+import { initAchievements, openAchievements, setAchievements, repaintAchievements, achNotice } from './achievements.js';
 import { avImg, openAvatarEditor } from './avatar.js';
 import { apply as applyDelta } from './delta.js';
 
@@ -108,7 +109,7 @@ async function onConnected() {
   const token = localStorage.getItem('hub_token');
   if (token && ME.accounts) {
     const a = await net.raw('auth', { token });
-    if (a.ok) { ME.user = a.user; loadWallet(net.raw); }
+    if (a.ok) { ME.user = a.user; loadWallet(net.raw); loadAchievements(net.raw); }
     else if (/hết hạn/.test(a.err || '')) { localStorage.removeItem('hub_token'); ME.user = null; toast('⚠️ ' + esc(a.err)); }
   }
   renderAccount();
@@ -147,6 +148,7 @@ function onMessage(m) {
   else if (m.t === 'rtc') voiceSignal(m);
   else if (m.t === 'kicked' && m.code === ME.code) resetToHome('🚪 Chủ phòng đã mời bạn ra khỏi phòng');
   else if (m.t === 'credit') creditNotice(m);
+  else if (m.t === 'ach') achNotice(m);
   else if (m.t === 'fx') setTimeout(() => playFx(m.fx, fxAnchor(m.seat), m.why !== 'win'), m.delay || 0);
 }
 
@@ -206,6 +208,7 @@ async function pump() {
 async function ensureGame(m) {
   if (current && current.matchId === m.matchId) return current;
   if (current) unmountGame();
+  dropPreviewCss();
   const entry = entryOf(m.game);
   if (!entry) throw new Error('Game lạ: ' + m.game);
   show('loading');
@@ -264,11 +267,19 @@ function makeCtx(cur) {
       set: (node, seat, slot) => setSkin(node, seatLook(seat), slot),
       hat: seat => { const l = seatLook(seat); return (l && l.hat) || null; },
       drawHat,
+      // Tên + danh hiệu theo đồ đang mặc (không có hiệu ứng tên thì giữ màu ghế .pn). Trong ván chúng đứng yên (shop.css, #game-root).
+      name: (seat, text, color) => nameHtml(text, seatLook(seat), color),
+      title: seat => titleHtml(seatLook(seat)),
       // Ảnh đại diện người ngồi ghế seat (bot/khách/chưa đặt = null).
       avatar: seatAv,
-      // face(seat, cls?) → chuỗi HTML <img class="hub-av"> (ẩn khi ghế chưa có ảnh). Luôn trả phần tử để hub cập nhật được khi
-      // người đó đổi ảnh giữa ván. cls 'fill' = phủ kín phần tử cha (cha cần position: relative + bo tròn).
-      face: (seat, cls = '') => { const u = seatAv(seat); return `<img class="hub-av${cls ? ' ' + cls : ''}" data-av="${seat}" alt="" draggable="false"${u ? ` src="${esc(u)}"` : ' hidden'}>`; },
+      // face(seat, cls?) → ảnh đại diện (ẩn khi ghế chưa có ảnh) kèm khung ảnh đang đeo. Luôn có <img class="hub-av"> để hub cập nhật
+      // được khi người đó đổi ảnh giữa ván. cls 'fill' = phủ kín phần tử cha (cha cần position: relative + bo tròn), khung là lớp <i> phủ lên.
+      face: (seat, cls = '') => {
+        const u = seatAv(seat), f = frameCls(seatLook(seat));
+        const img = c => `<img class="hub-av${c}" data-av="${seat}" alt="" draggable="false"${u ? ` src="${esc(u)}"` : ' hidden'}>`;
+        if (cls === 'fill') return img(' fill') + (f ? `<i class="hub-fr${f}" aria-hidden="true"></i>` : '');
+        return f ? `<span class="hub-avw${cls ? ' ' + cls : ''}${f}">${img('')}</span>` : img(cls ? ' ' + cls : '');
+      },
       // img(seat) → HTMLImageElement đã tải xong (vẽ lên canvas) hoặc null (đang tải/không có).
       img: seatAvImg,
     },
@@ -371,19 +382,25 @@ function renderRoom() {
   cur.innerHTML = `<span class="gi">${entry.icon}</span><div class="grow"><div class="gcur-head"><b>${esc(entry.name)}</b>` +
     `<span class="small muted">${esc(entry.tagline)} · ${range(entry)} người</span></div>` +
     `<div class="gdesc">${esc(entry.description)}</div></div>`;
+  const acts = el('div', 'gcur-acts');
+  const hb = el('button', 'ghost gcur-btn', '📖 Luật chơi');
+  hb.title = `Xem luật ${entry.name} theo thiết lập đang chọn`;
+  hb.onclick = () => { sfx.pop(); openGameHelp(entry); };
+  acts.appendChild(hb);
   if (CATALOG.length > 1) {
     const b = el('button', 'ghost gcur-btn', `🎮 ${host ? 'Đổi game' : 'Xem các game'} <span class="muted small">(${CATALOG.length})</span>`);
     if (!host) b.title = `Hub có ${CATALOG.length} trò — chỉ chủ phòng mới đổi được game`;
     b.onclick = () => { sfx.pop(); openGamePicker(); };
-    cur.appendChild(b);
+    acts.appendChild(b);
   }
+  cur.appendChild(acts);
 
   // ghế
   const seats = $('#seats');
   seats.innerHTML = '';
   ROOM.seats.forEach((s, i) => {
     const info = entry.seats[i];
-    const d = el('div', `seat seat-${s.kind}${s.uid && s.uid === ME.uid ? ' mine' : ''}`);
+    const d = el('div', `seat seat-${s.kind}${s.uid && s.uid === ME.uid ? ' mine' : ''}${s.kind === 'human' ? comboCls(s.look) : ''}`);
     d.style.setProperty('--c', info.color);
     const who = s.kind === 'human' ? `${s.look || s.av ? '' : '👤 '}${nameHtml(s.name, s.look)}${s.uid === ME.uid ? ' (bạn)' : ''}${guestTag(s)}${vmic(s.uid)}${s.online ? '' : ' <span class="muted small">(offline)</span>'}${titleHtml(s.look)}`
       : s.kind === 'bot' ? `🤖 ${esc(s.name)}`
@@ -392,7 +409,7 @@ function renderRoom() {
     const av = s.kind === 'human' && s.av;
     const dot = av ? '' : s.kind === 'human' ? esc([...s.name][0] || '?').toUpperCase() : s.kind === 'bot' ? '🤖' : '';
     const mineAv = s.kind === 'human' && s.uid === ME.uid && ME.user;   // bấm vào chấm của mình → đổi ảnh đại diện
-    d.innerHTML = `<div class="seat-dot${s.kind === 'human' ? frameCls(s.look) : ''}${av ? ' has-av' : ''}${mineAv ? ' av-edit' : ''}"${av ? ` style="background-image:url('${esc(av)}')"` : ''}${mineAv ? ' title="Đổi ảnh đại diện"' : ''}>${dot}</div><div><div class="seat-color">${esc(info.name)}${info.label ? ' · ' + esc(info.label) : ''}</div><div class="seat-who">${who}</div></div>`;
+    d.innerHTML = `${s.kind === 'human' ? comboStage(s.look) : ''}<div class="seat-dot${s.kind === 'human' ? frameCls(s.look) + comboCls(s.look) : ''}${av ? ' has-av' : ''}${mineAv ? ' av-edit' : ''}"${av ? ` style="background-image:url('${esc(av)}')"` : ''}${mineAv ? ' title="Đổi ảnh đại diện"' : ''}>${dot}</div><div><div class="seat-color">${esc(info.name)}${info.label ? ' · ' + esc(info.label) : ''}</div><div class="seat-who">${who}</div></div>`;
     if (s.kind === 'open') d.onclick = () => { sfx.pop(); act('sit', { seat: i }); };
     if (host) {
       const sel = el('select', 'seat-sel');
@@ -431,8 +448,8 @@ function renderRoom() {
   const filled = ROOM.seats.filter(s => s.kind === 'human' || s.kind === 'bot').length;
   const watchers = ROOM.members.filter(m => m.seat < 0);
   const hostM = ROOM.members.find(m => m.uid === ROOM.host);
-  $('#room-members').innerHTML = `👑 Chủ phòng: ${avImg(hostM && hostM.av)}${nameHtml(ROOM.hostName, hostM && hostM.look)}` +
-    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => avImg(m.av) + nameHtml(m.name, m.look) + guestTag(m) + vmic(m.uid) + (m.online ? '' : ' (offline)') +
+  $('#room-members').innerHTML = `👑 Chủ phòng: ${avImg(hostM && hostM.av)}${nameHtml(ROOM.hostName, hostM && hostM.look)}${titleHtml(hostM && hostM.look)}` +
+    (watchers.length ? ` · 👀 Đang xem: ${watchers.map(m => avImg(m.av) + nameHtml(m.name, m.look) + titleHtml(m.look) + guestTag(m) + vmic(m.uid) + (m.online ? '' : ' (offline)') +
       (host && m.uid !== ME.uid ? ` <button class="ghost kick" data-kick="${esc(m.uid)}" title="Mời ${esc(m.name)} ra khỏi phòng">✕</button>` : '')).join(', ')}` : '');
   for (const b of $('#room-members').querySelectorAll('[data-kick]')) {
     const m = ROOM.members.find(x => x.uid === b.dataset.kick);
@@ -445,6 +462,31 @@ function renderRoom() {
   $('#room-wait').textContent = host ? (filled < entry.minPlayers ? `Cần ít nhất ${entry.minPlayers} người/bot` : '') : 'Chờ chủ phòng chọn game và bắt đầu...';
   if (pickerPaint && $('#modal .gpick')) pickerPaint(); else pickerPaint = null;
 }
+
+// Luật chơi xem ngay ở phòng chờ (game chưa mount): nạp CSS + client.js của game rồi gọi help(ctx) với thiết lập đang chọn.
+async function openGameHelp(entry) {
+  const href = `/games/${entry.dir}/style.css`;
+  let css = $('#preview-css');
+  if (!css || css.getAttribute('href') !== href) {
+    if (css) css.remove();
+    css = el('link');
+    css.id = 'preview-css';
+    css.rel = 'stylesheet';
+    css.href = href;
+    document.head.appendChild(css);
+    await new Promise(r => { css.onload = css.onerror = r; });
+  }
+  const mod = await import(`/games/${entry.dir}/client.js`);
+  if (typeof (mod.default && mod.default.help) === 'function') {
+    const opts = Object.fromEntries((entry.options || []).map(o => [o.key, o.default]));
+    const same = ROOM && ROOM.game === entry.id;
+    const room = () => ({ ...(ROOM || {}), game: entry.id, opts: same ? { ...opts, ...ROOM.opts } : opts, turnMs: (same && ROOM.turnMs) || entry.turnMs || 25000 });
+    return mod.default.help({ game: entry, ui: UI, room });
+  }
+  const card = openModal(`<div class="help"><h2>📖 Luật chơi — ${esc(entry.name)}</h2><p>${esc(entry.description || entry.tagline)}</p><div class="btns" style="margin-top:16px"><button class="gold" data-x>Đã hiểu</button></div></div>`);
+  card.querySelector('[data-x]').onclick = closeModal;
+}
+const dropPreviewCss = () => { const c = $('#preview-css'); if (c) c.remove(); };
 
 // Bảng chọn game: tìm kiếm (không dấu) + lọc theo thể loại. Game không đủ chỗ cho cả phòng xếp cuối, làm mờ.
 // Người không phải chủ phòng mở ở chế độ chỉ đọc (xem hub có những trò gì). Phòng đổi (đổi game, đổi chủ phòng) thì vẽ lại.
@@ -508,6 +550,7 @@ function openGamePicker() {
 function resetToHome(msg) {
   GQ.length = 0;
   if (current) unmountGame();
+  dropPreviewCss();
   ROOM = null;
   Object.assign(ME, { code: null, pid: null, uid: null });
   sessionStorage.removeItem('hub_session');
@@ -534,28 +577,36 @@ function renderAccount() {
   const w = myWallet(), look = w && w.eq;
   box.innerHTML = u
     ? `<button class="av-me${u.av ? '' : ' none'}" data-av title="${u.av ? 'Đổi' : 'Đặt'} ảnh đại diện">${u.av ? avImg(u.av) : '📷'}</button>` +
-      `<span>🔐 ${nameHtml(u.name, look)}${titleHtml(look)} <span class="muted small">· ván của bạn được tính vào 🏆</span></span>` +
+      `<span>🔐 ${nameHtml(u.name, look)}${titleHtml(look)} <button class="ghost acct-ren" data-ren title="${renameCards() ? `Đổi tên tài khoản (đang có ${renameCards()} thẻ)` : 'Đổi tên tài khoản (cần Thẻ Đổi Tên)'}">✏️</button> <span class="muted small">· ván của bạn được tính vào 🏆</span></span>` +
       `<span class="acct-btns"><button class="gold lk-shopbtn" data-shop title="Cửa hàng đồ trang trí — credit kiếm được sau mỗi ván">🛍️ Cửa hàng · <b>${w ? fmt(w.credits) : '…'}</b> 💰</button>` +
+      `<button class="ghost" data-ach title="Thành tựu — hoàn thành thử thách để nhận xu và danh hiệu">🎖️ Thành tựu</button>` +
       `<button class="ghost" data-out>Đăng xuất</button></span>`
     : '<span class="muted">Đang chơi như khách — không được tính vào 🏆, không nhận credit</span><button data-in>Đăng nhập / Đăng ký</button>';
   if (u) {
     box.querySelector('[data-out]').onclick = logout;
     box.querySelector('[data-shop]').onclick = () => { sfx.pop(); openShop(); };
+    box.querySelector('[data-ach]').onclick = () => { sfx.pop(); openAchievements(); };
+    box.querySelector('[data-ren]').onclick = () => { sfx.pop(); openRenameModal(); };
     box.querySelector('[data-av]').onclick = editAvatar;
   } else box.querySelector('[data-in]').onclick = openLogin;
   paintShopBtn();
 }
-// Nút 🛍️ ở phòng chờ: số dư của mình (khách thì chỉ xem cửa hàng).
+// Nút 🛍️ và 🎖️ ở phòng chờ: số dư của mình (khách thì chỉ xem).
 function paintShopBtn() {
   const b = $('#btn-shop'), w = myWallet();
   b.classList.toggle('hidden', !ME.accounts);
+  $('#btn-ach').classList.toggle('hidden', !ME.accounts);
   b.innerHTML = w ? `🛍️ <b>${fmt(w.credits)}</b> 💰` : '🛍️';
   b.title = w ? 'Cửa hàng đồ trang trí — credit kiếm được sau mỗi ván' : 'Cửa hàng (đăng nhập ở trang chủ để nhận credit)';
 }
-// Ví credit: tải lại sau khi đăng nhập (raw = gửi ngay lúc đang kết nối lại).
+// Ví credit & thành tựu: tải lại sau khi đăng nhập (raw = gửi ngay lúc đang kết nối lại).
 async function loadWallet(send = net.request) {
   const r = await send('shop');
   setWallet(r.ok ? r.wallet : null);
+}
+async function loadAchievements(send = net.request) {
+  const r = await send('achievements');
+  setAchievements(r.ok ? r.ach : null);
 }
 
 function openLogin() {
@@ -577,6 +628,7 @@ function openLogin() {
     closeModal();
     renderAccount();
     loadWallet();
+    loadAchievements();
     toast(t === 'register' ? `🎉 Đã tạo tài khoản <b>${esc(r.user.name)}</b>` : `👋 Chào <b>${esc(r.user.name)}</b>!`);
   };
   card.querySelector('[data-x]').onclick = closeModal;
@@ -606,6 +658,7 @@ async function logout() {
   localStorage.removeItem('hub_token');
   ME.user = null;
   setWallet(null);
+  setAchievements(null);
 }
 
 // ================= KHỞI ĐỘNG =================
@@ -622,8 +675,16 @@ initShop({
   request: (t, data) => act(t, data),
   name: () => (ME.user ? ME.user.name : $('#in-name').value.trim()),
   avatar: () => (ME.user && ME.user.av) || null,
+  openAch: () => openAchievements(),
+  onRename: u => { if (u) { ME.user = u; localStorage.setItem('hub_name', u.name); } },
   // ví đổi (mua, trang bị, vừa nhận credit) → vẽ lại chỗ hiện số dư/đồ đang mặc
-  onChange: () => { renderAccount(); if (ROOM && !ROOM.playing) renderRoom(); },
+  onChange: () => { renderAccount(); if (ROOM && !ROOM.playing) renderRoom(); repaintAchievements(); },
+});
+initAchievements({
+  request: (t, data) => act(t, data),
+  name: () => (ME.user ? ME.user.name : $('#in-name').value.trim()),
+  avatar: () => (ME.user && ME.user.av) || null,
+  openShop: () => openShop(),
 });
 initChat({
   send: text => act('chat', { text }),
@@ -670,6 +731,7 @@ $('#btn-copy').onclick = () => {
 $('#btn-leave').onclick = leaveRoom;
 $('#btn-rank').onclick = () => open('/report', '_blank');
 $('#btn-shop').onclick = () => { sfx.pop(); openShop(); };
+$('#btn-ach').onclick = () => { sfx.pop(); openAchievements(); };
 $('#btn-unsit').onclick = () => act('unsit');
 $('#btn-bots').onclick = () => act('fillBots');
 $('#btn-start').onclick = () => { ac(); act('start'); };

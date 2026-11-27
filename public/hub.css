@@ -79,6 +79,7 @@ select:disabled, input:disabled { opacity: .75; }
 .gcur-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .gcur-head b { font-size: 18px; }
 .gdesc { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.gcur-acts { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 .gcur-btn { flex-shrink: 0; white-space: nowrap; }
 /* bảng "Đổi game": đầu bảng + ô tìm + thể loại đứng yên, danh sách cuộn */
 #modal .card.gpick { width: min(880px, 96vw); height: min(720px, 92vh); display: flex; flex-direction: column; gap: 12px; padding: 18px; overflow: hidden; }
@@ -108,7 +109,7 @@ select:disabled, input:disabled { opacity: .75; }
 .gcard.ro.sel:hover { background: color-mix(in srgb, var(--primary) 8%, var(--surface)); }
 .gp-ro { flex-shrink: 0; padding: 8px 12px; border-radius: 10px; background: var(--chip); border: 1px solid var(--line); color: var(--muted); }
 @media (max-width: 600px) {
-  .gcur { flex-wrap: wrap; } .gcur-btn { width: 100%; }
+  .gcur { flex-wrap: wrap; } .gcur-acts { width: 100%; flex-direction: row; } .gcur-btn { flex: 1; }
   #modal .card.gpick { padding: 14px; height: 94vh; }
   .gp-tags { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }   /* điện thoại: thể loại cuộn ngang, nhường chỗ cho danh sách */
 }
@@ -245,6 +246,10 @@ select:disabled, input:disabled { opacity: .75; }
   box-shadow: none; display: grid; place-items: center; font-size: 18px; overflow: hidden; flex: none; }
 .acct button.av-me .av-img { width: 100%; height: 100%; margin: 0; box-shadow: none; }
 .acct button.av-me.none { border-style: dashed; }
+/* Có khung ảnh: face() bọc <img class="hub-av"> trong .hub-avw (vòng tròn giữ khung); khung là đồ của shop.css (.lk-fr). */
+.hub-avw { position: relative; display: inline-grid; place-items: center; width: 1.55em; height: 1.55em; border-radius: 50%; vertical-align: middle; flex: none; --orb: 1.05em; }
+.hub-avw:has(> .hub-av[hidden]) { display: none !important; }
+.hub-avw > .hub-av { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; margin: 0; }
 /* Trong game: ctx.skin.face(seat) → <img class="hub-av">; 'fill' phủ kín phần tử cha (cha: position relative + bo tròn). */
 .hub-av { width: 1.5em; height: 1.5em; border-radius: 50%; object-fit: cover; vertical-align: middle; flex: none; background: var(--chip);
   box-shadow: 0 0 0 2px var(--c, var(--line)); }

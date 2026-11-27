@@ -29,6 +29,7 @@ import { createStats } from './hub/stats.js';
 import { createWallet } from './hub/wallet.js';
 import { createAvatars } from './hub/avatars.js';
 import { createReporter } from './hub/report.js';
+import { createAchievements } from './hub/achievements.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(ROOT, 'public');
@@ -166,9 +167,10 @@ async function worker(shard) {
   const db = openDb(DATA);
   if (!MULTI) migrateLegacy(db, DATA);
   const accounts = createAccounts(db), stats = createStats(db), wallet = createWallet(db), avatars = createAvatars(DATA);
+  const achievements = createAchievements(db, { wallet });
   const reporter = createReporter(DATA, gameInfo);
   let publicUrl = null, loads = [];
-  const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl, accounts, stats, wallet, avatars,
+  const hub = createHub({ games, lanUrls, publicUrl: () => publicUrl, accounts, stats, wallet, avatars, achievements,
     shard, shards: WORKERS, onAcct: id => { if (MULTI) process.send({ t: 'acct', id }); } });
 
   // Độ trễ vòng lặp sự kiện (p99) — tiến trình quá tải thì số này tăng trước tiên.

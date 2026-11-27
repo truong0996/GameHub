@@ -10,7 +10,8 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { weightOf, scoreRows } from './stats.js';
 import { creditOf, dayOf } from './wallet.js';
-import { ITEM, WEAR } from '../public/shop-data.js';
+import { COSMETIC, WEAR } from '../public/shop-data.js';
+import { ACHIEVEMENT } from '../public/achievements-data.js';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, nkey TEXT NOT NULL UNIQUE, salt TEXT NOT NULL, hash TEXT NOT NULL, at INTEGER);
@@ -29,7 +30,10 @@ CREATE TABLE IF NOT EXISTS mp (mid INTEGER NOT NULL, acct TEXT NOT NULL, at INTE
 CREATE INDEX IF NOT EXISTS mp_acct ON mp(acct, at);
 CREATE INDEX IF NOT EXISTS mp_at ON mp(at);
 CREATE INDEX IF NOT EXISTS mp_mid ON mp(mid);
-CREATE TABLE IF NOT EXISTS wallet (acct TEXT PRIMARY KEY, owned TEXT NOT NULL, eq TEXT NOT NULL, spent INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS wallet (acct TEXT PRIMARY KEY, owned TEXT NOT NULL, eq TEXT NOT NULL, spent INTEGER NOT NULL, bag TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS achievements (acct TEXT NOT NULL, id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (acct, id));
+CREATE TABLE IF NOT EXISTS ach_prog (acct TEXT NOT NULL, k TEXT NOT NULL, v INTEGER NOT NULL, PRIMARY KEY (acct, k));
+CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 `;
 
 export const dbFile = dir => path.join(dir, 'hub.db');
@@ -43,6 +47,8 @@ export function openDb(dir, { readOnly = false } = {}) {
     db.exec(`PRAGMA journal_mode = ${process.env.HUB_DB_WAL === '0' ? 'DELETE' : 'WAL'}`);
     db.exec('PRAGMA synchronous = NORMAL');
     db.exec(SCHEMA);
+    const cols = db.prepare('PRAGMA table_info(wallet)').all().map(c => c.name);
+    if (!cols.includes('bag')) db.exec("ALTER TABLE wallet ADD COLUMN bag TEXT NOT NULL DEFAULT '{}'");
   }
   db.function('w', { deterministic: true }, dur => weightOf(dur));
   db.function('credit', { deterministic: true }, (dur, rank) => creditOf({ dur }, { acct: 1, rank }));
@@ -106,9 +112,9 @@ export function migrateLegacy(db, dir) {
       const ins = db.prepare('INSERT INTO wallet (acct, owned, eq, spent) VALUES (?, ?, ?, ?)');
       for (const [acct, u] of Object.entries(old.users || {})) {
         // Làm sạch như bản cũ: bỏ món không còn bán, spent hỏng thì tính lại theo giá các món đang có.
-        const owned = (Array.isArray(u.owned) ? u.owned : []).filter(id => ITEM[id]);
+        const owned = (Array.isArray(u.owned) ? u.owned : []).filter(id => COSMETIC(id));
         const eq = Object.fromEntries(Object.entries(u.eq || {}).filter(([s, id]) => WEAR.includes(s) && owned.includes(id)));
-        const spent = Number.isFinite(u.spent) ? u.spent : owned.reduce((s, id) => s + ITEM[id].price, 0);
+        const spent = Number.isFinite(u.spent) ? u.spent : owned.reduce((s, id) => s + ((COSMETIC(id) && COSMETIC(id).price) || 0), 0);
         ins.run(acct, JSON.stringify(owned), JSON.stringify(eq), spent);
       }
     });
@@ -116,4 +122,38 @@ export function migrateLegacy(db, dir) {
     log.push(`${Object.keys(old.users || {}).length} ví`);
   }
   if (log.length) console.log(`   [db] đã chuyển dữ liệu cũ vào hub.db: ${log.join(', ')}`);
+  migrateShopV2(db);
+}
+
+const SHOP_MIGRATION = 'shop_refund_v2';
+// Chạy một lần khi triển khai bản mới: hoàn 100% xu đã tiêu (spent = 0) và xoá toàn bộ đồ cửa hàng đã mua để người chơi mua lại từ đầu.
+export function migrateShopV2(db) {
+  tx(db, () => {
+    if (db.prepare('SELECT 1 FROM meta WHERE k = ?').get(SHOP_MIGRATION)) return;
+    const rows = db.prepare('SELECT acct, owned, eq, spent, bag FROM wallet').all();
+    const upd = db.prepare('UPDATE wallet SET owned = ?, eq = ?, spent = 0, bag = ? WHERE acct = ?');
+    const achStmt = db.prepare('SELECT id FROM achievements WHERE acct = ?');
+    let n = 0;
+    for (const r of rows) {
+      const achTitles = new Set();
+      for (const a of achStmt.all(r.acct)) {
+        const def = ACHIEVEMENT[a.id];
+        if (def && def.title) achTitles.add(def.title.id);
+      }
+      let oldOwned = [], oldEq = {};
+      try { oldOwned = JSON.parse(r.owned); } catch {}
+      try { oldEq = JSON.parse(r.eq); } catch {}
+      const prevOwned = Array.isArray(oldOwned) ? oldOwned : [];
+      const nextOwned = [...new Set([...prevOwned.filter(id => achTitles.has(id)), ...achTitles])];
+      const nextEq = oldEq && oldEq.title && achTitles.has(oldEq.title) ? { title: oldEq.title } : {};
+      const changed = (r.spent || 0) !== 0 || JSON.stringify(nextOwned) !== JSON.stringify(prevOwned) ||
+        JSON.stringify(nextEq) !== JSON.stringify(oldEq || {}) || (r.bag && r.bag !== '{}');
+      if (changed) {
+        upd.run(JSON.stringify(nextOwned), JSON.stringify(nextEq), '{}', r.acct);
+        n++;
+      }
+    }
+    db.prepare('INSERT INTO meta (k, v) VALUES (?, ?)').run(SHOP_MIGRATION, String(Date.now()));
+    if (n) console.log(`   [db] đã hoàn 100% xu & xoá đồ cửa hàng cho ${n} tài khoản (${SHOP_MIGRATION})`);
+  });
 }

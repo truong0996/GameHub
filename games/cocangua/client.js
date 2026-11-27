@@ -40,7 +40,7 @@ const esc = s => UI.esc(s);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const mySeat = () => CTX.me().seat;
 const canAct = () => !!GAME && !playing && !pending && GAME.phase !== 'over' && mySeat() >= 0 && GAME.turn === mySeat();
-const nm = p => (p == null ? '???' : `<b class="pn" style="--c:${SEATS[p].color}">${esc(NAMES[p] || SEATS[p].name)}</b>`);
+const nm = p => (p == null ? '???' : CTX.skin.name(p, NAMES[p] || SEATS[p].name, SEATS[p].color));
 function S(tag, attrs, parent) {
   const e = document.createElementNS(SVGNS, tag);
   for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -527,9 +527,11 @@ function renderPanels() {
     const d = UI.el('div', 'pcard' + (p === GAME.turn && GAME.phase !== 'over' ? ' active' : ''));
     d.dataset.p = p;
     d.style.setProperty('--c', SEATS[p].color);
+    const ttl = CTX.skin.title(p);
     const status = pl.kind === 'bot' ? '🤖' : seat && seat.online ? '🟢' : '⚫';
     d.innerHTML = `
-      <div class="p-top">${CTX.skin.face(p)}<span class="p-name pn">${esc(pl.name)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
+      <div class="p-top">${CTX.skin.face(p)}<span class="p-name" title="${esc(pl.name)}">${CTX.skin.name(p, pl.name, SEATS[p].color)}</span>${p === me ? '<span class="tag">BẠN</span>' : ''}<span title="${pl.kind === 'bot' ? 'Bot' : seat && seat.online ? 'Đang online' : 'Mất kết nối'}">${status}</span></div>
+      ${ttl ? `<div class="p-ttl">${ttl}</div>` : ''}
       <div class="p-sub">${SEATS[p].label} · 🏠${cnt('stable')} 🏇${cnt('track')} 🏁${cnt('home')}${pl.frozen ? ` · ❄️×${pl.frozen}` : ''}</div>
       ${GAME.opts.chaos ? `<div class="p-cards">${pl.cards.map(c => `<span title="${C.CARDS[c].name}: ${C.CARDS[c].desc}">${C.CARDS[c].icon}</span>`).join('') || '<span class="muted small">chưa có thẻ</span>'}</div>` : ''}
       <div class="p-bar"><i style="width:${pct}%"></i></div>
@@ -676,12 +678,13 @@ function doRoll() {
 }
 
 function showHelp() {
+  const o = (GAME && GAME.opts) || (CTX.room().opts || {}), chaos = o.chaos !== false;
   const cards = Object.values(C.CARDS).map(c => `<li>${c.icon} <b>${c.name}</b> — ${c.desc}</li>`).join('');
   const myst = Object.values(C.MYSTERY).map(c => `${c.icon} ${c.name}`).join(' · ');
   const evs = Object.values(C.EVENTS).map(c => `<li>${c.icon} <b>${c.name}</b> — ${c.desc}</li>`).join('');
   UI.openModal(`<div class="help">
-    <h2>📖 Luật chơi — Lục Mã Hỗn Chiến</h2>
-    <h3>Cơ bản (cờ cá ngựa Việt Nam)</h3>
+    <h2>📖 Luật chơi — Cờ Cá Ngựa <small class="muted" style="font-size:13px;font-weight:500">(Lục Mã Hỗn Chiến)</small></h2>
+    <h3>Cơ bản (${o.home === 'classic' ? 'đang bật Truyền thống' : 'đang bật Nhanh'}${o.block === false ? ', không cản' : ', có luật cản'})</h3>
     <ul>
       <li>Bàn cờ đổi hình theo số người: 2 người — bàn vuông ngồi đối diện, 3 — tam giác, 4 — vuông, 5 — ngũ giác, 6 — lục giác. Càng ít người đường đua càng ngắn.</li>
       <li>Mỗi người có 2–4 ngựa trong chuồng. Gieo <b>1 hoặc 6</b> để xuất quân ra ô ★ màu của mình.</li>
@@ -694,7 +697,7 @@ function showHelp() {
       <li><b>Chiến thắng:</b> lấp đầy các bậc cao nhất (vd 3 ngựa → bậc 4, 5, 6 — các bậc sáng hơn).</li>
       <li>Mỗi lượt có 30 giây. Hết giờ hoặc mất mạng, máy sẽ tự đi giúp.</li>
     </ul>
-    <h3>🔥 Chế độ Hỗn Loạn</h3>
+    ${chaos ? `<h3>🔥 Chế độ Hỗn Loạn</h3>
     <ul>
       <li>🎁 <b>Ô quà</b> — nhận 1 thẻ kỹ năng. Đá được ngựa đối thủ cũng được 1 thẻ. Tối đa 3 thẻ.</li>
       <li>🌀 <b>Cổng dịch chuyển</b> — bay sang cổng cùng màu (có khi lợi to, có khi lùi cả vòng!).</li>
@@ -702,7 +705,7 @@ function showHelp() {
       <li>🐉 Gieo 6 ba lần liên tiếp → <b>Thần Mã giáng thế</b>, tặng thẻ 👻.</li>
     </ul>
     <h3>🃏 Thẻ kỹ năng (dùng trước khi gieo, 1 thẻ mỗi lượt)</h3><ul>${cards}</ul>
-    <h3>🌍 Biến cố toàn bàn (định kỳ mỗi vài lượt)</h3><ul>${evs}</ul>
+    <h3>🌍 Biến cố toàn bàn (định kỳ mỗi vài lượt)</h3><ul>${evs}</ul>` : ''}
     <div class="btns" style="margin-top:16px"><button class="gold" data-x>Đã hiểu, chiến thôi!</button></div>
   </div>`);
   document.querySelector('#modal [data-x]').onclick = UI.closeModal;
@@ -768,4 +771,6 @@ export default {
       },
     };
   },
+  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
+  help(ctx) { CTX = ctx; UI = ctx.ui; GAME = null; showHelp(); },
 };

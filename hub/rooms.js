@@ -37,7 +37,7 @@ export function shardOf(code, shards) {
 // achievements (hub/achievements.js): chấm thành tựu khi hết ván hợp lệ (≥1 tài khoản), thưởng xu + danh hiệu.
 // Chạy nhiều tiến trình (server.js): tiến trình thứ `shard` trong `shards` chỉ giữ phòng có shardOf(mã) === shard;
 // onAcct(id) = báo các tiến trình khác rằng ảnh/đồ trang trí của tài khoản này vừa đổi (họ gọi hub.acctChanged(id)).
-export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null, wallet = null, avatars = null,
+export function createHub({ games, lanUrls = () => [], publicUrl = () => null, accounts = null, stats = null, wallet = null, avatars = null, achievements = null,
   shard = 0, shards = 1, onAcct = () => {} }) {
   const rooms = new Map();
   const catalog = [...games.values()].map(catalogEntry).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
@@ -223,8 +223,11 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     // players: ai ngồi ghế nào lúc bắt đầu (ghi vào lịch sử khi hết ván — rời phòng giữa chừng vẫn tính, máy đi giúp).
     const players = room.seats.map((s, i) => (info[i] ? { seat: i, acct: s.kind === 'human' ? (room.members.get(s.pid) || {}).acct || null : null,
       name: info[i].name, ...(s.kind === 'bot' ? { bot: true } : {}) } : null)).filter(Boolean);
+    const tr = achievements ? achievements.tracker(room.gameKey) : null;
+    const ach = tr ? tr.init() : null;
+    if (ach && events && events.length) tr.onEvents(ach, events);
     room.match = { id: ++room.matchSeq, logic: g.logic, turnMs: M.turnMs || DEFAULT_TURN_MS, state, timer: null, tick: null, busyUntil: now, deadline: 0, home,
-      game: room.gameKey, opts: { ...optsOf(room) }, players, startedAt: now, recorded: false,
+      game: room.gameKey, opts: { ...optsOf(room) }, players, startedAt: now, recorded: false, ach,
       vc: new Map() };   // vc: ghế → bản đã phát lần trước (split) để tính delta
     broadcastRoom(room);
     afterAction(room, events || []);
@@ -233,6 +236,7 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
       mt.tick = setInterval(() => {
         if (room.match !== mt) return clearInterval(mt.tick);
         const r = mt.logic.tick(mt.state, Date.now());
+        if (r && r.events && r.events.length && mt.ach) { const t = achievements.tracker(mt.game); if (t) t.onEvents(mt.ach, r.events); }
         if (r && ((r.events && r.events.length) || r.changed)) broadcastGame(room, r.events || []);
         if (r && r.say) gameSay(room, r.say);
         if (mt.logic.isOver(mt.state)) { clearInterval(mt.tick); record(room); }
@@ -261,18 +265,31 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
     const ranks = aborted ? [] : ranksOf(mt.logic, mt.state, mt.players.map(x => x.seat));
     const delay = Math.max(0, mt.busyUntil - now) + 500;   // chờ animation cuối ván diễn xong
     if (!aborted) celebrate(room, ranks, delay);
-    if (!stats) return;
     const accts = [...new Set(mt.players.map(x => x.acct).filter(Boolean))];
-    if (accts.length < 2) return;
-    const rec = { at: now, dur: now - mt.startedAt, room: room.code, game: mt.game, opts: mt.opts,
-      ...(aborted ? { aborted: true, by } : {}), players: mt.players.map((x, i) => ({ ...x, rank: ranks[i] ?? null })) };
-    const before = wallet && !aborted ? new Map(accts.map(a => [a, wallet.info(a, now).earned])) : null;
-    try { stats.add(rec); } catch (e) { console.error(`[${room.code}] không ghi được lịch sử ván:`, e.message); return; }
-    if (!before) return;
-    for (const a of accts) {
-      const w = wallet.info(a, now), x = rec.players.find(p => p.acct === a);
-      const data = JSON.stringify({ t: 'credit', gain: w.earned - before.get(a), win: x.rank === 1, wallet: w, delay });
-      for (const m of room.members.values()) if (m.acct === a) for (const ws of m.conns) send(ws, data);
+    if (stats && accts.length >= 2) {
+      const rec = { at: now, dur: now - mt.startedAt, room: room.code, game: mt.game, opts: mt.opts,
+        ...(aborted ? { aborted: true, by } : {}), players: mt.players.map((x, i) => ({ ...x, rank: ranks[i] ?? null })) };
+      const before = wallet && !aborted ? new Map(accts.map(a => [a, wallet.info(a, now).earned])) : null;
+      try {
+        stats.add(rec);
+        if (before) {
+          for (const a of accts) {
+            const w = wallet.info(a, now), x = rec.players.find(p => p.acct === a);
+            const data = JSON.stringify({ t: 'credit', gain: w.earned - before.get(a), win: x.rank === 1, wallet: w, delay });
+            for (const m of room.members.values()) if (m.acct === a) for (const ws of m.conns) send(ws, data);
+          }
+        }
+      } catch (e) { console.error(`[${room.code}] không ghi được lịch sử ván:`, e.message); }
+    }
+    if (!aborted && achievements && accts.length) {
+      try {
+        const achDelay = delay + (stats && accts.length >= 2 ? 900 : 0);
+        for (const r of achievements.recordMatch({ game: mt.game, opts: mt.opts, players: mt.players, ranks, state: mt.state, dur: now - mt.startedAt, acc: mt.ach, now })) {
+          if (r.lookChanged) { acctChanged(r.acct); onAcct(r.acct); }
+          const data = JSON.stringify({ t: 'ach', unlocked: r.unlocked, ach: r.ach, wallet: r.wallet, delay: achDelay });
+          for (const m of room.members.values()) if (m.acct === r.acct) for (const ws of m.conns) send(ws, data);
+        }
+      } catch (e) { console.error(`[${room.code}] không ghi được thành tựu:`, e.message); }
     }
   }
   // Hiệu ứng thắng của người hạng 1 (đồ đã mua) — phát cho cả phòng, kể cả ván không được ghi.
@@ -290,6 +307,10 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
 
   function afterAction(room, events, meta) {
     const mt = room.match;
+    if (mt.ach && events && events.length) {
+      const tr = achievements.tracker(mt.game);
+      if (tr) tr.onEvents(mt.ach, events);
+    }
     const dur = mt.logic.animDuration ? mt.logic.animDuration(events) : 0;
     mt.busyUntil = Math.max(Date.now(), mt.busyUntil) + dur;
     schedule(room);
@@ -416,7 +437,8 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
       send(ws, { t: 'kicked', code });
     };
     function addMember(r, name) {
-      const m = { pid: rid(12), uid: rid(4), name: user ? user.name : cleanName(name), acct: user ? user.id : null,
+      const fresh = user && accounts ? accounts.get(user.id) : user;
+      const m = { pid: rid(12), uid: rid(4), name: fresh ? fresh.name : cleanName(name), acct: user ? user.id : null,
         conns: new Set(), lastEmote: 0, lastChat: 0, voice: null };
       r.members.set(m.pid, m);
       if (!r.host) r.host = m.uid;
@@ -448,12 +470,21 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
       logout(msg) { if (accounts) accounts.logout(msg.token); user = null; return {}; },
       // Cửa hàng: shop → { wallet }; buy { item } / equip { slot, item | null } → { wallet } (đang ở phòng thì cả phòng thấy đồ mới).
       shop() { needWallet(); return { wallet: wallet.info(user.id) }; },
+      achievements() { needWallet(); return { ach: achievements ? achievements.info(user.id) : { unlocked: {}, prog: {} }, wallet: wallet.info(user.id) }; },
       buy(msg) { needWallet(); const w = wallet.buy(user.id, String(msg.item || '')); lookChanged(); return { wallet: w }; },
       equip(msg) {
         needWallet();
         const w = wallet.equip(user.id, String(msg.slot || ''), msg.item == null ? null : String(msg.item));
         lookChanged();
         return { wallet: w };
+      },
+      rename(msg) {
+        needAccounts(); needWallet();
+        const u = accounts.rename(user.id, msg.name, () => wallet.consumeCardRaw(user.id, 'u-rename'));
+        user = u;
+        acctChanged(user.id);
+        onAcct(user.id);
+        return { user: withAv(user), wallet: wallet.info(user.id) };
       },
       // Ảnh đại diện: avatar { data: dataURL JPEG/PNG/WebP đã cắt vuông } → { av: URL }; data null = xoá ảnh.
       // Mọi phòng có tài khoản này đều thấy ảnh mới ngay (kể cả đang giữa ván).
@@ -713,7 +744,15 @@ export function createHub({ games, lanUrls = () => [], publicUrl = () => null, a
   function acctChanged(id, { av = false } = {}) {
     if (wallet && wallet.forget) wallet.forget(id);
     if (avatars && avatars.refresh && !av) avatars.refresh(id);
-    for (const r of rooms.values()) for (const m of r.members.values()) if (m.acct === id) { broadcastRoom(r); break; }
+    const u = accounts ? accounts.get(id) : null;
+    for (const r of rooms.values()) {
+      let hit = false;
+      for (const m of r.members.values()) if (m.acct === id) {
+        if (u && !r.match) m.name = u.name;
+        hit = true;
+      }
+      if (hit) broadcastRoom(r);
+    }
   }
   // Số liệu cho GET /api/health.
   function load() {

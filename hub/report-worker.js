@@ -5,6 +5,7 @@ import { openDb } from './db.js';
 import { MIN_GAMES, PRIOR, weightOf } from './stats.js';
 import { EARNED_SQL, lookOfRow } from './wallet.js';
 import { CREDIT } from '../public/shop-data.js';
+import { ACHIEVEMENT } from '../public/achievements-data.js';
 
 const TOP = 200;          // số người hiện trên bảng xếp hạng
 const H2H = 20;           // ma trận đối đầu: chừng này người đứng đầu
@@ -31,6 +32,7 @@ const q = {
   name: prep('SELECT name FROM users WHERE id = ?'),
   wallet: prep('SELECT owned, eq, spent FROM wallet WHERE acct = ?'),
   earned: prep(EARNED_SQL),
+  ach: prep('SELECT id FROM achievements WHERE acct = ?'),
 };
 const nameOf = id => (id && (q.name.get(id) || {}).name) || null;
 
@@ -58,7 +60,8 @@ function build({ from = 0, to = null, game = '' }) {
     // Đồ trang trí đang mặc + credit hiện có (không theo kỳ đang lọc).
     const wr = q.wallet.get(p.id);
     p.look = lookOfRow(wr);
-    p.credits = q.earned.get(CREDIT.dayCap, p.id).n - (wr ? wr.spent : 0);
+    const bonus = q.ach.all(p.id).reduce((s, r) => s + ((ACHIEVEMENT[r.id] && ACHIEVEMENT[r.id].coins) || 0), 0);
+    p.credits = q.earned.get(CREDIT.dayCap, p.id).n + bonus - (wr ? wr.spent : 0);
   }
 
   const hIds = players.slice(0, H2H).map(p => p.id), hIdx = new Map(hIds.map((id, i) => [id, i]));

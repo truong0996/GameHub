@@ -61,6 +61,8 @@
 .sk .mat-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .sk .av { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 15px; background: var(--c); }
 .sk .mat-name { flex: 1; min-width: 0; font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk .mat-ttl { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk .mat-ttl .lk-ttl { margin-left: 0; font-size: 9.5px; line-height: 14px; padding: 0 6px; }
 .sk .wins { flex: none; font-size: 14px; letter-spacing: -1px; color: rgba(255,255,255,.3); }
 .sk .wins .on { color: #ffd23f; text-shadow: 0 0 6px rgba(255,210,63,.7); }
 .sk .mat-sub { font-size: 11px; color: rgba(255,255,255,.75); margin: 2px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

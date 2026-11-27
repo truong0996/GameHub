@@ -23,6 +23,7 @@
 .cn .mem { white-space: nowrap; }
 .cn .mem.me { font-weight: 800; text-decoration: underline; text-decoration-color: var(--tc); text-underline-offset: 3px; }
 .cn .mem.off { opacity: .5; }
+.cn .mem .lk-ttl { font-size: 10px; line-height: 15px; }
 .cn .mem i { font-style: normal; color: var(--primary); font-weight: 800; }
 
 /* ---------- Thanh trạng thái ---------- */

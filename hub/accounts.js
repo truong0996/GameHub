@@ -19,6 +19,7 @@ export function createAccounts(db) {
     byKey: db.prepare('SELECT * FROM users WHERE nkey = ?'),
     byId: db.prepare('SELECT id, name FROM users WHERE id = ?'),
     addUser: db.prepare('INSERT INTO users (id, name, nkey, salt, hash, at) VALUES (?, ?, ?, ?, ?, ?)'),
+    setName: db.prepare('UPDATE users SET name = ?, nkey = ? WHERE id = ?'),
     addTok: db.prepare('INSERT INTO tokens (h, id, at) VALUES (?, ?, ?)'),
     trimTok: db.prepare('DELETE FROM tokens WHERE id = ? AND h NOT IN (SELECT h FROM tokens WHERE id = ? ORDER BY at DESC LIMIT ?)'),
     tok: db.prepare('SELECT u.id, u.name FROM tokens t JOIN users u ON u.id = t.id WHERE t.h = ?'),
@@ -62,7 +63,7 @@ export function createAccounts(db) {
       const k = keyOf(name), now = Date.now(), f = q.fail.get(k) || { n: 0, until: 0 };
       if (f.until > now) throw new Error(`Sai PIN nhiều lần — thử lại sau ${Math.ceil((f.until - now) / 1000)} giây`);
       const u = q.byKey.get(k);
-      if (!u) throw new Error(`Chưa có tài khoản "${name}" — bấm Đăng ký để tạo`);
+      if (!u) throw new Error(`Chưa có tài khoản "${name}" — hãy bấm "Tạo tài khoản" để tạo tài khoản mới.`);
       const ok = crypto.timingSafeEqual(Buffer.from(await hashPin(String(pin || ''), u.salt), 'hex'), Buffer.from(u.hash, 'hex'));
       if (!ok) {
         const n = f.until ? 1 : f.n + 1;   // vừa hết khoá thì đếm lại từ đầu
@@ -80,5 +81,20 @@ export function createAccounts(db) {
       if (token) q.delTok.run(sha(String(token)));
     },
     get(id) { const u = id && q.byId.get(id); return u ? pub(u) : null; },
+    rename(acct, newName, beforeSave) {
+      newName = cleanName(newName);
+      if ([...newName].length < 2) throw new Error('Tên cần ít nhất 2 ký tự');
+      return tx(db, () => {
+        const cur = q.byId.get(acct);
+        if (!cur) throw new Error('Không tìm thấy tài khoản');
+        if (cur.name === newName) throw new Error('Tên mới phải khác tên hiện tại');
+        const k = keyOf(newName), taken = q.byKey.get(k);
+        if (taken && taken.id !== acct) throw new Error(`Tên "${newName}" đã có người dùng`);
+        if (beforeSave) beforeSave();
+        try { q.setName.run(newName, k, acct); }
+        catch (e) { if (/UNIQUE/.test(e.message)) throw new Error(`Tên "${newName}" đã có người dùng`); throw e; }
+        return { id: acct, name: newName };
+      });
+    },
   };
 }
