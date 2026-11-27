@@ -127,22 +127,22 @@
 
 /* ---------- họp ---------- */
 .mdn .mdn-meet { position: absolute; inset: 0; z-index: 30; background: rgba(6,10,20,.78); display: grid; place-items: center; overflow: auto; padding: 10px; }
-.mdn .mt { width: min(780px, 100%); background: #dce3dc; color: var(--ink); border-radius: 18px; padding: 14px; border: 4px solid #758579; box-shadow: 0 12px 40px rgba(0,0,0,.5); animation: mdnPop .3s; }
-.mdn .mt .pn { color: oklch(from var(--c) min(l, .50) c h); }
+.mdn .mt { width: min(780px, 100%); background: #c9d3dc; color: #1d2330; border-radius: 18px; padding: 14px; border: 4px solid #6c7a8c; box-shadow: 0 12px 40px rgba(0,0,0,.5); animation: mdnPop .3s; }
+.mdn .mt .pn { color: color-mix(in oklab, var(--c) 58%, #000); }
 @keyframes mdnPop { from { transform: scale(.85); opacity: 0; } }
 .mdn .mt-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-bottom: 10px; }
 .mdn .mt-head h2 { margin: 0; font-size: 20px; flex: 1; min-width: 200px; }
-.mdn .mt-timer { font-size: 15px; padding: 4px 12px; border-radius: 99px; background: var(--surface); }
+.mdn .mt-timer { font-size: 15px; padding: 4px 12px; border-radius: 99px; background: #fff; }
 .mdn .mt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
-.mdn .mt-card { position: relative; display: flex; align-items: center; gap: 8px; text-align: left; background: var(--surface); color: var(--ink); padding: 6px 10px; border-radius: 12px; border: 2px solid transparent; box-shadow: 0 2px 0 #95a498; }
+.mdn .mt-card { position: relative; display: flex; align-items: center; gap: 8px; text-align: left; background: #eef2f5; color: #1d2330; padding: 6px 10px; border-radius: 12px; border: 2px solid transparent; box-shadow: 0 2px 0 #8a96a6; }
 .mdn .mt-card:disabled { opacity: 1; cursor: default; }
 .mdn .mt-card:not(:disabled):hover { border-color: var(--cta); }
 .mdn .mt-card.me { border-color: #3a8ee6; }
-.mdn .mt-card.dead { background: #a8b3aa; }
+.mdn .mt-card.dead { background: #9aa4b0; }
 .mdn .mt-card.dead .bean { filter: grayscale(1) brightness(.7); }
-.mdn .mt-card .nm { flex: 1; min-width: 0; }
+.mdn .mt-card .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mdn .mt-card .x { position: absolute; left: 14px; top: 2px; font-size: 34px; color: #c0392b; font-weight: 900; }
-.mdn .mt-card .vd { position: absolute; right: 6px; bottom: 2px; font-size: 10px; font-weight: 700; color: var(--primary); }
+.mdn .mt-card .vd { position: absolute; right: 6px; bottom: 2px; font-size: 10px; font-weight: 700; color: #2f6f62; }
 .mdn .mt-card .mg { position: absolute; right: 6px; top: 2px; }
 .mdn .mt-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
 .mdn .mt-foot .small { flex: 1; min-width: 200px; }
@@ -196,4 +196,4 @@
 }
 
 /* Ảnh đại diện (ctx.skin.face) — chỉ ở thẻ bỏ phiếu + bảng kết quả (theo ghế thật, giống tên); trên bản đồ không vẽ để Biến Hình/Ngụy Trang không lộ */
-.mdn .mt-card .nm :is(.hub-av, .hub-avw), .mdn .fo .or :is(.hub-av, .hub-avw) { width: 1.6em; height: 1.6em; margin-right: 5px; }
+.mdn .mt-card .nm .hub-av, .mdn .fo .or .hub-av { width: 1.6em; height: 1.6em; margin-right: 5px; }

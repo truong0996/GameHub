@@ -11,7 +11,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => V.players[p];
 const nm = p => UI.esc(V.players[p] ? V.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#888');
-const who = p => CTX.skin.name(p, V.players[p] ? V.players[p].name : '?', col(p));
+const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
 const active = () => V.players.map((pl, i) => (pl.active ? i : -1)).filter(i => i >= 0);
 const alive = p => P(p) && P(p).active && P(p).alive;
 const me = () => (mySeat() >= 0 && P(mySeat()) && P(mySeat()).active ? P(mySeat()) : null);
@@ -94,7 +94,7 @@ const TEMPLATE = `<div class="cp">
       <div id="cp-center"></div>
       <div id="cp-mats"></div>
     </div>
-    <div id="cp-status" class="lk-still"></div>
+    <div id="cp-status"></div>
     <div class="cp-timer"><i id="cp-timer"></i></div>
     <div id="cp-actions"></div>
     <div id="cp-hand"></div>
@@ -103,7 +103,7 @@ const TEMPLATE = `<div class="cp">
     <div class="cp-head"><b>🎭 Coup</b><span id="cp-mode" class="muted small"></span></div>
     <div id="cp-roles"></div>
     <div id="cp-event"></div>
-    <div id="cp-log" class="lk-still"></div>
+    <div id="cp-log"></div>
     <div id="cp-emotes"></div>
     <div id="cp-tools"></div>
   </aside>
@@ -140,13 +140,11 @@ function renderMats() {
     const F = pl.faction != null ? FACTIONS[pl.faction] : null;
     const role = Pd && Pd.by === p ? 'actor' : Pd && Pd.t === p ? 'target' : Pd && Pd.block && Pd.block.by === p ? 'blocker' : '';
     const can = targetPick && targetPick.list.includes(p);
-      const ttl = CTX.skin.title(p);
-      return `<div class="mat${asked.includes(p) ? ' turn' : ' lk-still'}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${role ? ' ' + role : ''}${can ? ' can' : ''}${passed ? ' passed' : ''}"
+    return `<div class="mat${asked.includes(p) ? ' turn' : ''}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${role ? ' ' + role : ''}${can ? ' can' : ''}${passed ? ' passed' : ''}"
       data-p="${p}" style="--c:${col(p)};left:${pos[p].x}%;top:${pos[p].y}%">
       <div class="mat-head"><span class="av">${pl.alive ? (SEATS[p].label || '🙂') + CTX.skin.face(p, 'fill') : pl.ghost ? '👻' : '💀'}</span>
-        <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${CTX.skin.name(p, pl.name)}${off ? ' 📴' : ''}</span>
+        <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${nm(p)}${off ? ' 📴' : ''}</span>
         ${F ? `<span class="fac" style="--f:${F.color}" title="Phe ${F.name}">${F.icon}</span>` : ''}</div>
-      ${ttl ? `<div class="mat-ttl">${ttl}</div>` : ''}
       <div class="mat-row"><span class="coins" title="Xu">🪙 <b>${pl.coins}</b></span><span class="cards">${pl.cards.map(c => cardMini(c, p)).join('')}</span></div>
       <div class="mat-sub">${claims && pl.alive ? `<span class="claims">${claims}</span>` : ''}${pl.nItems ? `<span class="items" title="Món chợ đen đang giữ">🎒${pl.nItems}</span>` : ''}${passed ? '<span class="ok">✓</span>' : ''}${!pl.alive ? (pl.ghost ? `<span>👻 Hồn ma${pl.gUsed ? '' : ' ✨'}</span>` : '<span>☠️ Bị loại</span>') : ''}</div>
       <div class="bubble"></div>
@@ -586,10 +584,8 @@ function showGameOver() {
 }
 
 function showHelp() {
-  const o = (CTX.room && CTX.room().opts) || {};
-  const chaos = V ? V.chaos : o.chaos !== false;
-  const roles = V ? V.roles : (chaos ? Object.keys(ROLES) : Object.keys(ROLES).filter(r => !ROLES[r].chaos));
-  const fac = V ? V.factions : !!o.factions;
+  const chaos = !V || V.chaos, roles = V ? V.roles : Object.keys(ROLES).filter(r => !ROLES[r].chaos);
+  const fac = V ? V.factions : false;
   UI.openModal(`<div class="cp-m help">
     <h2>📖 Luật chơi — Coup</h2>
     <h3>Cơ bản</h3><ul>
@@ -754,6 +750,4 @@ export default {
       unmount() { clearInterval(timerInt); V = null; },
     };
   },
-  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
-  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

@@ -17,7 +17,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => V.players[p];
 const nm = p => UI.esc(V.players[p] ? V.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#888');
-const who = p => CTX.skin.name(p, V.players[p] ? V.players[p].name : '?', col(p));
+const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
 const seatedList = () => V.players.map((pl, i) => (pl.on ? i : -1)).filter(i => i >= 0);
 const decider = () => (V.phase !== 'play' ? null : V.ask ? V.ask.seat : V.turn);
 const sum = g => ALL.reduce((s, c) => s + (g[c] || 0), 0);
@@ -93,7 +93,7 @@ const TEMPLATE = `<div class="spl">
       <div id="sp-players"></div>
     </div>
     <div class="sp-ctl">
-      <div id="sp-status" class="lk-still"></div>
+      <div id="sp-status"></div>
       <div class="sp-timer"><i id="sp-timer"></i></div>
       <div id="sp-actions"></div>
     </div>
@@ -102,7 +102,7 @@ const TEMPLATE = `<div class="spl">
     <div class="sp-head"><b>💎 Splendor</b><span id="sp-mode" class="muted small"></span></div>
     <div id="sp-round"></div>
     <div id="sp-obj"></div>
-    <div id="sp-log" class="lk-still"></div>
+    <div id="sp-log"></div>
     <div id="sp-emotes"></div>
     <div id="sp-tools"></div>
   </aside>
@@ -149,10 +149,10 @@ function renderPlayers() {
       pl.obj && !mine ? (pl.obj.hid ? '<span class="chip" title="Mục tiêu bí mật — lật ra cuối ván">🎯 ?</span>'
         : `<span class="chip" title="${UI.esc(`${objInfo(pl.obj, pl).name}: ${objInfo(pl.obj, pl).desc}`)}">${objInfo(pl.obj, pl).icon} ${pl.objDone ? '+' + pl.obj.pts : '✗'}</span>`) : '',
     ].join('');
-    return `<div class="pb${mine ? ' me' : ''}${p === dec ? ' turn' : ' lk-still'}${p === V.first ? ' first' : ''}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="pb${mine ? ' me' : ''}${p === dec ? ' turn' : ''}${p === V.first ? ' first' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="pb-head">
         <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
-        <div class="pb-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${mine ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}
+        <div class="pb-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${mine ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}
           <div class="pb-sub">${p === V.first ? '🥇 đi đầu · ' : ''}${pl.cards.length} thẻ · ${gemCount(pl.gems)}/${MAX_GEMS} ngọc ${tags}</div></div>
         <div class="pb-pts${pl.pts === lead && lead > 0 ? ' lead' : ''}" title="Điểm uy tín"><b>${pl.pts}</b><small>/${V.target}</small></div>
       </div>
@@ -628,7 +628,7 @@ function showGameOver() {
 }
 
 function showHelp() {
-  const o = (CTX.room && CTX.room().opts) || {}, chaos = V ? V.chaos : o.chaos !== false, target = V ? V.target : (o.target || 15);
+  const chaos = V && V.chaos;
   const gems = ALL.map(c => `${tk(c, '', 'xs')} ${GEMS[c].name}`).join(' · ');
   openTagged('help', `<div class="help">
     <h2>📖 Luật chơi — Splendor</h2>
@@ -643,13 +643,13 @@ function showHelp() {
       <li>Thẻ cấp ◆ (${LEVEL_NAME[1]}) rẻ, ít điểm; ◆◆ (${LEVEL_NAME[2]}) và ◆◆◆ (${LEVEL_NAME[3]}) đắt nhưng nhiều điểm.</li>
       <li>👑 <b>Quý tộc</b>: cuối lượt, ai có đủ số thẻ các màu như quý tộc yêu cầu thì quý tộc tự ghé thăm (+3 điểm), mỗi lượt tối đa 1 vị.</li>
       <li>Giữ tối đa <b>${MAX_GEMS} ngọc</b> (tính cả vàng) — thừa thì phải trả lại.</li>
-      <li>Ai đạt <b>${target}</b> điểm thì <b>chơi nốt vòng</b> (mọi người đi đủ lượt như nhau), điểm cao nhất thắng; bằng điểm thì ai ít thẻ hơn thắng.</li>
+      <li>Ai đạt <b>${V ? V.target : 15}</b> điểm thì <b>chơi nốt vòng</b> (mọi người đi đủ lượt như nhau), điểm cao nhất thắng; bằng điểm thì ai ít thẻ hơn thắng.</li>
       <li>Mỗi lượt có ${Math.round(CTX.room().turnMs / 1000)} giây — hết giờ máy lấy ngọc giúp.</li>
     </ul>
     ${chaos ? `<h3>🎁 Bất Ngờ — thẻ năng lực (kích hoạt khi mua)</h3><ul>${Object.values(ABILITIES).map(A => `<li>${A.icon} <b>${A.name}</b> — ${A.desc}</li>`).join('')}</ul>
     <h3>Sự kiện mỗi vòng bàn</h3><ul>${Object.entries(EVENTS).map(([k, x]) => `<li>${x.icon} <b>${x.name}</b> — ${eventText(k, null).replaceAll('?', 'một màu ngẫu nhiên')}</li>`).join('')}</ul>
     <h3>Quý tộc đặc quyền</h3><ul>${Object.values(PERKS).map(x => `<li>${x.icon} <b>${x.name}</b> — ${x.desc}</li>`).join('')}</ul>
-    <h3>Khác</h3><ul><li>🎯 Mỗi người có 1 <b>mục tiêu bí mật</b> (cột phải) — cuối ván đạt thì được cộng điểm (không tính vào mốc ${target} điểm để kết thúc).</li>
+    <h3>Khác</h3><ul><li>🎯 Mỗi người có 1 <b>mục tiêu bí mật</b> (cột phải) — cuối ván đạt thì được cộng điểm (không tính vào mốc ${V ? V.target : 15} điểm để kết thúc).</li>
       <li>🎁 <b>Bù lượt</b>: người đi sau nhận sẵn ngọc khởi đầu — người thứ 2 được 1 viên, thứ 3 được 2, từ thứ 4 trở đi 3 viên.</li></ul>` : ''}
     <div class="btns" style="margin-top:16px"><button class="gold" data-x>Hiểu rồi, chơi thôi!</button></div></div>`);
   mq('[data-x]').onclick = closeTagged;
@@ -728,6 +728,4 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler, true); V = null; },
     };
   },
-  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
-  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

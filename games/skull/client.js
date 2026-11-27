@@ -11,7 +11,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => V.players[p];
 const nm = p => UI.esc(V.players[p] ? V.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#888');
-const who = p => CTX.skin.name(p, V.players[p] ? V.players[p].name : '?', col(p));
+const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
 const dn = k => `${DISCS[k].icon} ${DISCS[k].name}`;
 const active = () => V.players.map((pl, i) => (pl.active ? i : -1)).filter(i => i >= 0);
 const alive = p => P(p).active && P(p).alive;
@@ -72,7 +72,7 @@ const TEMPLATE = `<div class="sk">
       <div id="sk-center"></div>
       <div id="sk-mats"></div>
     </div>
-    <div id="sk-status" class="lk-still"></div>
+    <div id="sk-status"></div>
     <div id="sk-actions"></div>
     <div class="sk-timer"><i id="sk-timer"></i></div>
     <div id="sk-hand"></div>
@@ -80,7 +80,7 @@ const TEMPLATE = `<div class="sk">
   <aside class="sk-side">
     <div class="sk-head"><b>💀 Hoa & Sọ</b><span id="sk-mode" class="muted small"></span></div>
     <div id="sk-omen"></div>
-    <div id="sk-log" class="lk-still"></div>
+    <div id="sk-log"></div>
     <div id="sk-emotes"></div>
     <div id="sk-tools"></div>
   </aside>
@@ -121,12 +121,10 @@ function renderMats() {
       : `💿 ${own} đĩa${pl.nLost ? ` <span class="lost">(−${pl.nLost})</span>` : ''}${passed ? ' · <b class="pass">bỏ</b>' : ''}${V.bid && V.bid.by === p && V.phase !== 'flip' ? ` · <b class="hi">cược ${V.bid.n}</b>` : ''}`;
     const unfl = st.filter(d => !d.fl), fl = st.filter(d => d.fl);
     const hit = V.flip && V.flip.hit && V.flip.hit.includes(p);
-    const ttl = CTX.skin.title(p);
-    return `<div class="mat${asked.includes(p) ? ' turn' : ' lk-still'}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${flipping ? ' flipping' : ''}${canFlip(p) || (canHaunt() && pl.alive) ? ' can' : ''}${hit ? ' haunted' : ''}"
+    return `<div class="mat${asked.includes(p) ? ' turn' : ''}${!pl.alive ? ' dead' : ''}${pl.ghost ? ' ghost' : ''}${p === m ? ' me' : ''}${flipping ? ' flipping' : ''}${canFlip(p) || (canHaunt() && pl.alive) ? ' can' : ''}${hit ? ' haunted' : ''}"
       data-p="${p}" style="--c:${col(p)};left:${pos[p].x}%;top:${pos[p].y}%">
       <div class="mat-head"><span class="av">${pl.alive ? (SEATS[p].label || '🙂') + CTX.skin.face(p, 'fill') : pl.ghost ? '👻' : '💀'}</span>
-        <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${CTX.skin.name(p, pl.name)}${off ? ' 📴' : ''}</span><span class="wins" title="Thử thách đã thắng">${wins}</span></div>
-      ${ttl ? `<div class="mat-ttl">${ttl}</div>` : ''}
+        <span class="mat-name">${pl.kind === 'bot' ? '<span class="bot">🤖 </span>' : ''}${nm(p)}${off ? ' 📴' : ''}</span><span class="wins" title="Thử thách đã thắng">${wins}</span></div>
       <div class="mat-sub">${sub}</div>
       <div class="pile">${unfl.map((d, i) => discHTML(d, i === unfl.length - 1 ? 'top' : '')).join('')}${fl.length ? `<span class="flipped">${fl.map(d => discHTML(d)).join('')}</span>` : ''}${!st.length && pl.alive && V.phase !== 'over' ? '<span class="empty"></span>' : ''}</div>
       ${hit ? '<span class="haunt-mark" title="Chồng này bị hồn ma ám">👻</span>' : ''}
@@ -488,7 +486,7 @@ function showGameOver() {
 }
 
 function showHelp() {
-  const o = (CTX.room && CTX.room().opts) || {}, chaos = V ? V.chaos : o.chaos !== false, need = V ? V.need : (o.need || 2);
+  const chaos = !V || V.chaos;
   UI.openModal(`<div class="sk-m help">
     <h2>📖 Luật chơi — Hoa & Sọ (Skull)</h2>
     <h3>Cơ bản</h3><ul>
@@ -496,7 +494,7 @@ function showHelp() {
       <li>Đầu vòng, cả bàn cùng lúc <b>úp 1 đĩa</b> trước mặt. Sau đó lần lượt: <b>đặt thêm 1 đĩa</b> lên chồng của mình, hoặc <b>cược</b> "tôi lật được n Hoa".</li>
       <li>Khi đã có cược, mọi người lần lượt <b>nâng</b> hoặc <b>bỏ</b> (bỏ là không cược lại vòng đó). Người cược cao nhất phải lật đủ n đĩa.</li>
       <li>Lật: phải lật <b>hết chồng trước mặt mình trước</b>, rồi mới chọn đĩa trên cùng của chồng người khác.</li>
-      <li>Lật đủ n mà không trúng Sọ → <b>thắng 1 thử thách</b> (★). Thắng ${need} lần là thắng chung cuộc.</li>
+      <li>Lật đủ n mà không trúng Sọ → <b>thắng 1 thử thách</b> (★). Thắng ${V ? V.need : 2} lần là thắng chung cuộc.</li>
       <li>Trúng Sọ người khác → mất ngẫu nhiên 1 đĩa. Trúng Sọ <b>của chính mình</b> → tự chọn đĩa bỏ. Mất đĩa không ai biết là đĩa gì. Hết đĩa là bị loại; người cuối cùng còn đĩa cũng thắng.</li>
       <li>Vòng sau người thách đấu đi đầu. Mỗi lượt có ${Math.round(CTX.room().turnMs / 1000)} giây — hết giờ máy đi giúp (đặt Hoa / bỏ).</li>
     </ul>
@@ -592,6 +590,4 @@ export default {
       unmount() { clearInterval(timerInt); V = null; },
     };
   },
-  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
-  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

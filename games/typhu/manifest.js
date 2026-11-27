@@ -6,7 +6,7 @@ export default {
   name: 'Cờ Tỷ Phú',
   icon: '🎩',
   tagline: 'Mua đất, xây nhà, thu tiền thuê!',
-  description: 'Phiên bản nhịp nhanh 2–6 người: chia sẵn đất đầu ván, đất bỏ qua sẽ đấu giá kín và có thể mua lại đất đối thủ giá ×2. Thắng khi giàu nhất lúc hết giờ, đối thủ phá sản hoặc đủ 3 bộ màu.',
+  description: 'Cờ tỷ phú 2–6 người, rút gọn cho nhịp nhanh: chia sẵn đất đầu ván, đất bỏ qua thì đấu giá kín, mua lại cưỡng chế đất người khác với giá ×2. Ván có giới hạn thời gian — hết giờ (hoặc có người phá sản) thì ai giàu nhất thắng; gom đủ 3 bộ màu là thắng ngay. Chế độ Bất Ngờ: thẻ kỹ năng, biến cố toàn bàn, Sòng Bạc, Tàu Cao Tốc, Cổng Dịch Chuyển, Hũ Vàng.',
   minPlayers: 2,
   maxPlayers: 6,
   tags: ['Cờ', 'Xúc xắc', 'Gia đình'],

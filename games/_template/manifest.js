@@ -11,8 +11,8 @@ export default {
   tags: ['Phản xạ'],   // thể loại: chip lọc + tìm kiếm trong bảng "Đổi game" (dùng lại tên tag đã có: Bài, Cờ, Phản xạ...)
   order: 50,
   seats: [
-    { name: 'Đỏ', color: '#e0313f' }, { name: 'Cam', color: '#f06a14' }, { name: 'Vàng', color: '#eab80e' },
-    { name: 'Lục', color: '#23b562' }, { name: 'Lam', color: '#2a85f7' }, { name: 'Tím', color: '#9354eb' },
+    { name: 'Đỏ', color: '#ff4d6d' }, { name: 'Cam', color: '#ff9f1c' }, { name: 'Vàng', color: '#ffd23f' },
+    { name: 'Lục', color: '#2ec76b' }, { name: 'Lam', color: '#3a9bff' }, { name: 'Tím', color: '#b06cff' },
   ],
   options: [
     { key: 'target', label: 'Điểm để thắng', default: 5,

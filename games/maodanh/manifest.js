@@ -6,7 +6,7 @@ export default {
   name: 'Kẻ Mạo Danh',
   icon: '🛸',
   tagline: 'Ai trong chúng ta là kẻ giả mạo?',
-  description: 'Trò suy luận thời gian thực: Phi Hành Đoàn hoàn thành nhiệm vụ hoặc bỏ phiếu trục xuất Kẻ Mạo Danh, còn Kẻ Mạo Danh lén hạ gục và phá hoại tàu qua 5 bản đồ.',
+  description: 'Suy luận real-time kiểu Among Us: phi hành đoàn chạy khắp bản đồ làm nhiệm vụ, Kẻ Mạo Danh lén giết người, phá hoại, chui cống. Thấy xác thì báo cáo, cả nhóm họp bàn rồi bỏ phiếu đẩy kẻ đáng ngờ ra ngoài. 5 bản đồ có luật riêng, vai trò ẩn, biến cố bất ngờ, vật phẩm và đàm thoại theo khoảng cách.',
   minPlayers: 4,
   maxPlayers: 10,
   tags: ['Suy luận', 'Phản xạ', 'Vui nhộn'],

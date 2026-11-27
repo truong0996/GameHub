@@ -6,7 +6,7 @@ export default {
   name: 'Cờ Cá Ngựa',
   icon: '🐴',
   tagline: 'Lục Mã Hỗn Chiến',
-  description: 'Cờ cá ngựa 2–6 người trên bàn đa giác co giãn theo số người chơi: đá ngựa về chuồng, ô bí ẩn, cổng dịch chuyển, thẻ kỹ năng và biến cố toàn bàn.',
+  description: 'Cờ cá ngựa 2–6 người, bàn đổi hình theo số người (vuông, tam giác... tới lục giác): đá ngựa, ô bí ẩn, cổng dịch chuyển, thẻ kỹ năng và biến cố toàn bàn.',
   minPlayers: 2,
   maxPlayers: 6,
   tags: ['Cờ', 'Xúc xắc', 'Gia đình'],

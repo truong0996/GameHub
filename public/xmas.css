@@ -1,31 +1,12 @@
-/* Theme Giáng Sinh toàn trang — phủ đồng bộ từ màn hình chính, phòng chờ, chat, modal (cửa hàng, thành tựu, chọn game...),
-   bảng xếp hạng (/report) đến bàn nỉ trong các game. Giữ nguyên bố cục, màu ghế và độ tương phản; animation chạy mãi chỉ đụng transform/opacity.
-   Bật khi html[data-theme="xmas"] (xmas.js); html[data-screen] do show() trong hub.js gắn. */
-html[data-theme="xmas"] {
-  --xm-red: #b83b36;
-  --xm-pine: #276749;
-  --xm-gold: #d8a23e;
-  --bg: #e5ecef;
-  --surface: #fdfaf5;
-  --field: #ffffff;
-  --chip: #ebf1ee;
-  --line: #cfe0d8;
-  --ink: #23302b;
-  --muted: #5b6d65;
-  --primary: #276749;
-  --primary-d: #1c4e37;
-  --cta: #c23b3b;
-  --cta-d: #962828;
-  --accent: #d8a23e;
-  --danger: #c6423d;
-  --wood: #7d5336;
-  --shadow: 0 2px 8px rgba(24,44,38,.06), 0 14px 36px rgba(28,52,44,.09);
+/* Theme Giáng Sinh — một lớp phủ nhẹ lên "Bàn gỗ dịu": giữ nguyên bố cục, màu ghế và các biến màu chính, chỉ thêm
+   dây đèn, đồi tuyết, cây thông, người tuyết, tuyết rơi phía sau mọi thứ (không bao giờ che chữ, nút, bàn chơi).
+   Trong ván: lớp nền chỉ còn dây đèn + nửa số bông tuyết (lộ ra ở khoảng trống quanh bàn), và bàn nỉ của các game
+   (dùng chung biến --felt) thành nỉ xanh thông có hoa văn bông tuyết — không cần CSS riêng cho từng game.
+   Bật khi html[data-theme="xmas"] (xmas.js); html[data-screen] do show() trong hub.js gắn. Animation chạy mãi chỉ đụng transform/opacity. */
+html[data-theme="xmas"] { --xm-red: #b8453a; --xm-pine: #3f6656; background: linear-gradient(#e3e8e9, var(--bg) 55%);
   --felt: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g stroke='%23fff' stroke-opacity='.06' stroke-width='1.5' stroke-linecap='round' fill='none'><path d='M30 18v24M19.6 24l20.8 12M40.4 24L19.6 36'/><path d='M88 74v20M79.3 79l17.4 10M96.7 79l-17.4 10'/></g><g fill='%23fff' fill-opacity='.09'><circle cx='92' cy='26' r='1.6'/><circle cx='26' cy='92' r='1.4'/></g></svg>") 0 0 / 170px,
-    radial-gradient(ellipse at center, #3b6f55 0%, #27513f 70%, #1d4033 100%);
-  background: linear-gradient(175deg, #d7e5ec 0%, #eaf1f0 48%, #f2ece4 100%);
-}
+    radial-gradient(ellipse at center, #3f7258 0%, #2c5644 70%, #23473a 100%); }
 html[data-theme="xmas"] body { background: transparent; }   /* để lớp #xm (z-index −1) nằm giữa nền html và nội dung */
-html[data-theme="xmas"] .hub-ambient { display: none; }
 
 /* ---------- lớp nền #xm ---------- */
 #xm { display: none; position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
@@ -35,21 +16,21 @@ html[data-screen="game"] :is(.xm-ground, .xm-sleigh, #xm > i:nth-child(2n)) { di
 html[data-screen="game"]:has(#game-root > .mdn) #xm { display: none; }   /* Kẻ Mạo Danh phủ kín màn hình nền tối — không vẽ uổng */
 
 /* dây đèn mép trên: lớp nền = dây + bóng tắt; ::before/::after = 2 nhóm bóng sáng, thay nhau mờ/tỏ */
-.xm-lights, .xm-lights::before, .xm-lights::after { position: absolute; top: 0; left: 0; right: 0; height: 28px; background-repeat: repeat-x; background-size: 120px 28px; }
-.xm-lights { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 28'><path d='M0 3Q30 16 60 3Q90 16 120 3' fill='none' stroke='%235d4d3d' stroke-width='1.5'/><g fill='%235d4d3d'><rect x='13' y='7' width='4' height='3.2' rx='1'/><rect x='43' y='7' width='4' height='3.2' rx='1'/><rect x='73' y='7' width='4' height='3.2' rx='1'/><rect x='103' y='7' width='4' height='3.2' rx='1'/></g><ellipse cx='15' cy='15' rx='3.6' ry='5.2' fill='%23963a31'/><ellipse cx='45' cy='15' rx='3.6' ry='5.2' fill='%23b08530'/><ellipse cx='75' cy='15' rx='3.6' ry='5.2' fill='%232f6a52'/><ellipse cx='105' cy='15' rx='3.6' ry='5.2' fill='%233d6585'/></svg>"); }
+.xm-lights, .xm-lights::before, .xm-lights::after { position: absolute; top: 0; left: 0; right: 0; height: 26px; background-repeat: repeat-x; background-size: 120px 26px; }
+.xm-lights { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 26'><path d='M0 3Q30 15 60 3Q90 15 120 3' fill='none' stroke='%236b5a48' stroke-width='1.4'/><g fill='%236b5a48'><rect x='13' y='7' width='4' height='3' rx='1'/><rect x='43' y='7' width='4' height='3' rx='1'/><rect x='73' y='7' width='4' height='3' rx='1'/><rect x='103' y='7' width='4' height='3' rx='1'/></g><ellipse cx='15' cy='14' rx='3.5' ry='5' fill='%23963a31'/><ellipse cx='45' cy='14' rx='3.5' ry='5' fill='%23b08530'/><ellipse cx='75' cy='14' rx='3.5' ry='5' fill='%232f6a52'/><ellipse cx='105' cy='14' rx='3.5' ry='5' fill='%233d6585'/></svg>"); }
 .xm-lights::before, .xm-lights::after { content: ''; animation: xm-blink 1.8s ease-in-out infinite alternate; }
-.xm-lights::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 28'><ellipse cx='15' cy='15' rx='3.8' ry='5.4' fill='%23e85d50'/><ellipse cx='75' cy='15' rx='3.8' ry='5.4' fill='%2359bd8e'/><circle cx='14' cy='13' r='1.3' fill='%23fff' opacity='.85'/><circle cx='74' cy='13' r='1.3' fill='%23fff' opacity='.85'/></svg>"); }
-.xm-lights::after { animation-delay: -1.8s; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 28'><ellipse cx='45' cy='15' rx='3.8' ry='5.4' fill='%23f5c856'/><ellipse cx='105' cy='15' rx='3.8' ry='5.4' fill='%2372ade0'/><circle cx='44' cy='13' r='1.3' fill='%23fff' opacity='.85'/><circle cx='104' cy='13' r='1.3' fill='%23fff' opacity='.85'/></svg>"); }
-@keyframes xm-blink { from { opacity: .18; } to { opacity: 1; } }
+.xm-lights::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 26'><ellipse cx='15' cy='14' rx='3.5' ry='5' fill='%23e0675a'/><ellipse cx='75' cy='14' rx='3.5' ry='5' fill='%235fb08a'/><circle cx='14' cy='12' r='1.2' fill='%23fff' opacity='.8'/><circle cx='74' cy='12' r='1.2' fill='%23fff' opacity='.8'/></svg>"); }
+.xm-lights::after { animation-delay: -1.8s; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 26'><ellipse cx='45' cy='14' rx='3.5' ry='5' fill='%23f0c55a'/><ellipse cx='105' cy='14' rx='3.5' ry='5' fill='%2378a7d0'/><circle cx='44' cy='12' r='1.2' fill='%23fff' opacity='.8'/><circle cx='104' cy='12' r='1.2' fill='%23fff' opacity='.8'/></svg>"); }
+@keyframes xm-blink { from { opacity: .15; } to { opacity: 1; } }
 
-/* đồi tuyết + cụm thông quà (trái) + người tuyết & nhà gỗ ấm (phải), vẽ tĩnh */
-.xm-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 200px; background:
-  url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 185'><defs><g id='t'><path d='M0 0L34 46H20L46 84H28L58 126H-58L-28 84H-46L-20 46H-34Z'/><rect x='-7' y='126' width='14' height='16' fill='%237d5336'/></g></defs><use href='%23t' transform='translate(154 78) scale(.64)' fill='%233d6d58'/><use href='%23t' transform='translate(72 24)' fill='%23276749'/><path d='M72 10l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z' fill='%23e2ac3b'/><g fill='%23c23b3b'><circle cx='60' cy='90' r='4'/><circle cx='90' cy='116' r='4'/><circle cx='54' cy='134' r='4'/></g><g fill='%23e2ac3b'><circle cx='82' cy='78' r='3.5'/><circle cx='68' cy='110' r='3.5'/><circle cx='98' cy='140' r='3.5'/></g><rect x='24' y='148' width='22' height='18' rx='2' fill='%23c23b3b'/><path d='M33 148v18M24 156h22' stroke='%23f5d06b' stroke-width='3'/><rect x='96' y='152' width='18' height='14' rx='2' fill='%23d8a23e'/><path d='M104 152v14M96 158h18' stroke='%23c23b3b' stroke-width='2.5'/></svg>") left max(8px, 3vw) bottom 18px / 195px auto no-repeat,
-  url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 185 136'><g transform='translate(88 44)'><rect x='46' y='4' width='10' height='22' rx='1' fill='%238c5a3c'/><path d='M0 32L36 4L72 32V76H0Z' fill='%239b6948'/><path d='M-6 34L36 0L78 34' fill='none' stroke='%23fbfaf7' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/><rect x='26' y='46' width='20' height='30' rx='2' fill='%235b3a24'/><rect x='9' y='44' width='12' height='12' rx='2' fill='%23ffd86b'/><rect x='51' y='44' width='12' height='12' rx='2' fill='%23ffd86b'/></g><g fill='%23fbfaf7' stroke='%23cfd6da' stroke-width='2'><circle cx='44' cy='102' r='27'/><circle cx='44' cy='61' r='19.5'/></g><path d='M27 75Q44 85 61 75' stroke='%23c23b3b' stroke-width='7' fill='none' stroke-linecap='round'/><path d='M55 77L61 96' stroke='%23c23b3b' stroke-width='6' stroke-linecap='round'/><rect x='29' y='39' width='30' height='5' rx='2' fill='%2323302b'/><rect x='34' y='19' width='20' height='22' rx='2' fill='%2323302b'/><rect x='34' y='35' width='20' height='4' fill='%23c23b3b'/><g fill='%2323302b'><circle cx='38' cy='57' r='2'/><circle cx='50' cy='57' r='2'/><circle cx='44' cy='96' r='2.5'/><circle cx='44' cy='108' r='2.5'/></g><path d='M44 62L59 65L44 67Z' fill='%23df7b26'/></svg>") right max(10px, 3vw) bottom 22px / 165px auto no-repeat,
-  url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 94' preserveAspectRatio='none'><path d='M0 42Q180 10 400 35T800 31T1200 38V94H0Z' fill='%23dce6ea'/><path d='M0 64Q300 38 620 60T1200 54V94H0Z' fill='%23f7f9f8'/></svg>") bottom / 100% 94px no-repeat; }
+/* đồi tuyết + cụm thông (trái) + người tuyết (phải), vẽ tĩnh */
+.xm-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 190px; background:
+  url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 180'><defs><g id='t'><path d='M0 0L34 46H20L46 84H28L58 126H-58L-28 84H-46L-20 46H-34Z'/><rect x='-7' y='126' width='14' height='16' fill='%238b6243'/></g></defs><use href='%23t' transform='translate(150 78) scale(.62)' fill='%234f7a66'/><use href='%23t' transform='translate(70 26)' fill='%233f6656'/><path d='M70 12l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z' fill='%23d9a23a'/><g fill='%23b8453a'><circle cx='58' cy='92' r='4'/><circle cx='88' cy='118' r='4'/><circle cx='52' cy='136' r='4'/></g><g fill='%23d9a23a'><circle cx='80' cy='80' r='3.5'/><circle cx='66' cy='112' r='3.5'/><circle cx='96' cy='142' r='3.5'/></g></svg>") left max(8px, 3vw) bottom 20px / 180px auto no-repeat,
+  url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 130'><g fill='%23fbfaf7' stroke='%23cfd6da' stroke-width='2'><circle cx='45' cy='98' r='28'/><circle cx='45' cy='56' r='20'/></g><path d='M28 70Q45 80 62 70' stroke='%23b8453a' stroke-width='7' fill='none' stroke-linecap='round'/><path d='M56 72L62 92' stroke='%23b8453a' stroke-width='6' stroke-linecap='round'/><rect x='30' y='34' width='30' height='5' rx='2' fill='%232a2723'/><rect x='35' y='14' width='20' height='22' rx='2' fill='%232a2723'/><g fill='%232a2723'><circle cx='39' cy='52' r='2'/><circle cx='51' cy='52' r='2'/><circle cx='45' cy='92' r='2.5'/><circle cx='45' cy='104' r='2.5'/></g><path d='M45 57L60 60L45 62Z' fill='%23d27a2c'/></svg>") right max(12px, 4vw) bottom 26px / 78px auto no-repeat,
+  url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 90' preserveAspectRatio='none'><path d='M0 40Q180 10 400 34T800 30T1200 36V90H0Z' fill='%23e3e8ea'/><path d='M0 62Q300 36 620 58T1200 52V90H0Z' fill='%23f6f7f6'/></svg>") bottom / 100% 90px no-repeat; }
 
 /* xe tuần lộc thỉnh thoảng bay ngang trời (bay ~22s, nghỉ ~28s) */
-.xm-sleigh { position: absolute; top: 56px; left: 0; font-size: 22px; white-space: nowrap; opacity: .78; transform: translate3d(100vw, 0, 0); animation: xm-fly 50s linear infinite; }
+.xm-sleigh { position: absolute; top: 64px; left: 0; font-size: 22px; white-space: nowrap; opacity: .75; transform: translate3d(100vw, 0, 0); animation: xm-fly 50s linear infinite; }
 @keyframes xm-fly { 0% { transform: translate3d(100vw, 0, 0); } 45%, 100% { transform: translate3d(-120px, -30px, 0); } }
 
 /* bông tuyết: --x vị trí, --s cỡ, --w trôi ngang, --d thời gian rơi, --t lệch pha (xmas.js gán ngẫu nhiên) */
@@ -58,7 +39,7 @@ html[data-screen="game"]:has(#game-root > .mdn) #xm { display: none; }   /* Kẻ
 @keyframes xm-fall { to { transform: translate3d(var(--w), 105vh, 0); } }
 
 @media (max-width: 640px) {
-  .xm-ground { height: 132px; background-size: 126px auto, 108px auto, 100% 64px; }
+  .xm-ground { height: 130px; background-size: 120px auto, 54px auto, 100% 64px; }
   .xm-sleigh { font-size: 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -66,117 +47,17 @@ html[data-screen="game"]:has(#game-root > .mdn) #xm { display: none; }   /* Kẻ
   .xm-lights::before, .xm-lights::after { animation: none; }
 }
 
-/* ---------- Toàn bộ thẻ & khối giao diện chính ---------- */
-/* dải ruy-băng kẹo gậy & lá thông mảnh ở mép trên các thẻ chính */
-html[data-theme="xmas"] :is(.home, .room, #modal > .card, #chat-panel, .rp-filters).card {
-  border-top: 4px solid transparent;
-  background: linear-gradient(var(--surface), var(--surface)) padding-box,
-    repeating-linear-gradient(-45deg, var(--xm-red) 0 9px, #fffaf2 9px 15px, var(--xm-pine) 15px 24px, #fffaf2 24px 30px) border-box;
-}
-html[data-theme="xmas"] :is(.home, .room).card {
-  box-shadow: 0 4px 14px rgba(24,44,38,.06), 0 22px 52px rgba(28,52,44,.11);
-}
-/* nhành nhựa ruồi ở góc trên-trái thẻ trang chủ */
-html[data-theme="xmas"] .home.card::before {
-  content: ''; position: absolute; top: -12px; left: 20px; width: 52px; height: 34px; pointer-events: none; z-index: 3;
-  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 30'><path d='M2 10Q10 2 22 12Q12 20 2 10Z' fill='%23276749'/><path d='M44 6Q34 0 24 12Q36 18 44 6Z' fill='%233b8461'/><g fill='%23c23b3b'><circle cx='21' cy='16' r='4'/><circle cx='28' cy='18' r='3.6'/><circle cx='24' cy='23' r='3.4'/></g></svg>") center / contain no-repeat;
-}
-
-/* huy hiệu logo trang chủ + mũ Noel nhỏ */
-html[data-theme="xmas"] .logo-wrap {
-  position: relative;
-  background: radial-gradient(circle at 30% 28%, #fffef8, #f7e6bf 72%, #e6cb8e);
-  border-color: color-mix(in srgb, var(--xm-gold) 65%, var(--line));
-  box-shadow: inset 0 2px 6px rgba(255,255,255,.95), 0 6px 20px rgba(184,59,54,.14), 0 0 0 3px color-mix(in srgb, var(--xm-red) 14%, transparent);
-}
-html[data-theme="xmas"] .logo-wrap::after {
-  content: ''; position: absolute; top: -11px; right: -10px; width: 30px; height: 26px; pointer-events: none;
-  transform: rotate(18deg);
-  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 30'><path d='M6 22C9 9 20 3 30 9C24 14 23 19 25 23Z' fill='%23c23b3b'/><rect x='4' y='20' width='23' height='6.5' rx='3.2' fill='%23fffdf9' stroke='%23e5dfd5' stroke-width='1'/><circle cx='31' cy='9.5' r='3.6' fill='%23fffdf9' stroke='%23e5dfd5' stroke-width='1'/></svg>") center / contain no-repeat;
-}
-html[data-theme="xmas"] .title::after {
-  width: 108px;
-  background: linear-gradient(90deg, var(--xm-pine) 0 33%, var(--xm-gold) 33% 67%, var(--xm-red) 67%);
-}
-
-/* nút hành động chính (.gold) mang sắc đỏ Giáng Sinh ấm áp */
-html[data-theme="xmas"] button.gold {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--cta) 88%, #ff8c7a), var(--cta));
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--cta) 28%, transparent), inset 0 -2px 0 var(--cta-d);
-}
-html[data-theme="xmas"] button.gold:hover:not(:disabled) {
-  box-shadow: 0 5px 16px color-mix(in srgb, var(--cta) 36%, transparent);
-}
-html[data-theme="xmas"] button.home-pill.has-new::after { background: var(--xm-red); }
-html[data-theme="xmas"] .showcase span:hover { border-color: color-mix(in srgb, var(--xm-pine) 35%, var(--line)); }
-
-/* ---------- Phòng chờ ---------- */
+/* ---------- điểm xuyết trên thẻ ---------- */
+/* viền kẹo gậy mảnh ở mép trên thẻ trang chủ & phòng chờ */
+html[data-theme="xmas"] :is(.home, .room).card { border-top: 4px solid transparent;
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, repeating-linear-gradient(-45deg, var(--xm-red) 0 8px, var(--surface) 8px 14px) border-box; }
+/* nhành nhựa ruồi góc trên-trái thẻ trang chủ */
+html[data-theme="xmas"] .home.card::before { content: ''; position: absolute; top: 10px; left: 12px; width: 46px; height: 30px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 30'><path d='M2 10Q10 2 22 12Q12 20 2 10Z' fill='%233f6656'/><path d='M44 6Q34 0 24 12Q36 18 44 6Z' fill='%234f7a66'/><g fill='%23b8453a'><circle cx='21' cy='16' r='4'/><circle cx='28' cy='18' r='3.6'/><circle cx='24' cy='23' r='3.4'/></g></svg>") center / contain no-repeat; }
+html[data-theme="xmas"] .title::after { width: 96px; background: linear-gradient(90deg, var(--xm-pine) 0 33%, var(--accent) 33% 67%, var(--xm-red) 67%); }
 html[data-theme="xmas"] .room-top > span:first-child::before { content: '🎄 '; }
-html[data-theme="xmas"] .code {
-  color: var(--xm-pine);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--xm-pine) 10%, var(--surface)), color-mix(in srgb, var(--xm-gold) 12%, var(--surface)));
-  border-color: color-mix(in srgb, var(--xm-pine) 28%, var(--line));
-}
-html[data-theme="xmas"] .gcur {
-  border-color: color-mix(in srgb, var(--xm-pine) 28%, var(--line));
-  background:
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'><g stroke='%23276749' stroke-opacity='.09' stroke-width='2' stroke-linecap='round'><path d='M30 12v36M14.4 21l31.2 18M45.6 21L14.4 39'/></g></svg>") right 12px center / 58px 58px no-repeat,
-    linear-gradient(135deg, color-mix(in srgb, var(--xm-pine) 9%, var(--surface)), color-mix(in srgb, var(--xm-gold) 8%, var(--surface)));
-}
-html[data-theme="xmas"] .seat.mine:not(.lk-cb) {
-  box-shadow: 0 0 0 2px var(--xm-gold), 0 6px 18px color-mix(in srgb, var(--xm-gold) 24%, transparent);
-}
-
-/* ---------- Modal, Chat, Thông báo, Tải game ---------- */
-html[data-theme="xmas"] #modal { background: rgba(24, 40, 34, .38); }
-html[data-theme="xmas"] #toast {
-  background: #1d4433; color: #fffaf2; border: 1px solid color-mix(in srgb, var(--xm-gold) 65%, transparent);
-}
-html[data-theme="xmas"] #loading {
-  padding: 14px 24px; border-radius: 99px; background: color-mix(in srgb, var(--surface) 92%, #fff);
-  border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--xm-pine); font-weight: 700;
-}
-html[data-theme="xmas"] #loading::before { content: '🎄 '; }
-html[data-theme="xmas"] #chat-btn.on { border-color: var(--xm-pine); }
-html[data-theme="xmas"] .cm.me { background: color-mix(in srgb, var(--xm-pine) 14%, var(--surface)); }
-html[data-theme="xmas"] .wn-item.top {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--xm-red) 7%, var(--surface)), color-mix(in srgb, var(--xm-gold) 9%, var(--surface)));
-  border-color: color-mix(in srgb, var(--xm-red) 25%, var(--line));
-}
-html[data-theme="xmas"] .wn-tag { background: var(--xm-red); }
-html[data-theme="xmas"] .rank li:first-child {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--xm-gold) 28%, var(--surface)), color-mix(in srgb, var(--xm-red) 10%, var(--surface)));
-}
-html[data-theme="xmas"] .sh-hero:not(.lk-cb) {
-  background:
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g stroke='%23fff' stroke-opacity='.07' stroke-width='1.5' stroke-linecap='round'><path d='M28 20v16M21 24l14 8M35 24l-14 8'/><path d='M92 78v16M85 82l14 8M99 82l-14 8'/></g><circle cx='88' cy='28' r='1.5' fill='%23ffe699' fill-opacity='.35'/><circle cx='34' cy='88' r='1.3' fill='%23fff' fill-opacity='.3'/></svg>") 0 0 / 120px,
-    radial-gradient(ellipse at 20% 28%, #2a5543 0%, #19382b 58%, #11271e 100%);
-  border-color: color-mix(in srgb, var(--xm-gold) 35%, #15241e);
-}
-
-/* ---------- Trang Bảng xếp hạng (/report) ---------- */
-html[data-theme="xmas"] .rp { --pos: #276749; --neg: #c23b3b; }
 html[data-theme="xmas"] .rp-head h1::after { content: ' 🎄'; }
-html[data-theme="xmas"] .rp-card,
-html[data-theme="xmas"] .rp-sum,
-html[data-theme="xmas"] .rp-how {
-  border-color: color-mix(in srgb, var(--xm-pine) 24%, var(--line));
-}
-html[data-theme="xmas"] .rp-tbl th { color: var(--xm-pine); }
-html[data-theme="xmas"] .rp-p.win {
-  background: color-mix(in srgb, var(--xm-gold) 24%, var(--surface));
-  border-color: color-mix(in srgb, var(--xm-gold) 52%, var(--line));
-}
-.rp-head { flex-wrap: wrap; }
-.rp-head h1 { margin-right: auto; }
 
-/* ---------- Nút đổi theme (trang chủ & bảng xếp hạng) ---------- */
-#xm-toggle { gap: 7px; padding: 4px 6px 4px 10px; }
-#xm-toggle .xm-sw { position: relative; width: 30px; height: 18px; border-radius: 99px; background: var(--line);
-  transition: background .2s ease; display: inline-flex; align-items: center; padding: 2px; }
-#xm-toggle .xm-sw i { width: 14px; height: 14px; border-radius: 50%; background: var(--surface);
-  box-shadow: 0 1px 3px rgba(0,0,0,.22); transition: transform .2s cubic-bezier(.22,1,.36,1); }
-html[data-theme="xmas"] #xm-toggle { color: var(--ink); border-color: color-mix(in srgb, var(--xm-red) 38%, var(--line));
-  background: color-mix(in srgb, var(--xm-pine) 10%, var(--surface)); }
-html[data-theme="xmas"] #xm-toggle .xm-sw { background: var(--xm-pine); }
-html[data-theme="xmas"] #xm-toggle .xm-sw i { transform: translateX(12px); }
+/* nút bật/tắt (góc trên-phải thẻ trang chủ, hiện cả khi đang tắt để bật lại) */
+#xm-toggle { position: absolute; top: 10px; right: 10px; padding: 4px 10px; font-size: 12px; opacity: .7; }
+html[data-theme="xmas"] #xm-toggle { opacity: 1; border-color: color-mix(in srgb, var(--xm-red) 35%, var(--line)); }

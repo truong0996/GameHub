@@ -15,7 +15,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => V.players[p];
 const col = p => (SEATS[p] ? SEATS[p].color : '#888');
 const nm = p => UI.esc(P(p) && P(p).name ? P(p).name : SEATS[p].name);
-const who = p => CTX.skin.name(p, P(p) && P(p).name ? P(p).name : SEATS[p].name, col(p));
+const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
 const alive = () => V.players.map((pl, i) => (pl.on ? i : -1)).filter(i => i >= 0);
 const money = n => '$' + Math.round(n).toLocaleString('en-US');
 const cellName = i => `<b class="cn" style="--g:${BOARD[i].g ? GROUPS[BOARD[i].g].c : 'transparent'}">${UI.esc(BOARD[i].name)}</b>`;
@@ -82,7 +82,7 @@ const TEMPLATE = `<div class="tp">
         <div id="tp-event"></div>
         <div class="tp-mid">
           <div class="tp-dice"><div class="die lk-df" id="die0"></div><div class="die lk-df" id="die1"></div></div>
-          <div id="tp-status" class="lk-still"></div>
+          <div id="tp-status"></div>
         </div>
         <div class="tp-timer"><i id="tp-timer"></i></div>
         <div id="tp-acts"></div>
@@ -95,7 +95,7 @@ const TEMPLATE = `<div class="tp">
   <aside class="tp-side">
     <div class="tp-shead"><b>🎩 Cờ Tỷ Phú</b><span id="tp-mode" class="muted small"></span></div>
     <div id="tp-players"></div>
-    <div id="tp-log" class="lk-still"></div>
+    <div id="tp-log"></div>
     <div id="tp-emotes"></div>
     <div id="tp-tools"></div>
   </aside>
@@ -169,10 +169,10 @@ function renderPlayers() {
     const badges = [pl.jail ? '🔒' : '', pl.jailCards ? `🔑${pl.jailCards > 1 ? '×' + pl.jailCards : ''}` : '', pl.stock ? `📈${money(pl.stock)}` : '',
       pl.hand.length ? `🃏${pl.hand.length}` : '', sets ? `<span title="Số bộ màu đủ">🏘️${sets}</span>` : ''].filter(Boolean).join(' ');
     const auc = V.phase === 'auction' && V.auc ? (p in V.auc.bids ? ' ✔' : pl.cash >= MIN_BID ? ' ⏳' : '') : '';
-    return `<div class="pl${p === m ? ' me' : ''}${p === dec ? ' turn' : ' lk-still'}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="pl${p === m ? ' me' : ''}${p === dec ? ' turn' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
       <div class="pl-main">
-        <div class="pl-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}${auc}${rank[0].p === p && rank[0].w > (rank[1] || { w: 0 }).w ? ' 👑' : ''}</div>
+        <div class="pl-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}${auc}${rank[0].p === p && rank[0].w > (rank[1] || { w: 0 }).w ? ' 👑' : ''}</div>
         <div class="pl-props">${props || '<span class="muted small">chưa có đất</span>'}</div>
       </div>
       <div class="pl-money"><b>${money(pl.cash)}</b><small title="Tổng tài sản">∑ ${money(w)}</small><small>${badges}</small></div>
@@ -642,7 +642,7 @@ function showCell(i) {
 }
 
 function showHelp() {
-  const o = (CTX.room && CTX.room().opts) || {}, chaos = V ? V.chaos : o.chaos !== false, minutes = V ? V.minutes : (o.minutes || 30), instant = V ? V.instant : o.instant !== false;
+  const chaos = V ? V.chaos : true;
   UI.openModal(`<div class="tp-m help">
     <h2>📖 Luật chơi — Cờ Tỷ Phú</h2>
     <h3>Cơ bản</h3><ul>
@@ -652,7 +652,7 @@ function showHelp() {
       <li>Sở hữu đủ một <b>nhóm màu</b>: tiền thuê đất trống ×2, và được <b>xây nhà</b> (trước khi đổ xúc xắc, bấm 🏠 Xây nhà rồi chạm ô). 5 nhà = khách sạn.</li>
       <li>Thiếu tiền: máy tự bán nhà (nửa giá xây) rồi bán đất cho ngân hàng (nửa giá). Vẫn không đủ là <b>phá sản</b> — ván kết thúc ngay.</li>
       <li>🔒 Tù: thử đổ đôi, nộp ${money(BAIL)} hoặc dùng 🔑 Thẻ Ra Tù. Không ra được cũng chỉ ngồi 1 lượt.</li>
-      <li>🏁 Hết giờ (${minutes} phút, đánh nốt vòng đang dở) hoặc có người phá sản → ai có <b>tổng tài sản</b> (tiền + đất + nhà) lớn nhất thắng.${instant ? ' Gom đủ <b>3 bộ màu</b> là <b>thắng ngay</b>!' : ''}</li>
+      <li>🏁 Hết giờ (${V ? V.minutes : 30} phút, đánh nốt vòng đang dở) hoặc có người phá sản → ai có <b>tổng tài sản</b> (tiền + đất + nhà) lớn nhất thắng.${!V || V.instant ? ' Gom đủ <b>3 bộ màu</b> là <b>thắng ngay</b>!' : ''}</li>
       <li>Chạm vào một ô trên bàn để xem giá và bảng tiền thuê.</li>
     </ul>
     ${chaos ? `<h3>🎁 Bất Ngờ — thẻ kỹ năng (giữ tối đa 2)</h3><p class="small">Qua Xuất Phát có 50% được 1 thẻ; thẻ Cơ Hội/Khí Vận cũng có thể cho thẻ.</p>
@@ -789,6 +789,4 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); V = null; },
     };
   },
-  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
-  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

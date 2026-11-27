@@ -1,9 +1,7 @@
 // Cửa hàng đồ trang trí (dùng chung server + client): danh sách món, ô trang bị, độ hiếm, công thức thưởng credit.
-// Đồ chỉ để khoe — không ảnh hưởng luật chơi. Hai tầng: đồ của hub (mọi game: khung ảnh, tên, khung chat, hiệu ứng thắng,
+// Đồ chỉ để khoe — không ảnh hưởng luật chơi. Hai tầng: đồ của hub (mọi game: khung ảnh, tên, danh hiệu, khung chat, hiệu ứng thắng,
 // gói biểu cảm) và đồ trong game (grp 'game': lưng bài, xúc xắc, mũ, khung tranh — chỉ các game ghi trong 'games' vẽ, đọc qua ctx.skin).
-// Danh hiệu (slot 'title') nhận qua Thành tựu (public/achievements-data.js), không bán trong cửa hàng.
 // Màu ghế trong game KHÔNG bị đổi (nhiều game dùng màu ghế làm luật: đội, quân cờ).
-import { TITLE } from './achievements-data.js';
 
 // Credit mỗi ván (chỉ ván được ghi vào lịch sử: ≥2 người đăng nhập, chơi đến hết):
 //   base × trọng số thời lượng (×1…×3, như bảng xếp hạng), hạng 1 (kể cả đồng hạng 1) nhân thêm winMul.
@@ -11,16 +9,16 @@ import { TITLE } from './achievements-data.js';
 export const CREDIT = { base: 15, winMul: 1.5, dayCap: 300 };
 
 export const SLOTS = [
-  { id: 'frame', name: 'Khung ảnh', icon: '🖼️', hint: 'Viền trang trí bao quanh ảnh đại diện tại phòng chờ' },
-  { id: 'name', name: 'Hiệu ứng tên', icon: '✨', hint: 'Hiệu ứng màu chữ hiển thị tại phòng chờ, trò chuyện và bảng xếp hạng' },
-  { id: 'bubble', name: 'Khung chat', icon: '💬', hint: 'Giao diện riêng cho tin nhắn trò chuyện và lời thoại tại bàn' },
-  { id: 'fx', name: 'Hiệu ứng thắng', icon: '🎆', hint: 'Hiệu ứng ăn mừng xuất hiện khi bạn chiến thắng hoặc ngồi vào bàn' },
-  { id: 'back', grp: 'game', name: 'Lưng bài', icon: '🂠', games: 'UNO, Mèo Nổ, Coup', hint: 'Hoạ tiết mặt sau của lá bài úp hiển thị với những người chơi khác' },
-  { id: 'dice', grp: 'game', name: 'Xúc xắc', icon: '🎲', games: 'Cờ Cá Ngựa, Cờ Tỷ Phú', hint: 'Giao diện xúc xắc riêng mỗi khi đến lượt bạn gieo' },
-  { id: 'hat', grp: 'game', name: 'Mũ', icon: '🎩', games: 'Kẻ Mạo Danh', hint: 'Phụ kiện đội đầu cho nhân vật (tự đồng bộ khi ngụy trang)' },
-  { id: 'easel', grp: 'game', name: 'Khung tranh', icon: '🖼️', games: 'Vẽ Đoán', hint: 'Khung viền bảng vẽ của bạn trong lúc vẽ và tại Phòng trưng bày' },
-  { id: 'emote', name: 'Gói biểu cảm', icon: '😎', hint: 'Mở khoá thêm biểu cảm mới trong trò chơi (tự động kích hoạt sau khi mua)' },
-  { id: 'util', name: 'Tiện ích', icon: '🎟️', hint: 'Thẻ tiêu hao dùng cho tài khoản (có thể mua nhiều lần)' },
+  { id: 'frame', name: 'Khung ảnh', icon: '🖼️', hint: 'Viền quanh ảnh đại diện ở phòng chờ' },
+  { id: 'name', name: 'Hiệu ứng tên', icon: '✨', hint: 'Tên lấp lánh ở phòng chờ, khung chat, bảng xếp hạng' },
+  { id: 'title', name: 'Danh hiệu', icon: '🎖️', hint: 'Hiện cạnh tên ở phòng chờ, khung chat, bảng xếp hạng' },
+  { id: 'bubble', name: 'Khung chat', icon: '💬', hint: 'Tin nhắn trong khung chat và bong bóng lời thoại tại ghế' },
+  { id: 'fx', name: 'Hiệu ứng thắng', icon: '🎆', hint: 'Cả phòng thấy khi bạn thắng ván (và khi bạn ngồi vào ghế)' },
+  { id: 'back', grp: 'game', name: 'Lưng bài', icon: '🂠', games: 'UNO, Mèo Nổ, Coup', hint: 'Mặt lưng các lá bài úp trên tay bạn — người khác nhìn thấy' },
+  { id: 'dice', grp: 'game', name: 'Xúc xắc', icon: '🎲', games: 'Cờ Cá Ngựa, Cờ Tỷ Phú', hint: 'Xúc xắc đổi kiểu tới lượt bạn gieo' },
+  { id: 'hat', grp: 'game', name: 'Mũ', icon: '🎩', games: 'Kẻ Mạo Danh', hint: 'Đội trên đầu nhân vật của bạn (bị Biến Hình/Ngụy Trang thì mũ đổi theo hình dạng)' },
+  { id: 'easel', grp: 'game', name: 'Khung tranh', icon: '🖼️', games: 'Vẽ Đoán', hint: 'Viền quanh bức tranh lúc bạn vẽ (cả phòng thấy) và quanh tranh của bạn trong Phòng tranh' },
+  { id: 'emote', name: 'Gói biểu cảm', icon: '😎', hint: 'Thêm biểu cảm vào thanh emoji trong game — mua là dùng được, không cần trang bị' },
 ];
 
 // c thường · r hiếm · e sử thi · l huyền thoại
@@ -31,109 +29,81 @@ export const RARITY = {
   l: { name: 'Huyền thoại', color: '#ff8a00' },
 };
 
-export const COLLECTIONS = [
-  { id: 'xmas', name: 'Giáng Sinh', icon: '🎄', season: true, desc: 'Sắc đỏ xanh lễ hội, tuyết rơi và quà Giáng Sinh.' },
-  { id: 'sakura', name: 'Hoa Anh Đào', icon: '🌸', desc: 'Sắc hồng dịu nhẹ cùng cánh hoa anh đào bay.' },
-  { id: 'ocean', name: 'Đại Dương', icon: '🫧', desc: 'Sắc xanh biển sâu mát lành và bọt sóng lung linh.' },
-  { id: 'gold', name: 'Hoàng Kim', icon: '👑', desc: 'Ánh vàng vương giả lấp lánh sang trọng.' },
-  { id: 'fire', name: 'Hoả Diệm', icon: '🔥', desc: 'Ngọn lửa rực cháy đầy uy lực.' },
-  { id: 'rainbow', name: 'Cầu Vồng', icon: '🌈', desc: 'Đa sắc cầu vồng rực rỡ chuyển động.' },
-  { id: 'galaxy', name: 'Thiên Hà', icon: '🪐', desc: 'Vũ trụ huyền bí với tinh vân và ánh sao.' },
-];
-
 // id cũng là tên class CSS (public/shop.css: .lk-<id>). Đổi giá thì người đã mua không bị ảnh hưởng (đã trừ theo giá lúc mua).
 export const ITEMS = [
-  // Khung ảnh (7 bộ đồng nhất: Hoa Anh Đào, Đại Dương, Hoàng Kim, Hoả Diệm, Giáng Sinh, Cầu Vồng, Thiên Hà)
-  { id: 'fr-sakura', slot: 'frame', col: 'sakura', name: 'Hoa Anh Đào', rar: 'r', price: 100 },
-  { id: 'fr-ocean', slot: 'frame', col: 'ocean', name: 'Đại Dương', rar: 'r', price: 100 },
-  { id: 'fr-gold', slot: 'frame', col: 'gold', name: 'Hoàng Kim', rar: 'e', price: 220 },
-  { id: 'fr-fire', slot: 'frame', col: 'fire', name: 'Hoả Diệm', rar: 'e', price: 250 },
-  { id: 'fr-xmas', slot: 'frame', col: 'xmas', name: 'Giáng Sinh', rar: 'e', price: 240 },
-  { id: 'fr-rainbow', slot: 'frame', col: 'rainbow', name: 'Cầu Vồng', rar: 'l', price: 400 },
-  { id: 'fr-galaxy', slot: 'frame', col: 'galaxy', name: 'Thiên Hà', rar: 'l', price: 480 },
+  // Khung ảnh
+  { id: 'fr-jade', slot: 'frame', name: 'Ngọc Bích', rar: 'r', price: 120 },
+  { id: 'fr-sakura', slot: 'frame', name: 'Hoa Anh Đào', rar: 'r', price: 150 },
+  { id: 'fr-gold', slot: 'frame', name: 'Vương Miện Vàng', rar: 'e', price: 350 },
+  { id: 'fr-fire', slot: 'frame', name: 'Hoả Diệm', rar: 'e', price: 400 },
+  { id: 'fr-rainbow', slot: 'frame', name: 'Cầu Vồng Xoay', rar: 'l', price: 700 },
+  { id: 'fr-galaxy', slot: 'frame', name: 'Thiên Hà', rar: 'l', price: 900 },
   // Hiệu ứng tên
-  { id: 'nx-sakura', slot: 'name', col: 'sakura', name: 'Hoa Anh Đào', rar: 'r', price: 100 },
-  { id: 'nx-ocean', slot: 'name', col: 'ocean', name: 'Đại Dương', rar: 'r', price: 100 },
-  { id: 'nx-gold', slot: 'name', col: 'gold', name: 'Hoàng Kim', rar: 'e', price: 220 },
-  { id: 'nx-fire', slot: 'name', col: 'fire', name: 'Hoả Diệm', rar: 'e', price: 250 },
-  { id: 'nx-xmas', slot: 'name', col: 'xmas', name: 'Giáng Sinh', rar: 'e', price: 240 },
-  { id: 'nx-rainbow', slot: 'name', col: 'rainbow', name: 'Cầu Vồng', rar: 'l', price: 400 },
-  { id: 'nx-galaxy', slot: 'name', col: 'galaxy', name: 'Thiên Hà', rar: 'l', price: 480 },
+  { id: 'nx-sunset', slot: 'name', name: 'Hoàng Hôn', rar: 'r', price: 150 },
+  { id: 'nx-ocean', slot: 'name', name: 'Đại Dương', rar: 'r', price: 150 },
+  { id: 'nx-gold', slot: 'name', name: 'Ánh Kim', rar: 'e', price: 400 },
+  { id: 'nx-fire', slot: 'name', name: 'Lửa Cháy', rar: 'e', price: 450 },
+  { id: 'nx-rainbow', slot: 'name', name: 'Cầu Vồng', rar: 'l', price: 800 },
+  { id: 'nx-galaxy', slot: 'name', name: 'Tinh Vân', rar: 'l', price: 850 },
+  // Danh hiệu (text = chữ hiện ra)
+  { id: 't-newbie', slot: 'title', name: 'Tân Binh', text: '🌱 Tân Binh', rar: 'c', price: 40 },
+  { id: 't-player', slot: 'title', name: 'Tay Chơi', text: '😎 Tay Chơi', rar: 'c', price: 80 },
+  { id: 't-pro', slot: 'title', name: 'Cao Thủ', text: '⚔️ Cao Thủ', rar: 'r', price: 200 },
+  { id: 't-cards', slot: 'title', name: 'Thần Bài', text: '🃏 Thần Bài', rar: 'r', price: 250 },
+  { id: 't-rich', slot: 'title', name: 'Đại Gia', text: '💰 Đại Gia', rar: 'e', price: 500 },
+  { id: 't-king', slot: 'title', name: 'Vua Trò Chơi', text: '👑 Vua Trò Chơi', rar: 'e', price: 600 },
+  { id: 't-legend', slot: 'title', name: 'Huyền Thoại', text: '🐉 Huyền Thoại', rar: 'l', price: 1000 },
   // Khung chat
-  { id: 'bb-sakura', slot: 'bubble', col: 'sakura', name: 'Hoa Anh Đào', rar: 'r', price: 100 },
-  { id: 'bb-ocean', slot: 'bubble', col: 'ocean', name: 'Đại Dương', rar: 'r', price: 100 },
-  { id: 'bb-gold', slot: 'bubble', col: 'gold', name: 'Hoàng Kim', rar: 'e', price: 220 },
-  { id: 'bb-fire', slot: 'bubble', col: 'fire', name: 'Hoả Diệm', rar: 'e', price: 250 },
-  { id: 'bb-xmas', slot: 'bubble', col: 'xmas', name: 'Giáng Sinh', rar: 'e', price: 240 },
-  { id: 'bb-rainbow', slot: 'bubble', col: 'rainbow', name: 'Cầu Vồng', rar: 'l', price: 400 },
-  { id: 'bb-galaxy', slot: 'bubble', col: 'galaxy', name: 'Thiên Hà', rar: 'l', price: 480 },
+  { id: 'bb-sakura', slot: 'bubble', name: 'Hoa Anh Đào', rar: 'r', price: 150 },
+  { id: 'bb-ocean', slot: 'bubble', name: 'Đại Dương', rar: 'r', price: 150 },
+  { id: 'bb-gold', slot: 'bubble', name: 'Dát Vàng', rar: 'e', price: 400 },
+  { id: 'bb-neon', slot: 'bubble', name: 'Đèn Lồng Đêm', rar: 'e', price: 450 },
+  { id: 'bb-rainbow', slot: 'bubble', name: 'Cầu Vồng', rar: 'l', price: 700 },
   // Hiệu ứng thắng
-  { id: 'fx-confetti', slot: 'fx', col: 'rainbow', name: 'Pháo Giấy', rar: 'r', price: 120 },
-  { id: 'fx-snow', slot: 'fx', col: 'xmas', name: 'Bão Tuyết Noel', rar: 'r', price: 140 },
-  { id: 'fx-gold', slot: 'fx', col: 'gold', name: 'Mưa Vàng', rar: 'e', price: 250 },
-  { id: 'fx-fireworks', slot: 'fx', name: 'Pháo Hoa Rực Rỡ', rar: 'e', price: 280 },
-  { id: 'fx-stars', slot: 'fx', col: 'galaxy', name: 'Mưa Sao Băng', rar: 'l', price: 450 },
-  { id: 'fx-santa', slot: 'fx', col: 'xmas', name: 'Ông Già Noel', rar: 'l', price: 460 },
-  { id: 'fx-dragon', slot: 'fx', col: 'fire', name: 'Rồng Lửa', rar: 'l', price: 520 },
+  { id: 'fx-confetti', slot: 'fx', name: 'Pháo Giấy', rar: 'r', price: 200 },
+  { id: 'fx-gold', slot: 'fx', name: 'Mưa Vàng', rar: 'e', price: 450 },
+  { id: 'fx-fireworks', slot: 'fx', name: 'Pháo Hoa Rực Rỡ', rar: 'e', price: 500 },
+  { id: 'fx-stars', slot: 'fx', name: 'Mưa Sao Băng', rar: 'l', price: 800 },
+  { id: 'fx-dragon', slot: 'fx', name: 'Rồng Lửa', rar: 'l', price: 950 },
   // Lưng bài (motif = hình to ở giữa lá, chỉ hiện khi lá đủ lớn — vd xem trước trong cửa hàng)
-  { id: 'bk-sakura', slot: 'back', col: 'sakura', name: 'Hoa Anh Đào', motif: '🌸', rar: 'r', price: 100 },
-  { id: 'bk-ocean', slot: 'back', col: 'ocean', name: 'Đại Dương', motif: '🫧', rar: 'r', price: 100 },
-  { id: 'bk-gold', slot: 'back', col: 'gold', name: 'Hoàng Kim', motif: '👑', rar: 'e', price: 220 },
-  { id: 'bk-fire', slot: 'back', col: 'fire', name: 'Hoả Diệm', motif: '🔥', rar: 'e', price: 250 },
-  { id: 'bk-xmas', slot: 'back', col: 'xmas', name: 'Giáng Sinh', motif: '🎄', rar: 'e', price: 240 },
-  { id: 'bk-rainbow', slot: 'back', col: 'rainbow', name: 'Cầu Vồng', motif: '🌈', rar: 'l', price: 400 },
-  { id: 'bk-galaxy', slot: 'back', col: 'galaxy', name: 'Thiên Hà', motif: '🪐', rar: 'l', price: 480 },
+  { id: 'bk-sakura', slot: 'back', name: 'Anh Đào', motif: '🌸', rar: 'r', price: 150 },
+  { id: 'bk-ocean', slot: 'back', name: 'Sóng Biển', motif: '🌊', rar: 'r', price: 150 },
+  { id: 'bk-gold', slot: 'back', name: 'Lá Vàng Ròng', motif: '💰', rar: 'e', price: 400 },
+  { id: 'bk-neon', slot: 'back', name: 'Neon Đêm', motif: '⚡', rar: 'e', price: 450 },
+  { id: 'bk-dragon', slot: 'back', name: 'Long Ấn', motif: '🐉', rar: 'l', price: 800 },
+  { id: 'bk-galaxy', slot: 'back', name: 'Dải Ngân Hà', motif: '🌌', rar: 'l', price: 900 },
   // Xúc xắc
-  { id: 'dc-sakura', slot: 'dice', col: 'sakura', name: 'Hoa Anh Đào', rar: 'r', price: 100 },
-  { id: 'dc-ocean', slot: 'dice', col: 'ocean', name: 'Đại Dương', rar: 'r', price: 100 },
-  { id: 'dc-gold', slot: 'dice', col: 'gold', name: 'Hoàng Kim', rar: 'e', price: 220 },
-  { id: 'dc-fire', slot: 'dice', col: 'fire', name: 'Hoả Diệm', rar: 'e', price: 250 },
-  { id: 'dc-xmas', slot: 'dice', col: 'xmas', name: 'Giáng Sinh', rar: 'e', price: 240 },
-  { id: 'dc-rainbow', slot: 'dice', col: 'rainbow', name: 'Cầu Vồng', rar: 'l', price: 400 },
-  { id: 'dc-galaxy', slot: 'dice', col: 'galaxy', name: 'Thiên Hà', rar: 'l', price: 480 },
+  { id: 'dc-jade', slot: 'dice', name: 'Ngọc Lục Bảo', rar: 'r', price: 120 },
+  { id: 'dc-ruby', slot: 'dice', name: 'Hồng Ngọc', rar: 'r', price: 150 },
+  { id: 'dc-gold', slot: 'dice', name: 'Vàng Ròng', rar: 'e', price: 400 },
+  { id: 'dc-neon', slot: 'dice', name: 'Neon', rar: 'e', price: 450 },
+  { id: 'dc-fire', slot: 'dice', name: 'Hoả Ngục', rar: 'l', price: 800 },
+  { id: 'dc-galaxy', slot: 'dice', name: 'Sao Trời', rar: 'l', price: 900 },
   // Mũ (Kẻ Mạo Danh): emoji = đội nguyên emoji; draw = kiểu vẽ riêng trong shop.js (drawHat); glow = màu phát sáng
-  { id: 'h-cap', slot: 'hat', name: 'Mũ Lưỡi Trai', emoji: '🧢', rar: 'c', price: 40 },
-  { id: 'h-bow', slot: 'hat', name: 'Nơ Hồng', emoji: '🎀', rar: 'c', price: 50 },
-  { id: 'h-flower', slot: 'hat', name: 'Hoa Cài Đầu', emoji: '🌺', rar: 'r', price: 80 },
-  { id: 'h-grad', slot: 'hat', name: 'Mũ Tốt Nghiệp', emoji: '🎓', rar: 'r', price: 100 },
-  { id: 'h-top', slot: 'hat', name: 'Mũ Ảo Thuật', emoji: '🎩', rar: 'r', price: 120 },
-  { id: 'h-antlers', slot: 'hat', col: 'xmas', name: 'Sừng Tuần Lộc', draw: 'antlers', glow: '#d98a3c', rar: 'r', price: 120 },
-  { id: 'h-crown', slot: 'hat', col: 'gold', name: 'Vương Miện', emoji: '👑', glow: '#ffcc33', rar: 'e', price: 240 },
-  { id: 'h-santa', slot: 'hat', col: 'xmas', name: 'Mũ Ông Già Noel', draw: 'santa', glow: '#ff4d4d', rar: 'e', price: 240 },
-  { id: 'h-horns', slot: 'hat', name: 'Sừng Quỷ', draw: 'horns', glow: '#ff2a2a', rar: 'e', price: 280 },
-  { id: 'h-halo', slot: 'hat', name: 'Hào Quang Thiên Thần', draw: 'halo', glow: '#ffe066', rar: 'l', price: 420 },
-  { id: 'h-flame', slot: 'hat', col: 'fire', name: 'Đầu Rực Lửa', draw: 'flame', glow: '#ff6a00', rar: 'l', price: 480 },
+  { id: 'h-cap', slot: 'hat', name: 'Mũ Lưỡi Trai', emoji: '🧢', rar: 'c', price: 60 },
+  { id: 'h-bow', slot: 'hat', name: 'Nơ Hồng', emoji: '🎀', rar: 'c', price: 80 },
+  { id: 'h-flower', slot: 'hat', name: 'Hoa Cài Đầu', emoji: '🌺', rar: 'r', price: 120 },
+  { id: 'h-grad', slot: 'hat', name: 'Mũ Tốt Nghiệp', emoji: '🎓', rar: 'r', price: 150 },
+  { id: 'h-top', slot: 'hat', name: 'Mũ Ảo Thuật', emoji: '🎩', rar: 'r', price: 200 },
+  { id: 'h-crown', slot: 'hat', name: 'Vương Miện', emoji: '👑', glow: '#ffcc33', rar: 'e', price: 450 },
+  { id: 'h-horns', slot: 'hat', name: 'Sừng Quỷ', draw: 'horns', glow: '#ff2a2a', rar: 'e', price: 500 },
+  { id: 'h-halo', slot: 'hat', name: 'Hào Quang Thiên Thần', draw: 'halo', glow: '#ffe066', rar: 'l', price: 800 },
+  { id: 'h-flame', slot: 'hat', name: 'Đầu Rực Lửa', draw: 'flame', glow: '#ff6a00', rar: 'l', price: 900 },
   // Khung tranh (Vẽ Đoán)
-  { id: 'ez-sakura', slot: 'easel', col: 'sakura', name: 'Hoa Anh Đào', rar: 'r', price: 100 },
-  { id: 'ez-ocean', slot: 'easel', col: 'ocean', name: 'Đại Dương', rar: 'r', price: 100 },
-  { id: 'ez-gold', slot: 'easel', col: 'gold', name: 'Hoàng Kim', rar: 'e', price: 220 },
-  { id: 'ez-fire', slot: 'easel', col: 'fire', name: 'Hoả Diệm', rar: 'e', price: 250 },
-  { id: 'ez-xmas', slot: 'easel', col: 'xmas', name: 'Giáng Sinh', rar: 'e', price: 240 },
-  { id: 'ez-rainbow', slot: 'easel', col: 'rainbow', name: 'Cầu Vồng', rar: 'l', price: 400 },
-  { id: 'ez-galaxy', slot: 'easel', col: 'galaxy', name: 'Thiên Hà', rar: 'l', price: 480 },
+  { id: 'ez-oak', slot: 'easel', name: 'Gỗ Sồi Viền Vàng', rar: 'r', price: 120 },
+  { id: 'ez-sakura', slot: 'easel', name: 'Anh Đào', rar: 'r', price: 150 },
+  { id: 'ez-gold', slot: 'easel', name: 'Khung Bảo Tàng', rar: 'e', price: 400 },
+  { id: 'ez-neon', slot: 'easel', name: 'Đèn Neon', rar: 'e', price: 450 },
+  { id: 'ez-rainbow', slot: 'easel', name: 'Cầu Vồng Xoay', rar: 'l', price: 800 },
+  { id: 'ez-galaxy', slot: 'easel', name: 'Tinh Vân', rar: 'l', price: 900 },
   // Gói biểu cảm
-  { id: 'em-mood', slot: 'emote', name: 'Cảm Xúc+', emojis: ['🥳', '🤯', '😱', '🫡'], rar: 'c', price: 60 },
-  { id: 'em-party', slot: 'emote', name: 'Lễ Hội', emojis: ['🎉', '🧧', '🏮', '🎆'], rar: 'r', price: 100 },
-  { id: 'em-xmas', slot: 'emote', col: 'xmas', name: 'Giáng Sinh', emojis: ['🎄', '🎅', '🎁', '⛄'], rar: 'r', price: 100 },
-  { id: 'em-beast', slot: 'emote', name: 'Thần Thú', emojis: ['🐉', '🦄', '🦊', '🐯'], rar: 'r', price: 120 },
-  { id: 'em-royal', slot: 'emote', name: 'Hoàng Gia', emojis: ['👑', '💎', '🏆', '💰'], rar: 'e', price: 180 },
-  // Tiện ích (tiêu hao)
-  { id: 'u-rename', slot: 'util', name: 'Thẻ Đổi Tên', icon: '🪪', rar: 'e', price: 1000, firstSale: 99, consumable: true,
-    desc: 'Dùng để đổi tên tài khoản 1 lần (chỉ đổi tên được khi có thẻ).' },
+  { id: 'em-mood', slot: 'emote', name: 'Cảm Xúc+', emojis: ['🥳', '🤯', '😱', '🫡'], rar: 'c', price: 100 },
+  { id: 'em-party', slot: 'emote', name: 'Lễ Hội', emojis: ['🎉', '🧧', '🏮', '🎆'], rar: 'r', price: 150 },
+  { id: 'em-beast', slot: 'emote', name: 'Thần Thú', emojis: ['🐉', '🦄', '🦊', '🐯'], rar: 'r', price: 200 },
+  { id: 'em-royal', slot: 'emote', name: 'Hoàng Gia', emojis: ['👑', '💎', '🏆', '💰'], rar: 'e', price: 300 },
 ];
-
-// Giá thực tế của một món (áp dụng giảm giá lần đầu nếu là vật phẩm tiêu hao có firstSale).
-export function itemPrice(it, wallet) {
-  if (!it) return 0;
-  if (it.firstSale && !(wallet && wallet.bag && wallet.bag.bought && wallet.bag.bought[it.id] > 0)) {
-    return Math.round(it.price * (100 - it.firstSale) / 100);
-  }
-  return it.price;
-}
 
 // Không có prototype: tra ITEM["constructor"], ITEM["__proto__"]... phải ra undefined (nếu không thì "mua" được món ma không giá → số dư NaN → mua gì cũng qua).
 export const ITEM = Object.freeze(Object.assign(Object.create(null), Object.fromEntries(ITEMS.map(x => [x.id, x]))));
-// Mọi vật phẩm trang trí hợp lệ (đồ cửa hàng + danh hiệu từ thành tựu).
-export const COSMETIC = id => ITEM[id] || TITLE[id] || null;
-// Ô trang bị được (gói biểu cảm & thẻ tiện ích không trang bị; 'title' mở qua thành tựu).
-export const WEAR = [...SLOTS.map(s => s.id).filter(s => s !== 'emote' && s !== 'util'), 'title'];
+// Ô trang bị được (gói biểu cảm mua là dùng, không trang bị).
+export const WEAR = SLOTS.map(s => s.id).filter(s => s !== 'emote');

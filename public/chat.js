@@ -85,7 +85,7 @@ function setOpen(v) {
 // tag: nhãn kênh do game đặt (vd 👻 = chỉ hồn ma thấy).
 // m.look = đồ trang trí của người gửi lúc gửi (hiệu ứng tên, danh hiệu, khung chat — xem shop.js).
 // m.av = ảnh đại diện của người gửi.
-const who = m => `${m.tag ? `<span class="ctag">${esc(m.tag)}</span>` : ''}${avImg(m.av, m.look)}${nameHtml(m.name, m.look, m.color || 'var(--muted)')}${titleHtml(m.look)}`;
+const who = m => `${m.tag ? `<span class="ctag">${esc(m.tag)}</span>` : ''}${avImg(m.av)}${nameHtml(m.name, m.look, m.color || 'var(--muted)')}${titleHtml(m.look)}`;
 const hhmm = t => new Date(t).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
 function addLine(m) {

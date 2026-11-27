@@ -1,5 +1,5 @@
 /* 🕵️ Mật Danh — mọi selector nằm trong .cn (modal dùng .cn-m) */
-.cn { --paper: #faf8f2; --paper-l: #d9dfd3; --nt: #d5dbc9; --as: #27332c;
+.cn { --paper: #fbf6ec; --paper-l: #e2d6c1; --nt: #d9cbb2; --as: #2d2724;
   display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; width: 100%; height: 100%; padding: 12px; position: relative; }
 .cn-main { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; padding-bottom: 4px; }
 .cn .muted { color: var(--muted); }
@@ -14,7 +14,7 @@
 .cn .tm.out { opacity: .55; }
 .cn .tm.win { box-shadow: 0 0 0 3px var(--accent), var(--shadow); }
 .cn .tm-head { display: flex; align-items: center; gap: 6px; }
-.cn .tm-name { font-weight: 800; color: oklch(from var(--tc) min(l, .52) c h); white-space: nowrap; }
+.cn .tm-name { font-weight: 800; color: color-mix(in oklab, var(--tc) 75%, #000); white-space: nowrap; }
 .cn .tm .left { min-width: 40px; height: 34px; border-radius: 9px; background: var(--tc); color: #fff; display: grid; place-items: center; font-size: 20px; }
 .cn .tm .sk { font-size: 16px; cursor: help; }
 .cn .tm .sk.used { opacity: .25; filter: grayscale(1); }
@@ -45,7 +45,7 @@
 .cn-board.shake { animation: cn-shake .9s; }
 @keyframes cn-shake { 10%, 50%, 90% { transform: translate(-6px, 2px) rotate(-.6deg); } 30%, 70% { transform: translate(6px, -2px) rotate(.6deg); } }
 .cn .cd { position: relative; aspect-ratio: 1.55; border-radius: 10px; background: var(--paper); border: 1px solid var(--paper-l);
-  box-shadow: 0 2px 0 var(--paper-l), 0 3px 8px rgba(39,51,44,.08); display: grid; place-items: center; text-align: center; padding: 4px;
+  box-shadow: 0 2px 0 var(--paper-l), 0 3px 8px rgba(60,48,36,.08); display: grid; place-items: center; text-align: center; padding: 4px;
   user-select: none; transition: transform .12s, box-shadow .12s, background .3s; overflow: hidden; }
 .cn .cd .w { font-weight: 800; font-size: clamp(11px, 1.35vw, 19px); line-height: 1.15; color: var(--ink); text-transform: uppercase; letter-spacing: .02em;
   overflow-wrap: anywhere; }
@@ -53,11 +53,11 @@
 .cn .cd.pic .w { font-size: clamp(26px, 3.4vw, 50px); text-transform: none; line-height: 1; }
 .cn-board.c6 .cd.pic .w { font-size: clamp(22px, 2.8vw, 42px); }
 .cn .cd.can { cursor: pointer; }
-.cn .cd.can:hover { transform: translateY(-2px); box-shadow: 0 4px 0 var(--paper-l), 0 6px 14px rgba(39,51,44,.14); }
-.cn .cd.sel { box-shadow: 0 0 0 3px var(--accent), 0 4px 10px rgba(39,51,44,.16); transform: translateY(-2px); }
+.cn .cd.can:hover { transform: translateY(-2px); box-shadow: 0 4px 0 var(--paper-l), 0 6px 14px rgba(60,48,36,.14); }
+.cn .cd.sel { box-shadow: 0 0 0 3px var(--accent), 0 4px 10px rgba(60,48,36,.18); transform: translateY(-2px); }
 .cn .cd.pick { outline: 2px dashed var(--primary); outline-offset: -4px; }
 .cn .cd.fog .w { color: var(--muted); font-size: clamp(18px, 2vw, 28px); }
-.cn .cd.fog { background: repeating-linear-gradient(135deg, #e5ece2 0 8px, #f2f6ef 8px 16px); }
+.cn .cd.fog { background: repeating-linear-gradient(135deg, #ece7df 0 8px, #f4f0ea 8px 16px); }
 .cn .cd.pulse { animation: cn-pulse 1s ease-out; }
 @keyframes cn-pulse { 30% { transform: scale(1.08); box-shadow: 0 0 0 4px var(--accent); } }
 .cn .cd.flipping { animation: cn-flip .35s ease-in forwards; }
@@ -67,10 +67,10 @@
 
 /* Trưởng nhóm thấy màu lá chưa lật (dải màu + nền ngả màu) */
 .cn .cd.spyv.k-0 { --tc: #d2483f; } .cn .cd.spyv.k-1 { --tc: #2f6fc9; } .cn .cd.spyv.k-2 { --tc: #2a8a52; }
-.cn .cd.spyv:is(.k-0, .k-1, .k-2) { background: color-mix(in srgb, var(--tc) 22%, var(--paper)); border-color: color-mix(in srgb, var(--tc) 55%, var(--paper)); box-shadow: inset 0 -5px 0 var(--tc), 0 3px 8px rgba(39,51,44,.08); }
-.cn .cd.spyv.k-n { background: var(--paper); box-shadow: inset 0 -5px 0 var(--nt), 0 3px 8px rgba(39,51,44,.08); }
-.cn .cd.spyv.k-a { background: var(--as); border-color: #131a16; }
-.cn .cd.spyv.k-a .w { color: var(--surface); }
+.cn .cd.spyv:is(.k-0, .k-1, .k-2) { background: color-mix(in srgb, var(--tc) 22%, var(--paper)); border-color: color-mix(in srgb, var(--tc) 55%, var(--paper)); box-shadow: inset 0 -5px 0 var(--tc), 0 3px 8px rgba(60,48,36,.08); }
+.cn .cd.spyv.k-n { background: var(--paper); box-shadow: inset 0 -5px 0 var(--nt), 0 3px 8px rgba(60,48,36,.08); }
+.cn .cd.spyv.k-a { background: var(--as); border-color: #000; }
+.cn .cd.spyv.k-a .w { color: #f4ede2; }
 .cn .cd.spyv.k-a::after { content: '💀'; position: absolute; left: 5px; top: 3px; font-size: 14px; }
 
 /* Lá đã lật */
@@ -82,7 +82,7 @@
 .cn .cd.rev.k-0 { background: #d2483f; box-shadow: 0 2px 0 #9e2f28; }
 .cn .cd.rev.k-1 { background: #2f6fc9; box-shadow: 0 2px 0 #1f4f94; }
 .cn .cd.rev.k-2 { background: #2a8a52; box-shadow: 0 2px 0 #1c623a; }
-.cn .cd.rev.k-n { background: var(--nt); color: var(--ink); box-shadow: 0 2px 0 #b3bdab; }
+.cn .cd.rev.k-n { background: var(--nt); color: var(--ink); box-shadow: 0 2px 0 #b9aa8f; }
 .cn .cd.rev.k-a { background: var(--as); box-shadow: 0 2px 0 #000; }
 .cn-board.spy .cd.rev { opacity: .55; }
 
@@ -119,7 +119,7 @@
 
 /* ---------- Banner ---------- */
 #cn-banner { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.8); opacity: 0; pointer-events: none; z-index: 5;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 20px 60px rgba(39,51,44,.24); padding: 18px 28px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 20px 60px rgba(40,30,20,.3); padding: 18px 28px;
   text-align: center; transition: opacity .25s, transform .25s; max-width: min(90vw, 460px); }
 #cn-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 #cn-banner .ic { font-size: 54px; line-height: 1.1; }
@@ -128,7 +128,7 @@
 #cn-banner.sm .ic { font-size: 40px; }
 #cn-banner.sm .t { font-size: 20px; }
 #cn-banner.clue { border: 3px solid var(--line); }
-#cn-banner .t.clue { font-size: 40px; color: oklch(from var(--tc) min(l, .52) c h); }
+#cn-banner .t.clue { font-size: 40px; color: color-mix(in oklab, var(--tc) 75%, #000); }
 
 /* ---------- Modal ---------- */
 .cn-m .rank { list-style: none; padding: 0; margin: 12px 0; display: flex; flex-direction: column; gap: 6px; }
@@ -160,6 +160,4 @@
 }
 
 /* Ảnh đại diện (ctx.skin.face) trước tên thành viên */
-.cn .mem :is(.hub-av, .hub-avw) { width: 1.35em; height: 1.35em; margin-right: 3px; }
-.cn .mem > .hub-av { box-shadow: 0 0 0 2px var(--tc); }
-.cn .mem .lk-ttl { font-size: 10px; line-height: 15px; }
+.cn .mem .hub-av { width: 1.35em; height: 1.35em; margin-right: 3px; box-shadow: 0 0 0 2px var(--tc); }

@@ -16,4 +16,4 @@
 .px .bottom { display: flex; gap: 12px; width: 100%; align-items: center; flex-wrap: wrap; }
 
 /* Ảnh đại diện (ctx.skin.face) trước tên */
-.px .sc :is(.hub-av, .hub-avw) { margin-right: 6px; }
+.px .sc .hub-av { margin-right: 6px; }

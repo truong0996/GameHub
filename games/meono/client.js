@@ -11,7 +11,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => ST.players[p];
 const nm = p => UI.esc(ST.players[p] ? ST.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#fff');
-const who = p => CTX.skin.name(p, ST.players[p] ? ST.players[p].name : '?', col(p));
+const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
 const cname = c => `${CARDS[c].icon} ${CARDS[c].name}`;
 const sortHand = h => h.slice().sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
 const myHand = () => (mySeat() >= 0 && P(mySeat()).hand ? sortHand(P(mySeat()).hand) : []);
@@ -71,7 +71,7 @@ const TEMPLATE = `<div class="mn">
       <div id="mn-stage"></div>
       <div class="pile" id="mn-discard"><div class="stack"></div><div class="pile-info" id="mn-discard-info"></div></div>
     </div>
-    <div id="mn-status" class="lk-still"></div>
+    <div id="mn-status"></div>
     <div id="mn-know"></div>
     <div id="mn-actions"></div>
     <div class="mn-timer"><i id="mn-timer"></i></div>
@@ -79,7 +79,7 @@ const TEMPLATE = `<div class="mn">
   </div>
   <aside class="mn-side">
     <div class="mn-head"><b>💣 Mèo Nổ</b><span id="mn-mode" class="muted small"></span></div>
-    <div id="mn-log" class="lk-still"></div>
+    <div id="mn-log"></div>
     <div id="mn-emotes"></div>
     <div id="mn-tools"></div>
   </aside>
@@ -96,10 +96,10 @@ function renderPlayers() {
     const backs = Math.min(pl.count, 8);
     const sub = dead ? (ghost ? `👻 Hồn ma · ${pl.count} 🙅` : '💀 Đã nổ')
       : `${pl.count} lá${ST.turn === p && ST.turnsLeft > 1 ? ` · <b class="warn">⚔️ ${ST.turnsLeft} lượt</b>` : ''}`;
-    return `<div class="pp${p === ST.turn && !dead ? ' turn' : ' lk-still'}${p === ask ? ' ask' : ''}${dead ? ' dead' : ''}${ghost ? ' ghost' : ''}${p === m ? ' me' : ''}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="pp${p === ST.turn && !dead ? ' turn' : ''}${p === ask ? ' ask' : ''}${dead ? ' dead' : ''}${ghost ? ' ghost' : ''}${p === m ? ' me' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="av">${dead ? (ghost ? '👻' : '💀') : (SEATS[p].label || '🐱') + CTX.skin.face(p, 'fill')}</div>
       <div class="pp-body">
-        <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
+        <div class="pp-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}</div>
         <div class="pp-sub">${sub}</div>
         <div class="minis">${dead ? '' : `<i class="${CTX.skin.cls(p, 'back')}"></i>`.repeat(backs)}</div>
       </div>
@@ -296,8 +296,8 @@ async function playEvent(e) {
       S.riffle();
       break;
     case 'turn':
-      ROOT.querySelectorAll('.pp.turn').forEach(x => x.classList.replace('turn', 'lk-still'));
-      ROOT.querySelector(`.pp[data-p="${e.p}"]`)?.classList.replace('lk-still', 'turn');
+      ROOT.querySelectorAll('.pp.turn').forEach(x => x.classList.remove('turn'));
+      ROOT.querySelector(`.pp[data-p="${e.p}"]`)?.classList.add('turn');
       log(`<span class="sep">— Lượt của ${who(e.p)}${e.turns > 1 ? ` (còn ${e.turns} lượt)` : ''} —</span>`);
       if (e.p === m) SFX.myTurn();
       break;
@@ -528,9 +528,8 @@ function showGameOver() {
 }
 
 function showHelp() {
-  const o = (CTX.room && CTX.room().opts) || {}, chaos = ST ? ST.chaos : o.chaos !== false;
-  const list = ORDER.filter(c => !CARDS[c].cat || c === 'taco').filter(c => chaos || !CARDS[c].chaos)
-    .map(c => `<li>${CARDS[c].icon} <b>${CARDS[c].cat ? 'Lá mèo (🌮🍉🥔🧔🌈' + (chaos ? '🐈' : '') + ')' : CARDS[c].name}</b> — ${CARDS[c].desc}</li>`).join('');
+  const list = ORDER.filter(c => !CARDS[c].cat || c === 'taco').filter(c => ST && (ST.chaos || !CARDS[c].chaos))
+    .map(c => `<li>${CARDS[c].icon} <b>${CARDS[c].cat ? 'Lá mèo (🌮🍉🥔🧔🌈' + (ST.chaos ? '🐈' : '') + ')' : CARDS[c].name}</b> — ${CARDS[c].desc}</li>`).join('');
   openTagged('help', `<div class="help">
     <h2>📖 Luật chơi — Mèo Nổ</h2>
     <h3>Cơ bản</h3><ul>
@@ -539,7 +538,7 @@ function showHelp() {
       <li>Mỗi lá vừa đánh có vài giây để bất kỳ ai hô 🙅 <b>Không!</b> (bấm nút hoặc phím <b>N</b>). "Không!" chồng "Không!" thì huỷ nhau.</li>
       <li><b>Combo:</b> 2 lá giống nhau → rút ngẫu nhiên 1 lá của người khác. 3 lá giống nhau → gọi tên 1 lá, người đó có thì phải đưa. 5 lá khác loại → nhặt 1 lá tuỳ ý từ chồng bỏ.</li>
       <li>Người cuối cùng còn sống thắng. Mỗi lượt có ${Math.round(CTX.room().turnMs / 1000)} giây — hết giờ máy sẽ rút giúp.</li>
-      ${chaos ? '<li>👻 <b>Hồn ma:</b> người đã nổ vẫn giữ các lá Không! và dùng được để phá người còn sống.</li>' : ''}
+      ${ST && ST.chaos ? '<li>👻 <b>Hồn ma:</b> người đã nổ vẫn giữ các lá Không! và dùng được để phá người còn sống.</li>' : ''}
     </ul>
     <h3>🃏 Các lá bài</h3><ul>${list}</ul>
     <div class="btns" style="margin-top:16px"><button class="gold" data-x>Hiểu rồi, chơi thôi!</button></div></div>`);
@@ -677,6 +676,4 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); ST = null; },
     };
   },
-  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
-  help(ctx) { CTX = ctx; UI = ctx.ui; ST = null; showHelp(); },
 };

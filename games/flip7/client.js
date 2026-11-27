@@ -11,7 +11,7 @@ const mySeat = () => CTX.me().seat;
 const P = p => V.players[p];
 const nm = p => UI.esc(V.players[p] ? V.players[p].name : '?');
 const col = p => (SEATS[p] ? SEATS[p].color : '#888');
-const who = p => CTX.skin.name(p, V.players[p] ? V.players[p].name : '?', col(p));
+const who = p => `<b class="pn" style="--c:${col(p)}">${nm(p)}</b>`;
 const seatedList = () => V.players.map((pl, i) => (pl.status !== 'off' ? i : -1)).filter(i => i >= 0);
 const actName = v => `${ACTIONS[v].icon} <b>${ACTIONS[v].name}</b>`;
 const decider = () => (V.phase !== 'play' ? null : V.pend.length ? V.pend[0].seat : V.turn);
@@ -73,7 +73,7 @@ const TEMPLATE = `<div class="f7">
     </div>
     <div id="f7-players"></div>
     <div class="f7-ctl">
-      <div id="f7-status" class="lk-still"></div>
+      <div id="f7-status"></div>
       <div class="f7-timer"><i id="f7-timer"></i></div>
       <div id="f7-actions"></div>
     </div>
@@ -81,7 +81,7 @@ const TEMPLATE = `<div class="f7">
   <aside class="f7-side">
     <div class="f7-head"><b>🃏 Flip 7</b><span id="f7-mode" class="muted small"></span></div>
     <div id="f7-count"></div>
-    <div id="f7-log" class="lk-still"></div>
+    <div id="f7-log"></div>
     <div id="f7-emotes"></div>
     <div id="f7-tools"></div>
   </aside>
@@ -100,10 +100,10 @@ function renderPlayers() {
     const extra = pl.mods.map(c => cardHTML(c)).join('') + (pl.sc ? cardHTML(pl.sc, 'sc') : '') + V.pend.filter(d => d.seat === p).map(d => cardHTML(d.card, 'waiting')).join('');
     const need = flipNeed(V.event), uniq = pl.nums.length;
     const pct = Math.min(100, (pl.total / V.target) * 100);
-    return `<div class="pb st-${pl.status}${p === m ? ' me' : ''}${p === dec ? ' turn' : ' lk-still'}${p === V.dealer ? ' dealer' : ''}" data-p="${p}" style="--c:${col(p)}">
+    return `<div class="pb st-${pl.status}${p === m ? ' me' : ''}${p === dec ? ' turn' : ''}${p === V.dealer ? ' dealer' : ''}" data-p="${p}" style="--c:${col(p)}">
       <div class="pb-head">
         <div class="av">${SEATS[p].label}${CTX.skin.face(p, 'fill')}</div>
-        <div class="pb-name">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}
+        <div class="pb-name">${pl.kind === 'bot' ? '🤖 ' : ''}${nm(p)}${p === m ? ' <span class="tag">bạn</span>' : ''}${off ? ' 📴' : ''}
           <div class="pb-sub">${STATUS[pl.status] || ''}${p === V.dealer ? ' · 🂠 chia bài' : ''}</div></div>
         <div class="pb-pts" title="Điểm vòng này"><small>vòng</small><b>${pts == null ? '?' : pl.status === 'bust' && !pts ? '0' : '+' + pts}</b></div>
         <div class="pb-total" title="Tổng điểm"><small>tổng</small><b>${pl.total}</b></div>
@@ -443,8 +443,7 @@ function showGameOver() {
 }
 
 function showHelp() {
-  const o = (CTX.room && CTX.room().opts) || {};
-  const chaos = V ? V.chaos : o.chaos !== false;
+  const chaos = V && V.chaos;
   const acts = Object.values(ACTIONS).filter(A => chaos || !A.chaos).map(A => `<li>${A.icon} <b>${A.name}</b>${A.chaos ? ' <span class="tag">Bất Ngờ</span>' : ''} (${A.n} lá) — ${A.desc}</li>`).join('');
   openTagged('help', `<div class="help">
     <h2>📖 Luật chơi — Flip 7</h2>
@@ -453,7 +452,7 @@ function showHelp() {
       <li>Lá số 0–12: số <b>n</b> có <b>n</b> lá (số 0 có 1 lá) — số càng lớn càng dễ trùng. Rút phải số <b>đã có</b> → <b>💥 CHÁY</b>: mất trắng điểm vòng này.</li>
       <li>Gom đủ <b>7 số khác nhau</b> → <b>🌟 FLIP 7</b>: +15 điểm và vòng kết thúc ngay (ai chưa cháy vẫn được tính điểm).</li>
       <li>Điểm vòng = tổng lá số (lá <b>×2</b> nhân đôi phần này) + các lá <b>+2 … +10</b> + thưởng Flip 7.</li>
-      <li>Vòng hết khi không còn ai đang chơi. Cuối vòng có người đạt <b>${V ? V.target : (o.target || 200)}</b> điểm → người cao nhất thắng (hoà thì đánh thêm vòng).</li>
+      <li>Vòng hết khi không còn ai đang chơi. Cuối vòng có người đạt <b>${V ? V.target : 200}</b> điểm → người cao nhất thắng (hoà thì đánh thêm vòng).</li>
       <li>Mỗi lượt có ${Math.round(CTX.room().turnMs / 1000)} giây — hết giờ máy chọn <b>Dừng</b> giúp.</li>
     </ul>
     <h3>Lá hành động — rút được thì chọn người nhận</h3><ul>${acts}</ul>
@@ -541,6 +540,4 @@ export default {
       unmount() { clearInterval(timerInt); removeEventListener('keydown', keyHandler); V = null; },
     };
   },
-  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
-  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };

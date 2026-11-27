@@ -3,62 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bảng xếp hạng thành tích — Celestials Game Hub</title>
+<title>🏆 Bảng xếp hạng — Celestials Game Hub</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
 <link rel="stylesheet" href="/hub.css">
 <link rel="stylesheet" href="/report.css">
 <link rel="stylesheet" href="/shop.css">
 <link rel="stylesheet" href="/xmas.css">
-<script>if(localStorage.getItem('hub_xmas_v3')!=='0')document.documentElement.dataset.theme='xmas';</script>
 </head>
 <body class="rp">
-<div class="hub-ambient" aria-hidden="true">
-  <div class="ambient-glow g1"></div>
-  <div class="ambient-glow g2"></div>
-  <div class="ambient-glow g3"></div>
-  <svg class="botanical b-tl" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18 8C48 56 84 106 142 152" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    <path d="M44 46C74 28 102 36 106 60C80 72 56 66 44 46Z" fill="currentColor" opacity=".45"/>
-    <path d="M76 86C52 96 42 122 58 140C84 134 94 108 76 86Z" fill="currentColor" opacity=".35"/>
-    <path d="M100 110C130 92 158 102 162 126C136 138 112 130 100 110Z" fill="currentColor" opacity=".3"/>
-    <path d="M22 24C6 44 10 68 32 76C48 58 44 34 22 24Z" fill="currentColor" opacity=".32"/>
-    <circle cx="152" cy="160" r="3" fill="currentColor" opacity=".4"/>
-    <circle cx="164" cy="169" r="2" fill="currentColor" opacity=".3"/>
-  </svg>
-  <svg class="botanical b-br" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M224 232C186 176 146 128 84 78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    <path d="M192 186C160 202 132 192 128 168C156 156 180 164 192 186Z" fill="currentColor" opacity=".42"/>
-    <path d="M158 144C184 134 196 108 180 88C154 94 142 120 158 144Z" fill="currentColor" opacity=".34"/>
-    <path d="M126 114C96 128 70 118 66 94C92 84 116 94 126 114Z" fill="currentColor" opacity=".28"/>
-    <path d="M208 212C226 194 224 168 202 160C186 176 188 202 208 212Z" fill="currentColor" opacity=".3"/>
-    <circle cx="72" cy="68" r="3" fill="currentColor" opacity=".35"/>
-  </svg>
-</div>
 <main>
   <header class="rp-head">
     <h1>🏆 Bảng xếp hạng</h1>
-    <a class="rp-back small" href="/">← Về trang chủ</a>
+    <a class="small" href="/">← Về Game Hub</a>
   </header>
   <div class="rp-filters card">
     <div class="rp-range"></div>
     <div class="rp-custom hidden">
-      <label>Từ ngày <input type="date" id="f-from"></label>
-      <label>Đến ngày <input type="date" id="f-to"></label>
+      <label>Từ <input type="date" id="f-from"></label>
+      <label>Đến <input type="date" id="f-to"></label>
     </div>
     <select id="f-game"></select>
   </div>
-  <div id="rp-body"><div class="card muted center rp-empty">Đang tải dữ liệu xếp hạng...</div></div>
-  <details class="rp-how card small muted">
-    <summary>💡 Phương pháp tính điểm xếp hạng</summary>
+  <div id="rp-body"><div class="muted center rp-empty">Đang tải...</div></div>
+  <details class="rp-how small muted">
+    <summary>Điểm được tính thế nào?</summary>
     <ul>
-      <li><b>Điều kiện ghi nhận:</b> Chỉ tính các ván đấu hoàn tất có từ <b>2 tài khoản đã đăng nhập</b> trở lên. Khách và Bot vẫn có thể tham gia cùng bàn nhưng không tính điểm xếp hạng.</li>
-      <li><b>Điểm từng ván (−1 đến +1):</b> Đo tỷ lệ đối thủ đã đăng nhập mà bạn vượt qua trong cùng bàn — hạng nhất đạt <b>+1</b>, hạng cuối <b>−1</b>, đồng hạng chia đều. Ví dụ bàn 6 người: +1 / +0.6 / +0.2 / −0.2 / −0.6 / −1.</li>
-      <li><b>Hệ số thời lượng (×1 đến ×3):</b> Ván đấu càng dài, trọng số càng cao dựa trên thời gian thực tế: mỗi 10 phút tương đương ×1 (làm tròn 0.5, tối thiểu ×1, tối đa ×3).</li>
-      <li><b>Chỉ số tổng hợp (−100 đến +100):</b> Trung bình có trọng số kèm 3 ván hoà khởi đầu để ổn định thứ hạng:
-        <code>Σ(trọng số × điểm ván) ÷ (Σ trọng số + 3) × 100</code>.</li>
-      <li><b>Tính công bằng:</b> Sắp xếp theo hiệu suất trung bình nên việc tạm nghỉ không gây bất lợi. Chỉ số dương (+) thể hiện phong độ thắng, âm (−) thể hiện phong độ thua.</li>
-      <li><b>Xử lý ngắt kết nối:</b> Thứ hạng tuân theo luật từng trò chơi; nếu người chơi mất kết nối giữa trận, hệ thống tự động hỗ trợ hoàn tất ván đấu.</li>
-      <li><b>Ván kết thúc sớm:</b> Khi chủ phòng dừng ván giữa chừng để quay lại phòng chờ, trận đấu được ghi nhận là ván kết thúc sớm và không tính điểm.</li>
+      <li>Chỉ tính ván có <b>ít nhất 2 người đã đăng nhập</b> chơi đến hết. Khách và bot không có điểm (nhưng vẫn chơi cùng được).</li>
+      <li><b>Điểm một ván</b> từ −1 đến +1 = bạn xếp trên bao nhiêu phần trăm số người cùng bàn (đã đăng nhập): nhất bàn <b>+1</b>, bét bàn <b>−1</b>, bàn đông hay vắng cũng vậy.
+        Vd bàn 6 người: nhất +1, nhì +0.6, ba +0.2, tư −0.2, năm −0.6, bét −1. Bàn 2 người: thắng +1, thua −1. Đồng hạng thì chia đều.</li>
+      <li><b>Ván dài tính nặng hơn</b>, theo thời lượng thật của ván: cứ 10 phút là ×1 (làm tròn 0.5), ít nhất ×1, nhiều nhất ×3. Vd UNO 3 phút ×1, Flip 7 15 phút ×1.5, Cờ Tỷ Phú 30 phút ×3 (nhãn cạnh tên game ở “Ván gần đây”).</li>
+      <li><b>Chỉ số</b> (−100 đến +100) = trung bình có trọng số của điểm các ván, tính như thể ai cũng có sẵn 3 ván hoà để vài ván ăn may không vọt lên đầu:
+        <code>Σ(trọng số × điểm ván) ÷ (Σ trọng số + 3) × 100</code>. Vd chơi 1 ván thắng 1 → 25; chơi 12 ván trung bình +0.4 → 32.</li>
+      <li>Xếp theo <b>trung bình</b> nên vắng vài buổi không thiệt mà cũng không lợi. <b>Dương là đang thắng, âm là đang thua.</b></li>
+      <li>Thứ hạng trong ván theo luật từng game (điểm, tài sản, thứ tự bị loại...). Người rớt mạng giữa ván vẫn được tính — máy đi giúp tới hết.</li>
+      <li>Chủ phòng bấm về phòng chờ khi ván chưa xong = <b>ván bỏ dở</b>: không tính điểm nhưng có ghi lại.</li>
     </ul>
   </details>
 </main>

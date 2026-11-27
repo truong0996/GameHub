@@ -2,19 +2,13 @@
 // rồi cắt vuông OUT×OUT px và nén WebP (trình duyệt không hỗ trợ thì JPEG) ngay trong trình duyệt — server chỉ lưu
 // (xem hub/avatars.js). Ảnh hiện tròn ở mọi nơi; ai không có ảnh thì vẫn là chấm màu ghế như cũ.
 import { esc, openModal, closeModal, toast } from './ui.js';
-import { frameCls, comboCls, comboFx } from './shop.js';
 
 const OUT = 192;              // cạnh ảnh lưu (px) — đủ nét cho ô ~64px trên màn hình mật độ 3x
 const MAX_B64 = 120000;       // ~88KB sau giải mã, dưới giới hạn server (hub/avatars.js AVATAR_MAX)
 const VIEW = 260;             // cạnh khung chỉnh (px CSS)
 
-// <img> tròn nhỏ cạnh tên (phòng chờ, danh sách người xem, chat, BXH...). Có look với khung → bọc tròn để hiện đầy đủ khung + hạt combo.
-export function avImg(url, look = null, cls = '') {
-  if (!url) return '';
-  const f = look ? frameCls(look) : '';
-  if (f) return `<span class="hub-avw sm${f}${comboCls(look)}${cls ? ' ' + cls : ''}"><img class="av-img" src="${esc(url)}" alt="" loading="lazy" draggable="false">${comboFx(look)}</span>`;
-  return `<img class="av-img${cls ? ' ' + cls : ''}" src="${esc(url)}" alt="" loading="lazy" draggable="false">`;
-}
+// <img> tròn nhỏ cạnh tên (phòng chờ, danh sách người xem, chat...). url null → ''.
+export const avImg = (url, cls = '') => (url ? `<img class="av-img${cls ? ' ' + cls : ''}" src="${esc(url)}" alt="" loading="lazy" draggable="false">` : '');
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -28,17 +22,18 @@ function loadImage(src) {
 // current: URL ảnh đang dùng (null = chưa có). save(dataUrl | null) → Promise<{ ok }> (null = xoá ảnh).
 export function openAvatarEditor({ current, save }) {
   const card = openModal(`<div class="ave"><h2>🖼️ Ảnh đại diện</h2>
-    <p class="ave-note">Tải lên, dán (Ctrl+V) hoặc kéo thả ảnh vào khung. Kéo để căn vị trí, cuộn chuột hoặc dùng thanh trượt để thu phóng; ảnh sẽ hiển thị đồng bộ tại phòng chờ và trong các ván đấu.</p>
-    <div class="ave-stage"><canvas width="${VIEW * 2}" height="${VIEW * 2}"></canvas><div class="ave-empty">📷<br>Chưa có ảnh<br><small>Nhấn để tải lên hoặc kéo thả</small></div></div>
+    <p class="small muted">Chọn ảnh, kéo để căn giữa, lăn chuột / kéo thanh (điện thoại: chụm hai ngón) để phóng to. Dán ảnh (Ctrl+V) hoặc kéo thả ảnh vào khung cũng được.
+    Ảnh hiện cho cả phòng — ở phòng chờ và trong mọi trò chơi.</p>
+    <div class="ave-stage"><canvas width="${VIEW * 2}" height="${VIEW * 2}"></canvas><div class="ave-empty">📷<br>Chưa chọn ảnh<br><small>Bấm để chọn</small></div></div>
     <div class="ave-tools">
-      <button class="ghost" data-pick>📁 Chọn ảnh</button>
+      <button class="ghost" data-pick>📁 Chọn ảnh...</button>
       <button class="ghost" data-rot title="Xoay 90°">⟳</button>
-      <input type="range" min="1" max="4" step="0.01" value="1" data-zoom title="Thu phóng">
+      <input type="range" min="1" max="4" step="0.01" value="1" data-zoom title="Phóng to">
     </div>
     <input type="file" accept="image/*" class="hidden" data-file>
     <div class="err"></div>
-    <div class="btns">${current ? '<button class="ghost danger" data-del>🗑️ Gỡ ảnh</button>' : ''}<span class="grow"></span>
-      <button class="ghost" data-x>Huỷ</button><button class="gold" data-save disabled>Lưu thay đổi</button></div></div>`);
+    <div class="btns">${current ? '<button class="ghost danger" data-del>🗑️ Xoá ảnh</button>' : ''}<span class="grow"></span>
+      <button class="ghost" data-x>Huỷ</button><button class="gold" data-save disabled>Lưu</button></div></div>`);
   const cv = card.querySelector('canvas'), g = cv.getContext('2d');
   const zoom = card.querySelector('[data-zoom]'), file = card.querySelector('[data-file]'), err = card.querySelector('.err');
   const saveBtn = card.querySelector('[data-save]'), empty = card.querySelector('.ave-empty');
@@ -72,9 +67,9 @@ export function openAvatarEditor({ current, save }) {
     drawTo(g, S);
     // phủ mờ phần ngoài vòng tròn (phần sẽ bị khuất khi hiện tròn)
     g.save();
-    g.fillStyle = 'rgba(35,48,41,.52)';
+    g.fillStyle = 'rgba(30,26,22,.55)';
     g.beginPath(); g.rect(0, 0, S, S); g.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2, true); g.fill('evenodd');
-    g.strokeStyle = 'rgba(252,253,249,.92)'; g.lineWidth = 3;
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 3;
     g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); g.stroke();
     g.restore();
   }
@@ -104,8 +99,8 @@ export function openAvatarEditor({ current, save }) {
   }
   function useFile(f) {
     if (!f) return;
-    if (!/^image\//.test(f.type)) { err.textContent = 'Định dạng tệp không hợp lệ — vui lòng chọn tệp hình ảnh.'; return; }
-    if (f.size > 25 * 1024 * 1024) { err.textContent = 'Dung lượng ảnh vượt quá giới hạn cho phép (25 MB).'; return; }
+    if (!/^image\//.test(f.type)) { err.textContent = 'Đây không phải file ảnh'; return; }
+    if (f.size > 25 * 1024 * 1024) { err.textContent = 'Ảnh quá lớn (tối đa 25MB)'; return; }
     const url = URL.createObjectURL(f);
     useSource(url).finally(() => setTimeout(() => URL.revokeObjectURL(url), 1000));
   }
@@ -164,11 +159,11 @@ export function openAvatarEditor({ current, save }) {
   card.querySelector('[data-x]').onclick = close;
   const del = card.querySelector('[data-del]');
   if (del) del.onclick = async () => {
-    if (!confirm('Bạn có chắc muốn gỡ ảnh đại diện hiện tại?')) return;
+    if (!confirm('Xoá ảnh đại diện? (sẽ hiện lại chấm màu ghế như cũ)')) return;
     del.disabled = true;
     const r = await save(null);
     del.disabled = false;
-    if (r.ok) { close(); toast('🗑️ Đã gỡ ảnh đại diện'); }
+    if (r.ok) { close(); toast('🗑️ Đã xoá ảnh đại diện'); }
   };
   saveBtn.onclick = async () => {
     const out = document.createElement('canvas');
@@ -177,11 +172,11 @@ export function openAvatarEditor({ current, save }) {
     let data = out.toDataURL('image/webp', 0.86);
     if (!data.startsWith('data:image/webp')) data = out.toDataURL('image/jpeg', 0.88);   // Safari cũ không nén được WebP
     for (let q = 0.75; data.length > MAX_B64 && q > 0.3; q -= 0.15) data = out.toDataURL('image/jpeg', q);
-    if (data.length > MAX_B64) { err.textContent = 'Không thể nén ảnh xuống dưới mức dung lượng cho phép — vui lòng chọn ảnh khác.'; return; }
+    if (data.length > MAX_B64) { err.textContent = 'Ảnh quá phức tạp, không nén đủ nhỏ — thử ảnh khác'; return; }
     saveBtn.disabled = true;
     const r = await save(data);
     if (r.ok) { close(); toast('🖼️ Đã cập nhật ảnh đại diện'); }
-    else { err.textContent = r.err || 'Không thể lưu ảnh, vui lòng thử lại.'; saveBtn.disabled = false; }
+    else { err.textContent = r.err || 'Lỗi lưu ảnh'; saveBtn.disabled = false; }
   };
 
   // Có ảnh rồi thì mở sẵn ảnh đó để chỉnh lại (căn/phóng to), hoặc chọn ảnh khác.

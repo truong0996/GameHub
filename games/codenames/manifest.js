@@ -10,7 +10,7 @@ export default {
   name: 'Mật Danh',
   icon: '🕵️',
   tagline: 'Một từ gợi ý, cả đội đoán lá',
-  description: 'Trò điệp viên chia đội: Đội trưởng chỉ nói một từ kèm một con số để đồng đội lật hết lá phe mình trước đối thủ, đồng thời tránh chạm phải lá 💀 Sát Thủ.',
+  description: 'Codenames — hai (hoặc ba) đội điệp viên. Trưởng nhóm biết lá nào của đội mình và chỉ được nói MỘT từ + một con số; đồng đội bỏ phiếu chỉ lá. Lật hết lá của đội trước thì thắng, lật trúng 💀 sát thủ là thua ngay. Có biến cố, kỹ năng, lá đặc biệt và chế độ hình emoji.',
   minPlayers: 4,
   maxPlayers: 15,
   tags: ['Đố chữ', 'Đồng đội', 'Đông người'],

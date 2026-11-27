@@ -4,9 +4,9 @@ import { $, esc } from './ui.js';
 import { nameHtml, titleHtml, fmt } from './shop.js';
 import { avImg } from './avatar.js';
 
-const RANGES = [[7, '7 ngày qua'], [14, '14 ngày qua'], [30, '30 ngày qua'], [0, 'Toàn thời gian'], ['c', 'Tuỳ chọn ngày']];
+const RANGES = [[7, '7 ngày'], [14, '14 ngày'], [30, '30 ngày'], [0, 'Tất cả'], ['c', 'Tuỳ chọn']];
 const MEDAL = ['🥇', '🥈', '🥉'];
-const FORM = { w: ['★', 'Hạng nhất'], u: ['▲', 'Trên mức trung bình bàn'], d: ['▼', 'Dưới mức trung bình bàn'], e: ['–', 'Hoà điểm'] };
+const FORM = { w: ['★', 'Thắng ván'], u: ['▲', 'Xếp trên phần lớn'], d: ['▼', 'Xếp dưới phần lớn'], e: ['–', 'Hoà điểm'] };
 const q = new URLSearchParams(location.search);
 const F = { d: q.has('from') ? 'c' : q.has('d') ? +q.get('d') : 14, from: q.get('from') || '', to: q.get('to') || '', game: q.get('game') || '' };
 
@@ -75,7 +75,7 @@ async function load() {
     if (!res.ok) throw new Error(res.status);
     R = await res.json();
   } catch (e) {
-    $('#rp-body').innerHTML = `<div class="card center rp-empty">⚠️ Không thể tải dữ liệu bảng xếp hạng (${esc(e.message)}). Vui lòng kiểm tra kết nối máy chủ.</div>`;
+    $('#rp-body').innerHTML = `<div class="card center rp-empty">⚠️ Không tải được báo cáo (${esc(e.message)}). Server có đang chạy không?</div>`;
     return;
   }
   if (my !== seq) return;
@@ -88,31 +88,31 @@ function render(R, from, to) {
   const total = Object.values(R.counts).reduce((a, b) => a + b, 0);
   const ids = Object.keys(R.counts).sort((a, b) => R.counts[b] - R.counts[a]);
   if (F.game && !ids.includes(F.game)) ids.push(F.game);
-  $('#f-game').innerHTML = `<option value="">🎮 Tất cả trò chơi (${total} ván)</option>` +
+  $('#f-game').innerHTML = `<option value="">🎮 Tất cả game (${total} ván)</option>` +
     ids.map(id => `<option value="${esc(id)}">${g(id).icon} ${esc(g(id).name)} (${R.counts[id] || 0})</option>`).join('');
   $('#f-game').value = F.game;
 
-  const period = `${from ? dm(from) : 'Từ đầu'} → ${to ? dm(to - 1) : 'Hiện tại'}` + (F.game ? ` · ${g(F.game).icon} ${esc(g(F.game).name)}` : '');
+  const period = `${from ? dm(from) : 'Từ đầu'} → ${to ? dm(to - 1) : 'hôm nay'}` + (F.game ? ` · ${g(F.game).icon} ${esc(g(F.game).name)}` : '');
   const P = R.players;
   if (!P.length) {
-    $('#rp-body').innerHTML = `<div class="card center rp-empty"><b>Chưa có dữ liệu xếp hạng</b> <span class="muted">(${period})</span><br>
-      <span class="small muted">Chỉ các ván đấu hoàn tất có ít nhất 2 tài khoản đã đăng nhập mới được ghi nhận. Hãy đăng nhập tại trang chủ để lưu thành tích.</span></div>` + recentHtml(R, g);
+    $('#rp-body').innerHTML = `<div class="card center rp-empty"><b>Chưa có ván nào được tính</b> <span class="muted">(${period})</span><br>
+      <span class="small muted">Ván được tính khi có ít nhất 2 người đã đăng nhập chơi đến hết. Đăng nhập ở trang chủ Game Hub.</span></div>` + recentHtml(R, g);
     return;
   }
-  // Server chỉ gửi R.players = top người đứng đầu (R.total = tổng số người) → chỉ biết người cuối bảng khi đã có cả bảng.
+  // Server chỉ gửi R.players = top người đứng đầu (R.total = tổng số người) → chỉ biết "đội sổ" khi đã có cả bảng.
   const all = !R.total || R.total <= P.length;
   const ranked = P.filter(p => p.enough), lead = ranked[0], last = all && ranked.length > 1 ? ranked[ranked.length - 1] : null;
   const max = Math.max(1, ...P.map(p => Math.abs(p.score)));
-  let html = `<div class="rp-sum card"><div class="small muted">${period} · ${F.game ? R.counts[F.game] || 0 : total} ván hợp lệ</div>` +
-    (lead ? `<div class="rp-hl"><span>👑 Dẫn đầu: <span class="rp-pl">${avImg(lead.av, lead.look)}${nameHtml(lead.name, lead.look)}</span>${titleHtml(lead.look)} <span class="sc pos">${signed(lead.score)}</span></span>` +
-      (last && last.score < lead.score ? `<span>📉 Cuối bảng: <span class="rp-pl">${avImg(last.av, last.look)}${nameHtml(last.name, last.look)}</span> <span class="sc ${last.score < 0 ? 'neg' : ''}">${signed(last.score)}</span></span>` : '') + '</div>'
-      : `<div class="rp-hl muted">Chưa có người chơi nào đạt tối thiểu ${R.minGames} ván để xếp hạng chính thức.</div>`) + '</div>';
+  let html = `<div class="rp-sum card"><div class="small muted">${period} · ${F.game ? R.counts[F.game] || 0 : total} ván được tính</div>` +
+    (lead ? `<div class="rp-hl"><span>👑 Dẫn đầu: <b>${esc(lead.name)}</b> <span class="sc pos">${signed(lead.score)}</span></span>` +
+      (last && last.score < lead.score ? `<span>🫣 Đội sổ: <b>${esc(last.name)}</b> <span class="sc ${last.score < 0 ? 'neg' : ''}">${signed(last.score)}</span></span>` : '') + '</div>'
+      : `<div class="rp-hl muted">Chưa ai đủ ${R.minGames} ván để xếp hạng chính thức.</div>`) + '</div>';
 
   // bảng xếp hạng
   let rank = 0;
-  html += `<div class="card rp-card"><div class="rp-scroll"><table class="rp-tbl"><thead><tr><th>#</th><th class="l">Người chơi</th><th class="bar-h" title="Thang −100 đến +100: trung bình có trọng số mỗi ván, cộng ${R.prior} ván hoà khởi đầu">Chỉ số</th>
-    <th>Số ván</th><th>Thắng</th><th class="opt">Tỉ lệ</th><th class="opt">Phong độ</th><th class="l opt">Sở trường</th>
-    <th class="opt" title="Tổng credit khả dụng hiện tại — tích luỹ qua các ván hợp lệ để đổi vật phẩm tại Cửa hàng">💰</th></tr></thead><tbody>`;
+  html += `<div class="card rp-card"><table class="rp-tbl"><thead><tr><th>#</th><th class="l">Người chơi</th><th class="bar-h" title="−100…+100: điểm trung bình mỗi ván (có trọng số), cộng ${R.prior} ván hoà ảo">Chỉ số</th>
+    <th>Ván</th><th>Thắng</th><th class="opt">Tỉ lệ</th><th class="opt">Phong độ</th><th class="l opt">Hay thắng</th>
+    <th class="opt" title="Credit hiện có (tính cả mọi lúc, không theo kỳ đang lọc) — kiếm sau mỗi ván, mua đồ ở 🛍️ Cửa hàng">💰</th></tr></thead><tbody>`;
   for (const p of P) {
     const pos = p.enough ? ++rank : null;
     const w = Math.round((Math.abs(p.score) / max) * 50);
@@ -121,17 +121,17 @@ function render(R, from, to) {
     const best = p.best.map(id => `<span title="${esc(g(id).name)}: thắng ${p.byGame[id].wins}/${p.byGame[id].games}">${g(id).icon}</span>`).join(' ');
     html += `<tr class="${p.enough ? '' : 'few'}" title="${esc(p.name)}: chỉ số ${signed(p.score)} · trung bình ${signed(p.avg)} mỗi ván · thắng ${p.wins}/${p.games} ván${p.enough ? '' : ` · chưa đủ ${R.minGames} ván`}">
       <td class="pos-c">${pos ? MEDAL[pos - 1] || pos : '·'}</td>
-      <td class="l"><span class="rp-pl">${avImg(p.av, p.look)}${nameHtml(p.name, p.look)}</span>${titleHtml(p.look)}${p.enough ? '' : ` <span class="guest">Chưa đủ ${R.minGames} ván</span>`}</td>
+      <td class="l">${avImg(p.av)}${nameHtml(p.name, p.look)}${titleHtml(p.look)}${p.enough ? '' : ` <span class="guest">chưa đủ ${R.minGames} ván</span>`}</td>
       <td><div class="bar-c"><div class="bar"><span class="mid"></span>${bar}</div><b class="sc ${p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : ''}">${signed(p.score)}</b></div></td>
       <td>${p.games}</td><td>${p.wins}</td><td class="opt">${pct(p.rate)}</td><td class="opt form">${form}</td><td class="l opt">${best || '<span class="muted">—</span>'}</td>
       <td class="opt cr">${p.credits != null ? fmt(p.credits) : ''}</td></tr>`;
   }
-  html += '</tbody></table></div>' + (all ? '' : `<div class="small muted center" style="margin-top:8px">Đang hiển thị ${P.length} người dẫn đầu trong tổng số ${R.total} người chơi.</div>`) + '</div>';
+  html += '</tbody></table>' + (all ? '' : `<div class="small muted center">Hiện ${P.length} người đứng đầu / ${R.total} người chơi trong kỳ.</div>`) + '</div>';
 
   // đối đầu (server chỉ gửi ma trận của nhóm đứng đầu)
   if (P.length > 1) {
     const H = R.h2h, names = H.ids.map(id => P.find(p => p.id === id).name);
-    html += `<div class="card rp-card"><h2>⚔️ Thành tích đối đầu</h2><div class="small muted">Ô tại hàng <b>A</b>, cột <b>B</b> thể hiện số ván A xếp trên B – số ván B xếp trên A.</div>
+    html += `<div class="card rp-card"><h2>⚔️ Đối đầu</h2><div class="small muted">Ô hàng <b>A</b>, cột <b>B</b> = số ván A xếp trên B – số ván B xếp trên A.</div>
       <div class="rp-scroll"><table class="rp-h2h"><thead><tr><th></th>${names.map(n => `<th>${esc(n)}</th>`).join('')}</tr></thead><tbody>`;
     H.ids.forEach((a, i) => {
       html += `<tr><th class="l">${esc(names[i])}</th>`;
@@ -146,7 +146,7 @@ function render(R, from, to) {
   }
 
   if (R.aborts.length) {
-    html += `<div class="card rp-card"><h2>⛔ Ván kết thúc sớm</h2><div class="small muted">Các ván do chủ phòng dừng giữa chừng — không tính điểm xếp hạng và credit.</div>
+    html += `<div class="card rp-card"><h2>⛔ Ván bỏ dở</h2><div class="small muted">Chủ phòng bấm về phòng chờ khi ván chưa xong — không tính điểm.</div>
       <div class="rp-aborts">${R.aborts.map(a => `<span><b>${esc(a.name)}</b> × ${a.n}</span>`).join('')}</div></div>`;
   }
   $('#rp-body').innerHTML = html + recentHtml(R, g);
@@ -165,11 +165,11 @@ function recentHtml(R, g) {
     const ppl = [...m.players].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)).map(x =>
       `<span class="rp-p${x.rank === 1 ? ' win' : ''}">${m.aborted ? '' : x.rank === 1 ? '🏆 ' : `<small>${x.rank}.</small> `}${x.bot ? '🤖 ' : ''}${esc(x.name)}${x.guest ? ' <span class="guest">khách</span>' : ''}</span>`).join('');
     return `<div class="rp-m${m.aborted ? ' ab' : ''}${i >= SHOW ? ' more' : ''}"><div class="rp-mh"><span>${g(m.game).icon} <b>${esc(g(m.game).name)}</b>${weightTag(m)}</span>
-      <span class="small muted">${when(m.at)} · ${Math.max(1, Math.round(m.dur / 60000))} phút${m.aborted ? ` · ⛔ kết thúc sớm${m.by ? ' bởi ' + esc(m.by) : ''}` : ''}</span></div>
+      <span class="small muted">${when(m.at)} · ${Math.max(1, Math.round(m.dur / 60000))} phút${m.aborted ? ` · ⛔ bỏ dở${m.by ? ' bởi ' + esc(m.by) : ''}` : ''}</span></div>
       <div class="rp-ps">${ppl}</div></div>`;
   }).join('');
-  return `<div class="card rp-card"><h2>🕑 Lịch sử ván đấu</h2><div class="rp-recent">${rows}</div>` +
-    (R.recent.length > SHOW ? `<button id="rp-more" class="ghost">Xem thêm ${R.recent.length - SHOW} ván cũ hơn</button>` : '') + '</div>';
+  return `<div class="card rp-card"><h2>🕑 Ván gần đây</h2><div class="rp-recent">${rows}</div>` +
+    (R.recent.length > SHOW ? `<button id="rp-more" class="ghost">Xem thêm ${R.recent.length - SHOW} ván</button>` : '') + '</div>';
 }
 
 load();

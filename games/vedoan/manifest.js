@@ -11,7 +11,7 @@ export default {
   name: 'Vẽ Đoán',
   icon: '🎨',
   tagline: 'Một người vẽ, cả bàn đoán chữ',
-  description: 'Lần lượt làm họa sĩ chọn từ và phác họa để cả bàn gõ đáp án (không dấu vẫn tính). Đoán càng nhanh càng nhiều điểm, kèm biến cố cọ vẽ, vật phẩm và phòng tranh cuối ván.',
+  description: 'Tới lượt thì chọn 1 trong 3 từ rồi vẽ cho cả bàn đoán. Ai gõ đúng càng sớm càng nhiều điểm, hoạ sĩ được điểm theo số người đoán ra. Gõ không dấu vẫn tính. Hết giờ dần dần lộ chữ cái. Có biến cố cọ vẽ (Gương, Mực Phai, Đèn Pin, Vẽ Mù...), vật phẩm cho người đoán, từ đặc biệt (độ khó, Từ Vàng, Song Hoạ) và bình chọn tranh + phòng tranh cuối ván. Bot vẽ bằng cách phác hoạ emoji.',
   minPlayers: 2,
   maxPlayers: 12,
   tags: ['Đố chữ', 'Vẽ', 'Vui nhộn', 'Đông người'],

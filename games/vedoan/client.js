@@ -15,7 +15,7 @@ const me = () => CTX.me().seat;
 const srvNow = () => Date.now() - srvOff;
 const P = p => V && V.players[p];
 const color0 = p => (CTX.game.seats[p] || {}).color || '#888';
-const who = p => (P(p) ? CTX.skin.name(p, P(p).name, color0(p)) : '?');
+const who = p => (P(p) ? `<b class="pn" style="--c:${color0(p)}">${esc(P(p).name)}</b>` : '?');
 const amDrawer = () => !!V && V.drawers.includes(me());
 const canDraw = () => V && V.phase === 'draw' && amDrawer() && !V.bd;
 const guessed = p => !!V && V.guessed.includes(p);
@@ -336,10 +336,10 @@ function renderPlayers() {
   const rows = V.order.slice().sort((a, b) => P(b).score - P(a).score || a - b);
   setHTML($('#vd-players'), rows.map((p, i) => {
     const pl = P(p), live = V.phase !== 'over';
-    const cls = ['pl', p === me() ? 'me' : '', V.drawers.includes(p) && live ? 'drawing' : 'lk-still', guessed(p) && V.phase === 'draw' ? 'ok' : '',
+    const cls = ['pl', p === me() ? 'me' : '', V.drawers.includes(p) && live ? 'drawing' : '', guessed(p) && V.phase === 'draw' ? 'ok' : '',
       pl.score > 0 && i < 3 ? 'top' + (i + 1) : ''].join(' ');
     return `<div class="${cls}" data-p="${p}" style="--c:${color0(p)}"><span class="rk">${i + 1}</span>${CTX.skin.face(p)}
-      <span class="nm" title="${esc(pl.name)}">${pl.kind === 'bot' ? '🤖 ' : ''}${CTX.skin.name(p, pl.name)}${CTX.skin.title(p)}${p === me() ? ' <small>(bạn)</small>' : ''}</span>
+      <span class="nm" title="${esc(pl.name)}">${pl.kind === 'bot' ? '🤖 ' : ''}${esc(pl.name)}${p === me() ? ' <small>(bạn)</small>' : ''}</span>
       <b class="sc">${pl.score}</b>${playerStatus(p)}</div>`;
   }).join(''));
 }
@@ -627,7 +627,7 @@ const TEMPLATE = `<div class="vd">
     <div id="vd-tools" class="vd-tools"></div>
   </main>
   <aside class="vd-chat">
-    <div id="vd-feed" class="lk-still vd-feed"></div>
+    <div id="vd-feed" class="vd-feed"></div>
     <form id="vd-form" class="vd-form" autocomplete="off"><input id="vd-input" maxlength="80" autocomplete="off" enterkeyhint="send"><button class="gold">↵</button></form>
     <div class="vd-bottom"><div id="vd-emotes" class="grow"></div><div id="vd-tb"></div></div>
   </aside>
@@ -694,6 +694,4 @@ export default {
       unmount() { removeEventListener('keydown', keyH); clearInterval(flushInt); clearInterval(timerInt); cancelAnimationFrame(raf); V = null; G = null; },
     };
   },
-  // mở từ phòng chờ (game đã unmount): bỏ state ván trước để luật hiện theo thiết lập đang chọn của phòng
-  help(ctx) { CTX = ctx; UI = ctx.ui; V = null; showHelp(); },
 };
