@@ -586,7 +586,8 @@ b.lk-nx, .lk-nx { position: relative; background-size: 200% auto; -webkit-backgr
 /* xem thử hiệu ứng: đang mở cửa hàng thì hạt/rồng/chữ bay nằm trên hộp thoại */
 body:has(#modal .shop) #fx { z-index: 75; }
 body:has(#modal .shop) .lk-dragon, body:has(#modal .shop) .lk-sleigh, body:has(#modal .shop) .floater { z-index: 76; }
-#modal .card.shop { width: min(920px, 96vw); height: min(92vh, 860px); display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; }
+#modal .card.shop { width: min(1000px, 96vw); height: min(92vh, 860px); display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; }
+#modal .card.shop:not(.ach) { gap: 10px; overflow: hidden; }
 /* ---------- Lưng bài (UNO, Mèo Nổ, Coup): 6 bộ đồng nhất (Hiếm → Sử thi → Huyền thoại) ---------- */
 @keyframes lk-fire-glow { 0%, 100% { box-shadow: 0 0 5px 1px #ff5a00cc; } 50% { box-shadow: 0 0 11px 2px #ffb000ee; } }
 @keyframes lk-gold-glow { 0%, 100% { box-shadow: 0 0 5px #ffcc33aa; } 50% { box-shadow: 0 0 11px #ffe680; } }
@@ -772,7 +773,6 @@ body:has(#modal .shop) .lk-dragon, body:has(#modal .shop) .lk-sleigh, body:has(#
 /* xem trước trong cửa hàng */
 .sh-easel { width: 84px; height: 63px; box-sizing: border-box; border-radius: 8px; display: grid; place-items: center; font-size: 26px; background: #fff; }
 .sh-ingame .sh-easel { width: 64px; height: 48px; font-size: 20px; }
-.sh-grp { font-weight: 700; white-space: nowrap; line-height: 32px; }
 .sh-note { grid-column: 1 / -1; padding: 8px 12px; border-radius: 10px; background: var(--chip); }
 .sh-backs { display: flex; align-items: center; }
 .sh-back { width: 46px; height: 66px; flex: none; border-radius: 7px; border: 2px solid #fff; display: grid; place-items: center; font-size: 22px; background: #333; }
@@ -803,9 +803,33 @@ body:has(#modal .shop) .lk-dragon, body:has(#modal .shop) .lk-sleigh, body:has(#
   background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.65) 50%, transparent 70%); animation: lk-shine 3.6s ease-in-out infinite; }
 .sh-coin { display: inline-block; animation: lk-coin 3.2s ease-in-out infinite; transform-origin: center bottom; }
 @keyframes lk-coin { 0%, 60%, 100% { transform: translateY(0) rotate(0deg); } 72% { transform: translateY(-2.5px) rotate(-8deg); } 84% { transform: translateY(0) rotate(6deg); } }
-.sh-how { padding: 8px 13px; border-radius: 12px; background: color-mix(in srgb, var(--chip) 60%, #fff); border: 1px solid var(--line); }
-.sh-how summary { cursor: pointer; color: var(--primary); font-weight: 600; }
-.sh-how ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); }
+/* dòng thống kê + nút "Cách tích luỹ" (mở bảng nổi, không đẩy nội dung xuống) */
+.sh-subrow { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin-top: -4px; }
+.sh-subrow .sh-sub { flex: 1; min-width: 0; }
+.sh-how { position: relative; flex: none; }
+.sh-how summary { cursor: pointer; list-style: none; color: var(--primary); font-weight: 600; padding: 3px 11px; border-radius: 99px;
+  background: color-mix(in srgb, var(--chip) 60%, #fff); border: 1px solid var(--line); white-space: nowrap; }
+.sh-how summary::-webkit-details-marker { display: none; }
+.sh-how[open] summary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.sh-how ul { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(440px, 86vw); margin: 0; padding: 12px 14px 12px 30px;
+  border-radius: 12px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--muted); line-height: 1.5; }
+.sh-how li + li { margin-top: 4px; }
+/* thân: menu dọc trái + (hero + lưới vật phẩm) phải — lưới chiếm hết chiều cao còn lại */
+.sh-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 196px 1fr; gap: 14px; }
+.sh-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.sh-main .sh-hero { flex: none; padding: 14px 20px; }
+.sh-side { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 8px; border-radius: 16px;
+  background: color-mix(in srgb, var(--chip) 55%, #fff); border: 1px solid var(--line); scrollbar-width: thin; }
+.sh-side .sh-grp { padding: 7px 8px 3px; font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.sh-side .sh-grp:first-child { padding-top: 2px; }
+.sh-nav { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 9px; min-height: 30px; border-radius: 10px; border: 1px solid transparent;
+  background: transparent; color: var(--ink); font-size: 13.5px; font-weight: 600; text-align: left; box-shadow: none; flex: none; }
+.sh-nav:hover:not(.on) { filter: none; background: var(--surface); border-color: var(--line); }
+.sh-nav i { font-style: normal; width: 20px; text-align: center; flex: none; }
+.sh-nav-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-nav-n { flex: none; font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 0 7px; border-radius: 99px; background: var(--chip); }
+.sh-nav.on, .sh-nav.on:hover { background: var(--primary); border-color: var(--primary); color: #fff; }
+.sh-nav.on .sh-nav-n { background: rgba(255,255,255,.2); color: #fff; }
 .sh-hero { display: flex; align-items: center; gap: 22px; padding: 18px 22px; border-radius: 18px; color: #fff;
   background: radial-gradient(ellipse at 20% 28%, #2e4d3f 0%, #1d3229 58%, #15241e 100%);
   border: 1px solid color-mix(in srgb, var(--primary) 35%, #15241e);
@@ -821,14 +845,7 @@ body:has(#modal .shop) .lk-dragon, body:has(#modal .shop) .lk-sleigh, body:has(#
 .sh-ava.big.lk-fr::after { font-size: 26px; }
 .sh-ava.big.lk-fr-gold::after { top: -28px; }
 .sh-ava.big.lk-fr-rainbow::after, .sh-ava.big.lk-fr-galaxy::after { --orb: 42px; font-size: 20px; }
-.sh-tabs { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; border-radius: 16px;
-  background: color-mix(in srgb, var(--chip) 55%, #fff); border: 1px solid var(--line); }
-.sh-tabrow { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: start; }
-.sh-tablist { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
-.sh-tabs .gp-tag { padding: 5px 10px; font-size: 13px; background: var(--surface); }
-.sh-tabs .gp-tag:hover:not(:disabled):not(.on) { background: var(--chip); }
-.sh-tabs .gp-tag.on, .sh-tabs .gp-tag.on:hover:not(:disabled) { background: var(--primary); border-color: var(--primary); color: #fff; }
-.sh-grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; align-content: start; padding: 10px 4px 4px; }
+.sh-grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; align-content: start; padding: 10px 6px 6px 2px; }
 .sh-item { --rc: #888; position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 10px 10px; border-radius: 16px;
   border: 1.5px solid color-mix(in srgb, var(--rc) 58%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 13%, var(--surface)), var(--surface) 72%);
   cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
@@ -864,9 +881,9 @@ body:has(#modal .shop) .lk-dragon, body:has(#modal .shop) .lk-sleigh, body:has(#
 .sh-item.rar-l .sh-rar { color: #e06000; }
 .sh-item button { width: 100%; padding: 7px 10px; font-size: 14px; }
 .sh-item button.sh-on { border-color: var(--primary); color: var(--primary); }
-.gp-tag.sh-xmas-tab { border-color: color-mix(in srgb, #c23b3b 42%, var(--line));
-  background: linear-gradient(135deg, color-mix(in srgb, #c23b3b 10%, var(--surface)), color-mix(in srgb, #276749 10%, var(--surface))); }
-.gp-tag.sh-xmas-tab.on, .gp-tag.sh-xmas-tab.on:hover:not(:disabled) {
+.sh-nav.sh-xmas-tab:not(.on) { border-color: color-mix(in srgb, #c23b3b 30%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, #c23b3b 9%, var(--surface)), color-mix(in srgb, #276749 9%, var(--surface))); }
+.sh-nav.sh-xmas-tab.on, .sh-nav.sh-xmas-tab.on:hover {
   background: linear-gradient(135deg, #b83232, #276749); border-color: #b83232; color: #fff; }
 .sh-xmas-note { background: linear-gradient(135deg, color-mix(in srgb, #c23b3b 9%, var(--surface)), color-mix(in srgb, #276749 10%, var(--surface)));
   border: 1px solid color-mix(in srgb, #c23b3b 30%, var(--line)); }
@@ -878,14 +895,28 @@ body:has(#modal .shop) .lk-dragon, body:has(#modal .shop) .lk-sleigh, body:has(#
   color: #fff; background: linear-gradient(135deg, #c23b3b, #276749); box-shadow: 0 2px 6px rgba(194,59,59,.25); pointer-events: none; }
 .sh-slot { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--chip); border: 1px solid var(--line);
   padding: 1px 8px; border-radius: 99px; }
+@media (max-width: 820px) and (min-width: 601px) { .sh-body { grid-template-columns: 172px 1fr; gap: 10px; } .sh-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); } }
 @media (max-width: 600px) {
   #modal .card.shop { padding: 12px; height: 94vh; }
   .sh-hero { padding: 12px 14px; gap: 14px; flex-wrap: wrap; }
   .sh-ingame { margin-left: 0; border-left: 0; padding-left: 4px; }
   .sh-hero .sh-me { font-size: 17px; }
-  .sh-tabrow { grid-template-columns: 1fr; }
-  .sh-grp { line-height: 1.4; }
-  .sh-tablist { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  /* điện thoại: menu thành 1 hàng chip cuộn ngang trên đầu */
+  .sh-body { display: flex; flex-direction: column; gap: 10px; }
+  .sh-side { flex: none; flex-direction: row; align-items: center; gap: 6px; overflow: auto hidden; padding: 6px; }
+  .sh-side .sh-grp { padding: 0 2px 0 8px; font-size: 16px; }
+  .sh-side .sh-grp span { display: none; }
+  .sh-side .sh-grp:first-child { padding-left: 2px; }
+  .sh-nav { width: auto; padding: 5px 10px; border-color: var(--line); background: var(--surface); border-radius: 99px; }
+  .sh-nav-nm { overflow: visible; }
+  .sh-main .sh-hero { padding: 12px 14px; gap: 6px 14px; }
+  .sh-main .sh-hero .sh-ava.big { width: 56px; height: 56px; font-size: 26px; --orb: 34px; }
+  .sh-main .sh-hero .sh-me { flex: 1 1 0; gap: 6px; }
+  .sh-main .sh-hero .cm { white-space: normal; }
+  .shop:not(.ach) .sh-head { gap: 6px; }
+  .shop:not(.ach) .sh-head h2 { font-size: 18px; white-space: nowrap; }
+  .shop:not(.ach) .sh-wide { display: none; }
+  .sh-bal { white-space: nowrap; flex: none; }
   .sh-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {

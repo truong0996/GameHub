@@ -435,23 +435,25 @@ export function openShop(startTab) {
   if (startTab) tab = startTab;
   if (!colOf(tab) && !SLOTS.some(s => s.id === tab)) tab = 'xmas';
   tryOn = {};
-  const card = openModal(`<div class="sh-head"><h2>🛍️ Cửa hàng vật phẩm</h2><span class="grow"></span>
-    <button class="ghost" data-ach title="Xem Thành tựu để nhận xu và danh hiệu">🎖️ Thành tựu</button>
+  const card = openModal(`<div class="sh-head"><h2>🛍️ Cửa hàng<span class="sh-wide"> vật phẩm</span></h2><span class="grow"></span>
+    <button class="ghost" data-ach title="Xem Thành tựu để nhận xu và danh hiệu">🎖️<span class="sh-wide"> Thành tựu</span></button>
     <span class="sh-bal"></span>
     <button class="ghost" data-x title="Đóng (Esc)">✕</button></div>
-    <div class="sh-sub small muted"></div>
-    <details class="sh-how small"><summary>💡 Hướng dẫn tích luỹ credit</summary><ul>
+    <div class="sh-subrow"><div class="sh-sub small muted"></div>
+    <details class="sh-how small"><summary>💡 Cách tích luỹ credit</summary><ul>
       <li>Hoàn tất mỗi ván đấu <b>được xếp hạng</b> (từ 2 tài khoản đăng nhập trở lên): nhận <b>${CREDIT.base} credit × hệ số thời lượng</b> (×1 đến ×3 tuỳ độ dài ván đấu).</li>
       <li><b>Hạng 1 nhận ×${CREDIT.winMul}</b> tiền thưởng; các thứ hạng còn lại vẫn được cộng credit.</li>
       <li>Hoàn thành <b>🎖️ Thành tựu</b> trong các trò chơi để nhận thêm <b>credit</b> thưởng và mở khoá <b>Danh hiệu</b> độc quyền.</li>
       <li>Giới hạn tối đa <b>${CREDIT.dayCap} credit/ngày</b> (không tính thưởng thành tựu). Ván kết thúc sớm (bỏ dở) không cộng hay trừ credit.</li>
       <li>Mọi vật phẩm chỉ mang tính <b>trang trí cá nhân</b> — không ảnh hưởng tới luật chơi hay màu ghế.</li>
-    </ul></details>
-    <div class="sh-hero"></div>
-    <div class="gp-tags sh-tabs"></div>
-    <div class="sh-grid"></div>`);
+    </ul></details></div>
+    <div class="sh-body"><nav class="sh-side"></nav>
+      <div class="sh-main"><div class="sh-hero"></div><div class="sh-grid"></div></div></div>`);
   card.classList.add('shop');
   card.querySelector('[data-x]').onclick = closeModal;
+  // hướng dẫn mở dạng bảng nổi → bấm ra ngoài thì đóng
+  const how = card.querySelector('.sh-how');
+  card.addEventListener('click', e => { if (how.open && !how.contains(e.target)) how.open = false; });
   card.querySelector('[data-ach]').onclick = () => { sfx.pop(); O && O.openAch && O.openAch(); };
   const bal = card.querySelector('.sh-bal');
   bal.onclick = () => {
@@ -460,7 +462,7 @@ export function openShop(startTab) {
     pop(pt, ['💰', '🪙', '✨'], 5, 4, 20);
     coin();
   };
-  const hero = card.querySelector('.sh-hero'), tabs = card.querySelector('.sh-tabs'), grid = card.querySelector('.sh-grid');
+  const hero = card.querySelector('.sh-hero'), tabs = card.querySelector('.sh-side'), grid = card.querySelector('.sh-grid');
 
   const paint = () => {
     setTimeout(hatLoop);
@@ -484,31 +486,31 @@ export function openShop(startTab) {
       <div class="small muted">${trying ? '👗 Đang xem thử trang bị (chưa sở hữu)' : on ? 'Hiển thị thực tế trong phòng chờ' : 'Nhấn vào từng vật phẩm bên dưới để xem thử'}${cb ? ` · ${COMBO[cb].icon} Hiệu ứng bộ ${COMBO[cb].name}` : ''}${look.fx ? ` · ${FX[look.fx].icon} ${esc(ITEM[look.fx].name)}` : ''}</div></div>
       ${look.back || look.dice || look.hat || look.easel ? `<div class="sh-ingame" title="Trang bị trong trò chơi">${look.back ? backHtml(ITEM[look.back]) : ''}${look.dice ? dieHtml(look.dice) : ''}${look.hat ? hatHtml(look.hat, 64) : ''}${look.easel ? easelHtml(look.easel) : ''}</div>` : ''}`;
 
-    // 3 hàng: bộ sưu tập theo chủ đề, đồ của hub (mọi game) và đồ trong từng game
+    // menu dọc bên trái (điện thoại: 1 hàng cuộn ngang): bộ sưu tập theo chủ đề, đồ của hub (mọi game), đồ trong từng game
+    const sideScroll = tabs.scrollTop, sideScrollX = tabs.scrollLeft;
     tabs.innerHTML = '';
-    const colRow = el('div', 'sh-tabrow', '<span class="sh-grp small muted">🎨 Bộ sưu tập</span><div class="sh-tablist"></div>');
+    const navBtn = (id, icon, label, cnt, title, extra = '') => {
+      const b = el('button', `sh-nav${extra}${tab === id ? ' on' : ''}`, `<i>${icon}</i><span class="sh-nav-nm">${esc(label)}</span>${cnt ? `<span class="sh-nav-n">${cnt}</span>` : ''}`);
+      b.title = title;
+      b.onclick = () => { if (tab === id) return; tab = id; grid.scrollTop = 0; sfx.click(); paint(); };
+      return b;
+    };
+    tabs.appendChild(el('div', 'sh-grp', '🎨<span> Bộ sưu tập</span>'));
     for (const c of COLLECTIONS) {
       const items = ITEMS.filter(x => x.col === c.id);
       const n = items.reduce((sum, x) => sum + (owned.has(x.id) ? 1 : 0), 0);
-      const b = el('button', 'gp-tag' + (c.season ? ' sh-xmas-tab' : '') + (tab === c.id ? ' on' : ''), `${c.icon} ${esc(c.name)} <span>${n}/${items.length}</span>`);
-      b.title = `${c.desc} (Trang bị Khung + Tên cùng bộ để bật hiệu ứng combo)`;
-      b.onclick = () => { tab = c.id; paint(); };
-      colRow.lastChild.appendChild(b);
+      tabs.appendChild(navBtn(c.id, c.icon, c.name, `${n}/${items.length}`, `${c.desc} (Trang bị Khung + Tên cùng bộ để bật hiệu ứng combo)`, c.season ? ' sh-xmas-tab' : ''));
     }
-    tabs.appendChild(colRow);
-
-    for (const [grp, label] of [['hub', '✨ Toàn hệ thống'], ['game', '🎮 Trong game']]) {
-      const row = el('div', 'sh-tabrow', `<span class="sh-grp small muted">${label}</span><div class="sh-tablist"></div>`), list = row.lastChild;
+    for (const [grp, label] of [['hub', '✨<span> Toàn hệ thống</span>'], ['game', '🎮<span> Trong game</span>']]) {
+      tabs.appendChild(el('div', 'sh-grp', label));
       for (const s of SLOTS.filter(x => (x.grp || 'hub') === grp)) {
         const n = ITEMS.filter(x => x.slot === s.id).reduce((sum, x) => sum + (x.consumable ? ((W && W.bag && W.bag.cards && W.bag.cards[x.id]) || 0) : (owned.has(x.id) ? 1 : 0)), 0);
-        const b = el('button', 'gp-tag' + (s.id === tab ? ' on' : ''), `${s.icon} ${esc(s.name)}${n ? ` <span>${n}</span>` : ''}`);
-        b.title = s.hint + (s.games ? ` (${s.games})` : '');
-        b.onclick = () => { tab = s.id; paint(); };
-        list.appendChild(b);
+        tabs.appendChild(navBtn(s.id, s.icon, s.name, n ? String(n) : '', s.hint + (s.games ? ` (${s.games})` : '')));
       }
-      tabs.appendChild(row);
     }
+    tabs.scrollTop = sideScroll; tabs.scrollLeft = sideScrollX;
 
+    const gridScroll = grid.scrollTop;   // vẽ lại (thử đồ, mua, trang bị) giữ nguyên vị trí cuộn
     grid.innerHTML = '';
     const C = colOf(tab), S = SLOTS.find(s => s.id === tab);
     const shown = C ? ITEMS.filter(x => x.col === C.id) : ITEMS.filter(x => x.slot === tab);
@@ -595,6 +597,7 @@ export function openShop(startTab) {
       };
       grid.appendChild(c);
     }
+    grid.scrollTop = gridScroll;
   };
 
   async function buy(it, c) {
